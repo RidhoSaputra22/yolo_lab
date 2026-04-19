@@ -1,0 +1,22 @@
+{
+  "name": "yolo-lab-app",
+  "version": "1.0.0",
+  "description": "YOLO Lab - React + Bun server for YOLO labeling, testing, and training",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "bun server.js",
+    "build": "node build-react.mjs",
+    "start": "bun server.js"
+  },
+  "dependencies": {
+    "daisyui": "^4.12.24",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.7",
+    "tailwindcss": "^3.3.6",
+    "typescript": "^5.3.3"
+  }
+}

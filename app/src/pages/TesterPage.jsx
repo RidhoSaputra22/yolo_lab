@@ -1,0 +1,252 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { Alert, Badge, Button } from "../ui.js";
+import { fetchJson } from "../shared/api.js";
+import { formatCount, formatTimestamp, groupArtifactsByFolder } from "../shared/utils.js";
+import { noticeTone, PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
+import {
+  TesterSidebar,
+  TesterFormSection,
+  TesterCommandPanel,
+  TesterOutputExplorer,
+  TesterLogs,
+} from "./TesterPage/index.js";
+
+/**
+ * TesterPage - Redesigned with top action bar and simplified layout.
+ */
+export default function TesterPage() {
+  const [layout, setLayout] = useState([]);
+  const [suggestions, setSuggestions] = useState({});
+  const [defaults, setDefaults] = useState({});
+  const [formValues, setFormValues] = useState({});
+  const [preview, setPreview] = useState(null);
+  const [previewError, setPreviewError] = useState("");
+  const [previewState, setPreviewState] = useState("idle");
+  const [runtimePaths, setRuntimePaths] = useState(null);
+  const [runtimeWarnings, setRuntimeWarnings] = useState([]);
+  const [job, setJob] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const [selectedFolderKey, setSelectedFolderKey] = useState("");
+  const [isConfigLoading, setIsConfigLoading] = useState(true);
+
+  const baseOutputDir = job?.outputDir || defaults.outputDir || "";
+  const folders = useMemo(
+    () => groupArtifactsByFolder(job?.artifacts || [], baseOutputDir),
+    [job?.artifacts, baseOutputDir],
+  );
+
+  useEffect(() => {
+    if (!folders.length) { setSelectedFolderKey(""); return; }
+    if (!folders.some((f) => f.key === selectedFolderKey)) {
+      setSelectedFolderKey(folders[0].key);
+    }
+  }, [folders, selectedFolderKey]);
+
+  const selectedFolder = folders.find((f) => f.key === selectedFolderKey) || folders[0] || null;
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadConfig() {
+      setIsConfigLoading(true);
+      try {
+        const config = await fetchJson("/api/test/config");
+        if (cancelled) return;
+        setLayout(config.layout || []);
+        setSuggestions(config.suggestions || {});
+        setDefaults(config.defaults || {});
+        setFormValues(config.defaults || {});
+        setRuntimePaths(config.paths || null);
+        setRuntimeWarnings(config.runtimeWarnings || []);
+        setPreview(config.preview || null);
+        setPreviewError("");
+        setPreviewState(config.preview?.commandDisplay ? "ready" : "idle");
+        setJob(config.job || null);
+      } catch (error) {
+        if (!cancelled) {
+          setNotice({ type: "error", message: error.message });
+          setPreviewError(error.message);
+          setPreviewState("error");
+        }
+      } finally {
+        if (!cancelled) setIsConfigLoading(false);
+      }
+    }
+    loadConfig();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!Object.keys(formValues).length) return undefined;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setPreviewState("loading");
+      try {
+        const nextPreview = await fetchJson("/api/test/preview", {
+          method: "POST", body: JSON.stringify(formValues),
+        });
+        if (cancelled) return;
+        setPreview(nextPreview);
+        setPreviewError("");
+        setPreviewState("ready");
+      } catch (error) {
+        if (cancelled) return;
+        setPreviewError(error.message);
+        setPreviewState("error");
+      }
+    }, PREVIEW_DEBOUNCE_MS);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [formValues]);
+
+  useEffect(() => {
+    const delay = job?.running ? 1800 : 5000;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        const nextJob = await fetchJson("/api/test/status");
+        if (!cancelled) setJob(nextJob);
+      } catch (error) {
+        if (!cancelled) setNotice({ type: "error", message: error.message });
+      }
+    }, delay);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [job?.running, job?.jobId, job?.state, job?.artifacts]);
+
+  const handleFieldChange = (name, value) => {
+    setFormValues((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleRun = async () => {
+    setNotice({ type: "info", message: "Menjalankan runner offline..." });
+    try {
+      const nextJob = await fetchJson("/api/test/run", { method: "POST", body: JSON.stringify(formValues) });
+      setJob(nextJob);
+      setNotice({ type: "success", message: "Runner berhasil dimulai." });
+    } catch (error) { setNotice({ type: "error", message: error.message }); }
+  };
+
+  const handleStop = async () => {
+    try {
+      const nextJob = await fetchJson("/api/test/stop", { method: "POST", body: JSON.stringify({}) });
+      setJob(nextJob);
+      setNotice({ type: "info", message: "Permintaan stop dikirim." });
+    } catch (error) { setNotice({ type: "error", message: error.message }); }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      const nextJob = await fetchJson("/api/test/status");
+      setJob(nextJob);
+      setNotice(null);
+    } catch (error) { setNotice({ type: "error", message: error.message }); }
+  };
+
+  const stateBadgeType =
+    job?.state === "failed" ? "error"
+      : job?.state === "finished" ? "success"
+        : job?.running ? "warning" : "ghost";
+
+  return (
+    <div className="grid gap-4">
+      {/* Top action bar */}
+      <section className="flex flex-col gap-3 rounded-sm border border-base-300 bg-base-100/90 p-4 shadow-lg xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge type={stateBadgeType} className="px-4 py-3 text-xs font-bold uppercase">
+            {job?.state || "idle"}
+          </Badge>
+          <div className="text-sm">
+            <span className="font-semibold text-slate-900">
+              {job?.outputDir || defaults.outputDir || "-"}
+            </span>
+            <span className="ml-2 text-slate-500">
+              {job?.durationSeconds != null ? `${job.durationSeconds}s` : ""}
+              {job?.returnCode != null ? ` • code ${job.returnCode}` : ""}
+              {` • ${formatCount((job?.artifacts || []).length, "artifact")}`}
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="primary"
+            isSubmit={false}
+            size="sm"
+            className="rounded-sm px-5"
+            disabled={Boolean(job?.running) || isConfigLoading}
+            onClick={handleRun}
+          >
+            ▶ Jalankan Test
+          </Button>
+          <Button
+            variant="error"
+            outline
+            isSubmit={false}
+            size="sm"
+            className="rounded-sm px-4"
+            disabled={!job?.running}
+            onClick={handleStop}
+          >
+            ■ Stop
+          </Button>
+          <Button
+            variant="ghost"
+            isSubmit={false}
+            size="sm"
+            className="rounded-sm border border-base-300 px-4"
+            onClick={handleRefresh}
+          >
+            ↻ Refresh
+          </Button>
+        </div>
+      </section>
+
+      {/* Inline notice */}
+      {notice?.message && (
+        <Alert type={noticeTone(notice.type)} dismissible className="rounded-sm shadow-md">
+          {notice.message}
+        </Alert>
+      )}
+
+      {/* Inline runtime warnings */}
+      {runtimeWarnings.length > 0 && (
+        <div className="grid gap-2">
+          {runtimeWarnings.map((warning) => (
+            <Alert key={warning} type="warning" className="rounded-sm text-sm">
+              {warning}
+            </Alert>
+          ))}
+        </div>
+      )}
+
+      {/* Main content */}
+      <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
+        <TesterSidebar runtimePaths={runtimePaths} />
+
+        <section className="grid gap-4">
+          <TesterFormSection
+            layout={layout}
+            formValues={formValues}
+            suggestions={suggestions}
+            onFieldChange={handleFieldChange}
+          />
+
+          <TesterCommandPanel
+            preview={preview}
+            previewError={previewError}
+            previewState={previewState}
+            job={job}
+            defaults={defaults}
+          />
+
+          <TesterOutputExplorer
+            folders={folders}
+            selectedFolderKey={selectedFolderKey}
+            selectedFolder={selectedFolder}
+            job={job}
+            onSelectFolder={setSelectedFolderKey}
+          />
+
+          <TesterLogs job={job} />
+        </section>
+      </div>
+    </div>
+  );
+}

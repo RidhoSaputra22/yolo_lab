@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="yololab">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>YOLO Lab React</title>
+    <meta
+      name="description"
+      content="Manual labeler dan YOLO tester lokal berbasis React yang dijalankan dari server Bun."
+    />
+    <link rel="stylesheet" href="/static/react-app.css" />
+    <script src="/static/vendor/react.development.js"></script>
+    <script src="/static/vendor/react-dom.development.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "/static/vendor/react.js",
+          "react-dom/client": "/static/vendor/react-dom-client.js"
+        }
+      }
+    </script>
+  </head>
+  <body class="min-h-screen antialiased">
+    <div id="root" data-react-root="yolo-lab"></div>
+    <script type="module" src="/react/yolo_lab/app/src/main.js"></script>
+  </body>
+</html>

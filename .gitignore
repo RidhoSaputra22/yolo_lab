@@ -1,0 +1,130 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# PyCharm
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Node.js / npm
+node_modules/
+package-lock.json
+yarn.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build artifacts
+dist/
+build/
+*.bundle.js
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# YOLO Model files (large files)
+*.pt
+*.weights
+*.onnx
+
+# Training outputs
+train/runs/
+train/frames/
+train/footage/
+
+# Test outputs (keep only results, ignore large files)
+test/output/**/*.mp4
+test/output/**/*.avi
+test/output/**/*.mov
+
+# Data files
+*.zip
+*.tar.gz
+*.tar
+
+# Logs
+*.log
+logs/
+
+# System
+.vscode-settings
+.DS_Store
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Python cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js cache
+.npm
+.cache/
+
+*.txt
+*.mp4
+*.jpg
+*.jpeg
+*.png
+

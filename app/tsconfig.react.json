@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "jsx": "react",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": false,
+    "outDir": "./static/react",
+    "rootDir": "../..",
+    "skipLibCheck": true,
+    "target": "es2022"
+  },
+  "include": [
+    "./src/**/*",
+    "./ui/**/*"
+  ]
+}

@@ -1,0 +1,6 @@
+path: "/home/codeslayer/Desktop/PROJECT LARAVEL/2026_31_si_pencatatan_pengunjung_YOLO/pencatatan_app_v2/train/dataset"
+train: "images/train"
+val: "images/val"
+nc: 1
+names:
+  0: "person"
