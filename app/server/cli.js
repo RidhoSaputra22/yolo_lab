@@ -87,12 +87,12 @@ export function printUsage() {
   console.log("YOLO Lab Bun server");
   console.log("");
   console.log("Gunakan:");
-  console.log("  bun yolo_lab/app/server.js [opsi]");
+  console.log("  bun app/server.js [opsi]");
   console.log("");
   console.log("Opsi:");
-  console.log("  --frames-dir <path>   Folder frame. Default: yolo_lab/train/frames");
-  console.log("  --labels-dir <path>   Folder label. Default: yolo_lab/train/labels");
-  console.log("  --dataset-dir <path>  Folder dataset. Default: yolo_lab/train/dataset");
+  console.log("  --frames-dir <path>   Folder frame. Default: train/frames");
+  console.log("  --labels-dir <path>   Folder label. Default: train/labels");
+  console.log("  --dataset-dir <path>  Folder dataset. Default: train/dataset");
   console.log("  --class-name <name>   Nama class, bisa dipakai berulang.");
   console.log("  --host <host>         Host bind. Default: 127.0.0.1");
   console.log("  --port <port>         Port bind. Default: 8765");

@@ -2,7 +2,7 @@
  * TestRunManager — mengelola proses test runner offline.
  */
 
-import { existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import {
@@ -20,6 +20,96 @@ import { discoverFiles } from "../files.js";
 import { displayPath, encodePathQuery, pathInside, resolveProjectPath } from "../paths.js";
 import { defaultTestFormData, testFormLayout } from "../forms/test-form.js";
 import { BaseRunManager } from "./base-manager.js";
+
+function inspectMp4Playback(filePath) {
+  const stats = statSync(filePath);
+  if (!stats.isFile() || stats.size < 8) {
+    return {
+      playable: false,
+      issue: "File video tidak lengkap atau ukurannya terlalu kecil.",
+    };
+  }
+
+  let fd = null;
+  try {
+    fd = openSync(filePath, "r");
+    let offset = 0;
+    let foundFtyp = false;
+    let foundMoov = false;
+
+    while (offset + 8 <= stats.size) {
+      const header = Buffer.alloc(8);
+      const headerRead = readSync(fd, header, 0, 8, offset);
+      if (headerRead < 8) {
+        break;
+      }
+
+      let atomSize = header.readUInt32BE(0);
+      const atomType = header.toString("ascii", 4, 8);
+      let headerSize = 8;
+
+      if (atomSize === 1) {
+        const extendedSizeBuffer = Buffer.alloc(8);
+        const extendedRead = readSync(fd, extendedSizeBuffer, 0, 8, offset + 8);
+        if (extendedRead < 8) {
+          return {
+            playable: false,
+            issue: "Header MP4 tidak lengkap.",
+          };
+        }
+        atomSize = Number(extendedSizeBuffer.readBigUInt64BE(0));
+        headerSize = 16;
+      } else if (atomSize === 0) {
+        atomSize = stats.size - offset;
+      }
+
+      if (!Number.isFinite(atomSize) || atomSize < headerSize || offset + atomSize > stats.size) {
+        return {
+          playable: false,
+          issue: "Struktur MP4 tidak lengkap atau terpotong.",
+        };
+      }
+
+      if (atomType === "ftyp") {
+        foundFtyp = true;
+      }
+      if (atomType === "moov") {
+        foundMoov = true;
+      }
+
+      offset += atomSize;
+    }
+
+    if (!foundFtyp) {
+      return {
+        playable: false,
+        issue: "Header MP4 (ftyp) tidak ditemukan.",
+      };
+    }
+
+    if (!foundMoov) {
+      return {
+        playable: false,
+        issue:
+          "Metadata MP4 (moov atom) tidak ditemukan. Biasanya file video belum selesai ditulis atau proses test berhenti sebelum finalisasi.",
+      };
+    }
+
+    return {
+      playable: true,
+      issue: null,
+    };
+  } catch (error) {
+    return {
+      playable: false,
+      issue: `Video tidak bisa dibaca: ${error.message}`,
+    };
+  } finally {
+    if (fd !== null) {
+      closeSync(fd);
+    }
+  }
+}
 
 export class TestRunManager extends BaseRunManager {
   constructor({ projectDir, runnerScript, pythonBin, defaultOutputDir }) {
@@ -228,6 +318,7 @@ export class TestRunManager extends BaseRunManager {
   }
 
   snapshot() {
+    const artifactRoot = this.current.outputDir || this.defaultOutputDir;
     return {
       jobId: this.current.jobId,
       state: this.current.state,
@@ -243,7 +334,7 @@ export class TestRunManager extends BaseRunManager {
       stopRequested: this.current.stopRequested,
       logs: [...this.current.logs],
       error: this.current.error,
-      artifacts: this.listArtifacts(this.current.outputDir),
+      artifacts: this.listArtifacts(artifactRoot),
     };
   }
 
@@ -276,6 +367,7 @@ export class TestRunManager extends BaseRunManager {
     const stats = statSync(targetPath);
     const resolvedPath = path.resolve(targetPath);
     const relativePath = displayPath(resolvedPath);
+    const isVideo = path.extname(targetPath).toLowerCase() === ".mp4";
     const downloadUrl = pathInside(resolvedPath, PROJECT_DIR)
       ? `/api/test/artifact?path=${encodePathQuery(relativePath)}`
       : null;
@@ -288,7 +380,8 @@ export class TestRunManager extends BaseRunManager {
       sizeLabel: fileSizeLabel(stats.size),
       modifiedAt: toLocalIso(stats.mtimeMs),
       downloadUrl,
-      isVideo: path.extname(targetPath).toLowerCase() === ".mp4",
+      isVideo,
+      videoPlayback: isVideo ? inspectMp4Playback(resolvedPath) : null,
     };
   }
 

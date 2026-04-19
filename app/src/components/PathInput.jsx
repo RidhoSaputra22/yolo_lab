@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button, Input, Modal } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
+import { displayProjectPath, normalizeProjectRelativePath } from "../shared/formHelpers.js";
 
 /**
  * PathInput - File/folder picker with text input
@@ -28,6 +29,8 @@ export function PathInput({
   const [error, setError] = useState("");
   const [isRoot, setIsRoot] = useState(false);
   const [parentPath, setParentPath] = useState(null);
+  const [rootName, setRootName] = useState("yolo_lab");
+  const [selectedPath, setSelectedPath] = useState("");
 
   // Load directory contents when browser path changes
   useEffect(() => {
@@ -37,12 +40,18 @@ export function PathInput({
       setLoading(true);
       setError("");
       try {
-        const queryPath = currentPath ? `?path=${encodeURIComponent(currentPath)}` : "";
+        const normalizedCurrentPath = normalizeProjectRelativePath(currentPath, rootName);
+        const queryPath = normalizedCurrentPath
+          ? `?path=${encodeURIComponent(normalizedCurrentPath)}`
+          : "";
         const result = await fetchJson(`/api/files/browse${queryPath}`);
-        setCurrentPath(result.currentPath);
+        const nextRootName = result.rootName || "yolo_lab";
+        setCurrentPath(normalizeProjectRelativePath(result.currentPath, nextRootName));
         setEntries(result.entries || []);
         setIsRoot(result.isRoot);
-        setParentPath(result.parentPath);
+        setParentPath(normalizeProjectRelativePath(result.parentPath, nextRootName));
+        setRootName(nextRootName);
+        setSelectedPath(normalizeProjectRelativePath(result.selectedPath, nextRootName));
       } catch (err) {
         setError(err.message);
       } finally {
@@ -54,51 +63,67 @@ export function PathInput({
   }, [showBrowser, currentPath]);
 
   const handleSelectPath = (path) => {
-    onChange(path);
+    const normalizedPath = normalizeProjectRelativePath(path, rootName);
+    onChange(normalizedPath || rootName);
     setShowBrowser(false);
   };
 
   const handleNavigateTo = (dirPath) => {
-    setCurrentPath(dirPath);
+    setCurrentPath(normalizeProjectRelativePath(dirPath, rootName));
   };
 
   const handleParentClick = () => {
     if (parentPath) {
-      setCurrentPath(parentPath);
+      setCurrentPath(normalizeProjectRelativePath(parentPath, rootName));
     }
   };
 
+  const displayCurrentPath = displayProjectPath(currentPath, rootName);
+
   return (
     <div>
-      <div className="flex gap-2">
-        <div className="flex-1">
+      {label && (
+        <label className="label" htmlFor={name}>
+          <span className="label-text font-medium">
+            {label}
+            {required && <span className="text-error ml-1">*</span>}
+          </span>
+        </label>
+      )}
+
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <div className="min-w-0">
           <Input
             name={name}
-            label={label}
             type="text"
             required={required}
-            helpText={helpText}
             placeholder={placeholder}
             value={value}
             onChange={(event) => onChange(event.target.value)}
             list={suggestions.length ? `suggestions-${name}` : undefined}
           />
         </div>
-        <div className="flex items-end">
+        <div>
           <Button
             type="button"
-            size="sm"
+            size="md"
             variant="outline"
             onClick={() => {
-              setCurrentPath("");
+              setCurrentPath(normalizeProjectRelativePath(value, rootName));
               setShowBrowser(true);
             }}
-            className="mb-0"
+            className="w-full justify-center px-5 sm:w-auto sm:min-w-[108px]"
           >
             Browse
           </Button>
         </div>
       </div>
+
+      {helpText && (
+        <label className="label">
+          <span className="label-text-alt text-base-content/70">{helpText}</span>
+        </label>
+      )}
 
       {suggestions.length > 0 && (
         <datalist id={`suggestions-${name}`}>
@@ -115,7 +140,7 @@ export function PathInput({
             <div className="flex items-center gap-2 justify-between">
               <div className="flex-1">
                 <p className="text-sm font-medium text-base-content/70">Current path:</p>
-                <p className="text-sm font-mono break-all text-base-content">{currentPath}</p>
+                <p className="text-sm font-mono break-all text-base-content">{displayCurrentPath}</p>
               </div>
               {!isRoot && parentPath && (
                 <Button
@@ -155,7 +180,11 @@ export function PathInput({
                 {entries.map((entry) => (
                   <div
                     key={entry.path}
-                    className="flex items-center gap-2 rounded-sm border border-base-300 bg-base-100 p-2 hover:border-primary hover:bg-primary/5 cursor-pointer transition"
+                    className={`flex items-center gap-2 rounded-sm border p-2 cursor-pointer transition ${
+                      entry.path === selectedPath
+                        ? "border-primary bg-primary/5"
+                        : "border-base-300 bg-base-100 hover:border-primary hover:bg-primary/5"
+                    }`}
                     onClick={() => {
                       if (entry.isDirectory) {
                         handleNavigateTo(entry.path);

@@ -1,5 +1,5 @@
 import React from "react";
-import { Checkbox, Input, Paragraph, Select, Textarea } from "../ui.js";
+import { Input, Select, Textarea } from "../ui.js";
 import { PathInput } from "./PathInput.jsx";
 import { fieldValueToString } from "../shared/formHelpers.js";
 
@@ -10,16 +10,30 @@ import { fieldValueToString } from "../shared/formHelpers.js";
 export function FormFieldControl({ field, value, suggestions, onChange }) {
   if (field.type === "bool") {
     return (
-      <div className="rounded-sm border border-base-300 bg-base-100/80 p-4">
-        <Checkbox
-          single
-          name={field.name}
-          options={[{ value: "1", label: field.label }]}
-          checked={value ? ["1"] : []}
-          onChange={(next) => onChange(field.name, next.includes("1"))}
-        />
+      <div className="form-control w-full">
+        <label className="label" htmlFor={field.name}>
+          <span className="label-text font-medium">{field.label}</span>
+        </label>
+        <label
+          htmlFor={field.name}
+          className="flex min-h-12 cursor-pointer items-center gap-3 rounded-sm border border-base-300 bg-base-100/80 px-4 transition-colors hover:border-base-content/20"
+        >
+          <input
+            id={field.name}
+            type="checkbox"
+            name={field.name}
+            checked={Boolean(value)}
+            className="checkbox checkbox-primary"
+            onChange={(event) => onChange(field.name, event.target.checked)}
+          />
+          <span className="text-sm text-base-content/80">
+            {value ? "Aktif" : "Nonaktif"}
+          </span>
+        </label>
         {field.helpText ? (
-          <Paragraph className="mt-2 text-xs leading-5">{field.helpText}</Paragraph>
+          <label className="label">
+            <span className="label-text-alt text-base-content/70">{field.helpText}</span>
+          </label>
         ) : null}
       </div>
     );
@@ -27,19 +41,15 @@ export function FormFieldControl({ field, value, suggestions, onChange }) {
 
   if (field.type === "textarea") {
     return (
-      <div>
-        <Textarea
-          name={field.name}
-          label={field.label}
-          rows={4}
-          placeholder={field.placeholder || ""}
-          value={fieldValueToString(value)}
-          onChange={(event) => onChange(field.name, event.target.value)}
-        />
-        {field.helpText ? (
-          <Paragraph className="mt-2 text-xs leading-5">{field.helpText}</Paragraph>
-        ) : null}
-      </div>
+      <Textarea
+        name={field.name}
+        label={field.label}
+        rows={4}
+        placeholder={field.placeholder || ""}
+        helpText={field.helpText || null}
+        value={fieldValueToString(value)}
+        onChange={(event) => onChange(field.name, event.target.value)}
+      />
     );
   }
 
@@ -52,6 +62,7 @@ export function FormFieldControl({ field, value, suggestions, onChange }) {
         onChange={(event) => onChange(field.name, event.target.value)}
         options={(field.choices || []).map((choice) => ({ value: choice, label: choice }))}
         placeholder="Pilih..."
+        helpText={field.helpText || null}
       />
     );
   }

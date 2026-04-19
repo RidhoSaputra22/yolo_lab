@@ -1,8 +1,8 @@
 /**
- * AppState — state utama server YOLO Lab (labeler, test runner, training runner).
+ * AppState — state utama server YOLO Lab (labeler, footage, test runner, training runner).
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import {
@@ -11,6 +11,7 @@ import {
   DEFAULT_FRAMES_DIR,
   DEFAULT_LABELS_DIR,
   DEFAULT_TEST_OUTPUT_DIR,
+  DEFAULT_TEST_INPUT_DIR,
   DEFAULT_TEST_RUNNER,
   DEFAULT_TRAIN_OUTPUT_DIR,
   DEFAULT_TRAIN_RUNNER,
@@ -23,9 +24,10 @@ import { envValue } from "./env.js";
 import { HttpError } from "./errors.js";
 import { shellJoin } from "./format.js";
 import { discoverFiles, listTopLevelFiles } from "./files.js";
-import { displayPath, resolveProjectPath } from "./paths.js";
+import { displayPath, pathInside, resolveProjectPath } from "./paths.js";
 import { classNamesFromDataYaml } from "./parsers.js";
 import { defaultLabelerAutolabelConfig } from "./forms/training-form.js";
+import { FootageRunManager } from "./managers/footage-manager.js";
 import { TestRunManager } from "./managers/test-manager.js";
 import { TrainingRunManager } from "./managers/training-manager.js";
 
@@ -42,6 +44,7 @@ export class AppState {
     labelsDir,
     classNames,
     checkpointPath,
+    footageRunner,
     testRunner,
     trainingRunner,
     pythonBin,
@@ -51,6 +54,7 @@ export class AppState {
     this.labelsDir = path.resolve(labelsDir);
     this.classNames = [...classNames];
     this.checkpointPath = path.resolve(checkpointPath);
+    this.footageRunner = footageRunner;
     this.testRunner = testRunner;
     this.trainingRunner = trainingRunner;
     this.pythonBin = pythonBin;
@@ -69,6 +73,22 @@ export class AppState {
         isCheckpoint: path.basename(imagePath) === checkpointImage,
       };
     });
+  }
+
+  setFramesDir(nextFramesDir) {
+    const resolvedPath = path.resolve(nextFramesDir);
+    if (
+      !existsSync(resolvedPath)
+      || !statSync(resolvedPath).isDirectory()
+      || !pathInside(resolvedPath, PROJECT_DIR)
+    ) {
+      throw new HttpError(400, `Folder frame aktif tidak valid: ${nextFramesDir}`);
+    }
+    this.framesDir = resolvedPath;
+    return {
+      framesDir: displayPath(this.framesDir),
+      imageCount: listTopLevelFiles(this.framesDir, IMAGE_EXTENSIONS).length,
+    };
   }
 
   readLabelData(imageName) {
@@ -344,6 +364,15 @@ export function createServerState(options) {
     labelsDir,
     classNames,
     checkpointPath,
+    footageRunner: new FootageRunManager({
+      projectDir: PROJECT_DIR,
+      trainScript: DEFAULT_TRAIN_RUNNER,
+      pythonBin,
+      defaultFootageDir: DEFAULT_TEST_INPUT_DIR,
+      defaultFramesDir: DEFAULT_FRAMES_DIR,
+      defaultLabelsDir: DEFAULT_LABELS_DIR,
+      defaultDatasetDir: DEFAULT_DATASET_DIR,
+    }),
     testRunner: new TestRunManager({
       projectDir: PROJECT_DIR,
       runnerScript: DEFAULT_TEST_RUNNER,

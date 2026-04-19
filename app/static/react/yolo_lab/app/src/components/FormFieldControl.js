@@ -1,5 +1,5 @@
 import React from "react";
-import { Checkbox, Input, Paragraph, Select, Textarea } from "../ui.js";
+import { Input, Select, Textarea } from "../ui.js";
 import { PathInput } from "./PathInput.js";
 import { fieldValueToString } from "../shared/formHelpers.js";
 /**
@@ -8,17 +8,20 @@ import { fieldValueToString } from "../shared/formHelpers.js";
  */
 export function FormFieldControl({ field, value, suggestions, onChange }) {
     if (field.type === "bool") {
-        return (React.createElement("div", { className: "rounded-sm border border-base-300 bg-base-100/80 p-4" },
-            React.createElement(Checkbox, { single: true, name: field.name, options: [{ value: "1", label: field.label }], checked: value ? ["1"] : [], onChange: (next) => onChange(field.name, next.includes("1")) }),
-            field.helpText ? (React.createElement(Paragraph, { className: "mt-2 text-xs leading-5" }, field.helpText)) : null));
+        return (React.createElement("div", { className: "form-control w-full" },
+            React.createElement("label", { className: "label", htmlFor: field.name },
+                React.createElement("span", { className: "label-text font-medium" }, field.label)),
+            React.createElement("label", { htmlFor: field.name, className: "flex min-h-12 cursor-pointer items-center gap-3 rounded-sm border border-base-300 bg-base-100/80 px-4 transition-colors hover:border-base-content/20" },
+                React.createElement("input", { id: field.name, type: "checkbox", name: field.name, checked: Boolean(value), className: "checkbox checkbox-primary", onChange: (event) => onChange(field.name, event.target.checked) }),
+                React.createElement("span", { className: "text-sm text-base-content/80" }, value ? "Aktif" : "Nonaktif")),
+            field.helpText ? (React.createElement("label", { className: "label" },
+                React.createElement("span", { className: "label-text-alt text-base-content/70" }, field.helpText))) : null));
     }
     if (field.type === "textarea") {
-        return (React.createElement("div", null,
-            React.createElement(Textarea, { name: field.name, label: field.label, rows: 4, placeholder: field.placeholder || "", value: fieldValueToString(value), onChange: (event) => onChange(field.name, event.target.value) }),
-            field.helpText ? (React.createElement(Paragraph, { className: "mt-2 text-xs leading-5" }, field.helpText)) : null));
+        return (React.createElement(Textarea, { name: field.name, label: field.label, rows: 4, placeholder: field.placeholder || "", helpText: field.helpText || null, value: fieldValueToString(value), onChange: (event) => onChange(field.name, event.target.value) }));
     }
     if (field.type === "select") {
-        return (React.createElement(Select, { name: field.name, label: field.label, value: fieldValueToString(value), onChange: (event) => onChange(field.name, event.target.value), options: (field.choices || []).map((choice) => ({ value: choice, label: choice })), placeholder: "Pilih..." }));
+        return (React.createElement(Select, { name: field.name, label: field.label, value: fieldValueToString(value), onChange: (event) => onChange(field.name, event.target.value), options: (field.choices || []).map((choice) => ({ value: choice, label: choice })), placeholder: "Pilih...", helpText: field.helpText || null }));
     }
     if (field.type === "path") {
         return (React.createElement(PathInput, { name: field.name, label: field.label, value: fieldValueToString(value), suggestions: suggestions, onChange: (newValue) => onChange(field.name, newValue), required: Boolean(field.required), helpText: field.helpText || null, placeholder: field.placeholder || "" }));

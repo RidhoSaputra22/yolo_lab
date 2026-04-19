@@ -1,14 +1,14 @@
 import React from "react";
 import { Alert, Badge, Button, Card, Paragraph } from "../../ui.js";
-import { formatCount, joinClasses } from "../../shared/utils.js";
+import { formatCount, formatTimestamp, joinClasses } from "../../shared/utils.js";
 import { formatMetric } from "../../shared/formHelpers.js";
 /**
  * Training run explorer and detail view
  * Displays list of training runs and detailed metrics for selected run
  */
 export function TrainingRunExplorer({ runs, selectedRun, selectedRunKey, onSelectRun, }) {
-    return (React.createElement("div", { className: "grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]" },
-        React.createElement(Card, { className: "rounded-sm border border-base-300 bg-base-100/90 shadow-xl" },
+    return (React.createElement("div", { className: "grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]" },
+        React.createElement(Card, { className: "h-fit rounded-sm border border-base-300 bg-base-100/90 shadow-xl xl:sticky xl:top-28" },
             React.createElement("div", { className: "space-y-4" },
                 React.createElement("div", { className: "flex flex-wrap items-start justify-between gap-3" },
                     React.createElement("div", null,
@@ -16,20 +16,24 @@ export function TrainingRunExplorer({ runs, selectedRun, selectedRunKey, onSelec
                         React.createElement("h2", { className: "mt-2 text-xl font-bold tracking-tight" }, "Hasil Training"),
                         React.createElement(Paragraph, { className: "mt-2 text-sm leading-6 opacity-100" }, "Pilih run untuk melihat metric, weights, dan artifact utama.")),
                     React.createElement(Badge, { type: "success", className: "px-3 py-3" }, formatCount(runs.length, "run"))),
-                React.createElement("div", { className: "grid gap-3" }, runs.length ? (runs.map((run) => (React.createElement("button", { key: run.key, type: "button", onClick: () => onSelectRun(run.key), className: joinClasses("rounded-sm border p-4 text-left transition duration-150", run.key === selectedRunKey
+                React.createElement("div", { className: "grid gap-3" }, runs.length ? (runs.map((run) => (React.createElement("button", { key: run.key, type: "button", onClick: () => onSelectRun(run.key), className: joinClasses("w-full rounded-sm border p-4 text-left transition duration-150", run.key === selectedRunKey
                         ? "border-warning bg-warning/10 shadow-md"
                         : "border-base-300 bg-base-100 hover:-translate-y-0.5 hover:border-base-content/20") },
                     React.createElement("div", { className: "flex items-start justify-between gap-3" },
+                        React.createElement("div", { className: "min-w-0 flex-1" },
+                            React.createElement("p", { className: "truncate text-sm font-semibold text-slate-900" }, run.key),
+                            React.createElement("p", { className: "mt-1 break-all font-mono text-[11px] leading-5 text-slate-500" }, run.path)),
+                        React.createElement(Badge, { type: run.key === selectedRunKey ? "warning" : "ghost", className: "shrink-0 px-3 py-2" }, run.metrics?.lastEpoch ? `ep ${run.metrics.lastEpoch}` : run.fileCount)),
+                    React.createElement("div", { className: "mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-[11px]" },
                         React.createElement("div", null,
-                            React.createElement("p", { className: "text-sm font-semibold text-slate-900" }, run.key),
-                            React.createElement("p", { className: "mt-1 text-[11px] text-slate-500" }, run.path)),
-                        React.createElement(Badge, { type: run.key === selectedRunKey ? "warning" : "ghost", className: "px-3 py-3" }, run.metrics?.lastEpoch ? `ep ${run.metrics.lastEpoch}` : run.fileCount)),
-                    React.createElement("div", { className: "mt-3 flex items-center justify-between gap-3 text-[11px] text-slate-500" },
-                        React.createElement("span", null, run.totalSizeLabel),
-                        React.createElement("span", null, run.updatedAt)),
-                    React.createElement("p", { className: "mt-2 text-[11px] text-slate-400" },
-                        "mAP50-95 ",
-                        formatMetric(run.metrics?.bestMap50_95, { percent: true })))))) : (React.createElement(Alert, { type: "info", className: "rounded-sm text-sm" }, "Belum ada run training di folder output."))))),
+                            React.createElement("p", { className: "uppercase tracking-[0.18em] text-slate-400" }, "Size"),
+                            React.createElement("p", { className: "mt-1 font-medium text-slate-600" }, run.totalSizeLabel)),
+                        React.createElement("div", { className: "text-right" },
+                            React.createElement("p", { className: "uppercase tracking-[0.18em] text-slate-400" }, "Updated"),
+                            React.createElement("p", { className: "mt-1 font-medium text-slate-600" }, formatTimestamp(run.updatedAt))),
+                        React.createElement("div", { className: "col-span-2" },
+                            React.createElement("p", { className: "uppercase tracking-[0.18em] text-slate-400" }, "mAP50-95"),
+                            React.createElement("p", { className: "mt-1 font-medium text-slate-500" }, formatMetric(run.metrics?.bestMap50_95, { percent: true })))))))) : (React.createElement(Alert, { type: "info", className: "rounded-sm text-sm" }, "Belum ada run training di folder output."))))),
         React.createElement(Card, { className: "rounded-sm border border-base-300 bg-base-100/90 shadow-xl" },
             React.createElement("div", { className: "space-y-4" },
                 React.createElement("div", { className: "flex flex-wrap items-start justify-between gap-3" },

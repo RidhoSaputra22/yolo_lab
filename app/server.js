@@ -91,6 +91,7 @@ function startServer(options) {
   console.log(`║  labels : ${appState.labelsDir}`);
   console.log("╠══════════════════════════════════════════════════════╣");
   console.log(`║  labeler  : http://${options.host}:${options.port}`);
+  console.log(`║  footage  : http://${options.host}:${options.port}/footage`);
   console.log(`║  tester   : http://${options.host}:${options.port}/tester`);
   console.log(`║  training : http://${options.host}:${options.port}/training`);
   console.log("╠══════════════════════════════════════════════════════╣");

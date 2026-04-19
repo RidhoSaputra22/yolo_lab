@@ -7,6 +7,21 @@ export function fieldValueToString(value) {
     }
     return String(value);
 }
+export function normalizeProjectRelativePath(value, rootName = "yolo_lab") {
+    const rawValue = fieldValueToString(value).trim().replaceAll("\\", "/");
+    if (!rawValue) {
+        return "";
+    }
+    if (rawValue === rootName) {
+        return "";
+    }
+    const prefix = `${rootName}/`;
+    return rawValue.startsWith(prefix) ? rawValue.slice(prefix.length) : rawValue;
+}
+export function displayProjectPath(value, rootName = "yolo_lab") {
+    const normalizedValue = normalizeProjectRelativePath(value, rootName);
+    return normalizedValue ? `${rootName}/${normalizedValue}` : rootName;
+}
 export function noticeTone(type) {
     if (type === "error") {
         return "error";

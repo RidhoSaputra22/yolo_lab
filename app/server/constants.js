@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 export const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const APP_DIR = path.dirname(MODULE_DIR);
 export const LAB_DIR = path.dirname(APP_DIR);
-export const PROJECT_DIR = path.dirname(LAB_DIR);
+export const PROJECT_DIR = LAB_DIR;
 export const STATIC_DIR = path.join(APP_DIR, "static");
 export const REACT_MODULES_DIR = path.join(STATIC_DIR, "react");
 export const REACT_SHELL_PATH = path.join(APP_DIR, "index.html");

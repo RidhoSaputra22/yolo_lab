@@ -19,6 +19,7 @@ export default function Textarea({
   onChange,
   error = null,
   required = false,
+  helpText = null,
   rows = 4,
   className = "",
   name,
@@ -29,7 +30,7 @@ export default function Textarea({
     <div className={`form-control w-full ${className}`}>
       {label && (
         <label className="label" htmlFor={textareaId}>
-          <span className="label-text">
+          <span className="label-text font-medium">
             {label}
             {required && <span className="text-error ml-1">*</span>}
           </span>
@@ -46,6 +47,11 @@ export default function Textarea({
         className={`textarea textarea-bordered w-full font-mono${error ? " textarea-error" : ""}`}
         {...rest}
       />
+      {helpText && !error && (
+        <label className="label">
+          <span className="label-text-alt text-base-content/70">{helpText}</span>
+        </label>
+      )}
       {error && (
         <label className="label">
           <span className="label-text-alt text-error">{error}</span>

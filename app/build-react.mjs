@@ -6,7 +6,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const APP_DIR = path.dirname(fileURLToPath(import.meta.url));
-const PROJECT_DIR = path.resolve(APP_DIR, "..", "..");
+const PROJECT_DIR = path.resolve(APP_DIR, "..");
 const STATIC_DIR = path.join(APP_DIR, "static");
 const NODE_MODULES_DIR = path.join(APP_DIR, "node_modules");
 const REACT_OUT_DIR = path.join(STATIC_DIR, "react");

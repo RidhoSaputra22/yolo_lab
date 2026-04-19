@@ -32,18 +32,76 @@ export function contentTypeForPath(filePath) {
   return STATIC_CONTENT_TYPES[path.extname(filePath).toLowerCase()] || Bun.file(filePath).type || "application/octet-stream";
 }
 
-export function fileResponse(filePath, { method = "GET", contentType = null } = {}) {
+function parseByteRange(rangeHeader, sizeBytes) {
+  if (!rangeHeader) {
+    return null;
+  }
+
+  const rawValue = String(rangeHeader).trim();
+  if (!rawValue.startsWith("bytes=") || rawValue.includes(",")) {
+    throw new HttpError(416, "Header Range tidak valid.");
+  }
+
+  const [startRaw, endRaw] = rawValue.slice("bytes=".length).split("-", 2);
+  if (!startRaw && !endRaw) {
+    throw new HttpError(416, "Header Range tidak valid.");
+  }
+
+  let start = 0;
+  let end = sizeBytes - 1;
+
+  if (!startRaw) {
+    const suffixLength = Number.parseInt(endRaw, 10);
+    if (!Number.isFinite(suffixLength) || suffixLength <= 0) {
+      throw new HttpError(416, "Header Range tidak valid.");
+    }
+    start = Math.max(sizeBytes - suffixLength, 0);
+  } else {
+    start = Number.parseInt(startRaw, 10);
+    if (!Number.isFinite(start) || start < 0) {
+      throw new HttpError(416, "Header Range tidak valid.");
+    }
+    if (endRaw) {
+      end = Number.parseInt(endRaw, 10);
+      if (!Number.isFinite(end) || end < start) {
+        throw new HttpError(416, "Header Range tidak valid.");
+      }
+    }
+  }
+
+  if (start >= sizeBytes) {
+    throw new HttpError(416, "Range melebihi ukuran file.");
+  }
+
+  end = Math.min(end, sizeBytes - 1);
+  return { start, end };
+}
+
+export function fileResponse(filePath, { method = "GET", contentType = null, rangeHeader = null } = {}) {
   if (!existsSync(filePath) || !statSync(filePath).isFile()) {
     throw new HttpError(404, "File tidak ditemukan.");
   }
 
+  const stats = statSync(filePath);
+  const range = parseByteRange(rangeHeader, stats.size);
   const headers = new Headers();
   headers.set("Content-Type", contentType || contentTypeForPath(filePath));
-  headers.set("Content-Length", String(statSync(filePath).size));
+  headers.set("Accept-Ranges", "bytes");
   if ([".html", ".js", ".css"].includes(path.extname(filePath).toLowerCase())) {
     headers.set("Cache-Control", "no-store");
   }
 
+  if (range) {
+    const chunkSize = range.end - range.start + 1;
+    headers.set("Content-Length", String(chunkSize));
+    headers.set("Content-Range", `bytes ${range.start}-${range.end}/${stats.size}`);
+    return new Response(method === "HEAD" ? null : Bun.file(filePath).slice(range.start, range.end + 1), {
+      status: 206,
+      headers,
+    });
+  }
+
+  headers.set("Content-Length", String(stats.size));
   return new Response(method === "HEAD" ? null : Bun.file(filePath), {
     status: 200,
     headers,

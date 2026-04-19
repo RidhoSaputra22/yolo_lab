@@ -6,7 +6,7 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { PROJECT_DIR, REACT_MODULES_DIR, REACT_SHELL_PATH, STATIC_DIR } from "./constants.js";
 import { HttpError } from "./errors.js";
-import { pathInside, resolveProjectPath, displayPath } from "./paths.js";
+import { pathInside, resolveProjectPath, displayPath, projectRootName } from "./paths.js";
 import {
   fileResponse,
   jsonResponse,
@@ -15,6 +15,16 @@ import {
   staticPathResponse,
   textResponse,
 } from "./response.js";
+
+function requestRangeHeader(request) {
+  return (
+    request.headers.get("range")
+    || request.headers.get("Range")
+    || request.headers.toJSON?.().range
+    || request.headers.toJSON?.().Range
+    || null
+  );
+}
 
 export function createFetchHandler(appState) {
   return async function handleRequest(request) {
@@ -43,6 +53,13 @@ export function createFetchHandler(appState) {
         }
 
         if (pathname === "/training" || pathname === "/training.html") {
+          return fileResponse(REACT_SHELL_PATH, {
+            method: request.method,
+            contentType: "text/html; charset=utf-8",
+          });
+        }
+
+        if (pathname === "/footage" || pathname === "/footage.html") {
           return fileResponse(REACT_SHELL_PATH, {
             method: request.method,
             contentType: "text/html; charset=utf-8",
@@ -97,6 +114,29 @@ export function createFetchHandler(appState) {
           return jsonResponse(appState.testRunner.configPayload());
         }
 
+        if (pathname === "/api/footage/config") {
+          return jsonResponse(appState.footageRunner.configPayload());
+        }
+
+        if (pathname === "/api/footage/status") {
+          return jsonResponse(appState.footageRunner.snapshot());
+        }
+
+        if (pathname === "/api/footage/artifact") {
+          const artifactValue = requireQueryValue(url, "path");
+          const artifactPath = resolveProjectPath(artifactValue);
+          if (!existsSync(artifactPath)) {
+            throw new HttpError(404, `Footage tidak ditemukan: ${artifactValue}`);
+          }
+          if (!pathInside(artifactPath, PROJECT_DIR)) {
+            throw new HttpError(400, "Footage di luar project tidak bisa diakses dari UI.");
+          }
+          return fileResponse(artifactPath, {
+            method: request.method,
+            rangeHeader: requestRangeHeader(request),
+          });
+        }
+
         if (pathname === "/api/test/status") {
           return jsonResponse(appState.testRunner.snapshot());
         }
@@ -110,7 +150,10 @@ export function createFetchHandler(appState) {
           if (!pathInside(artifactPath, PROJECT_DIR)) {
             throw new HttpError(400, "Artifact di luar project tidak bisa diakses dari UI.");
           }
-          return fileResponse(artifactPath, { method: request.method });
+          return fileResponse(artifactPath, {
+            method: request.method,
+            rangeHeader: requestRangeHeader(request),
+          });
         }
 
         if (pathname === "/api/train/config") {
@@ -130,12 +173,16 @@ export function createFetchHandler(appState) {
           if (!pathInside(artifactPath, PROJECT_DIR)) {
             throw new HttpError(400, "Artifact di luar project tidak bisa diakses dari UI.");
           }
-          return fileResponse(artifactPath, { method: request.method });
+          return fileResponse(artifactPath, {
+            method: request.method,
+            rangeHeader: requestRangeHeader(request),
+          });
         }
 
         if (pathname === "/api/files/browse") {
           const pathValue = url.searchParams.get("path") || "";
           const targetPath = pathValue ? resolveProjectPath(pathValue) : PROJECT_DIR;
+          const rootName = projectRootName();
           
           if (!existsSync(targetPath)) {
             throw new HttpError(404, `Path tidak ditemukan: ${pathValue}`);
@@ -145,44 +192,55 @@ export function createFetchHandler(appState) {
           }
 
           const stats = statSync(targetPath);
-          const parentPath = targetPath === PROJECT_DIR ? null : path.dirname(targetPath);
+          const browsePath = stats.isDirectory() ? targetPath : path.dirname(targetPath);
+          const parentPath = browsePath === PROJECT_DIR ? null : path.dirname(browsePath);
+          const selectedPath = stats.isFile() ? displayPath(targetPath) : null;
           
-          if (stats.isDirectory()) {
-            const entries = readdirSync(targetPath, { withFileTypes: true })
-              .map((entry) => {
-                const entryPath = path.join(targetPath, entry.name);
-                const entryStats = statSync(entryPath);
-                return {
-                  name: entry.name,
-                  path: displayPath(entryPath),
-                  isDirectory: entry.isDirectory(),
-                  size: entryStats.size,
-                  modified: entryStats.mtime.toISOString(),
-                };
-              })
-              .sort((a, b) => {
-                if (a.isDirectory !== b.isDirectory) return b.isDirectory - a.isDirectory;
-                return a.name.localeCompare(b.name);
-              });
+          const entries = readdirSync(browsePath, { withFileTypes: true })
+            .map((entry) => {
+              const entryPath = path.join(browsePath, entry.name);
+              const entryStats = statSync(entryPath);
+              return {
+                name: entry.name,
+                path: displayPath(entryPath),
+                isDirectory: entry.isDirectory(),
+                size: entryStats.size,
+                modified: entryStats.mtime.toISOString(),
+              };
+            })
+            .sort((a, b) => {
+              if (a.isDirectory !== b.isDirectory) return b.isDirectory - a.isDirectory;
+              return a.name.localeCompare(b.name);
+            });
 
+          if (stats.isDirectory()) {
             return jsonResponse({
-              currentPath: displayPath(targetPath),
-              isRoot: targetPath === PROJECT_DIR,
+              currentPath: displayPath(browsePath),
+              isRoot: browsePath === PROJECT_DIR,
               parentPath: parentPath ? displayPath(parentPath) : null,
+              rootName,
+              selectedPath,
               entries,
             });
           } else {
             return jsonResponse({
-              currentPath: displayPath(targetPath),
-              isRoot: false,
-              parentPath: displayPath(path.dirname(targetPath)),
-              entries: [],
+              currentPath: displayPath(browsePath),
+              isRoot: browsePath === PROJECT_DIR,
+              parentPath: parentPath ? displayPath(parentPath) : null,
+              rootName,
+              selectedPath,
+              entries,
               isFile: true,
             });
           }
         }
 
         throw new HttpError(404, "Route tidak ditemukan.");
+      }
+
+      if (pathname === "/api/footage/import") {
+        const formData = await request.formData();
+        return jsonResponse(await appState.footageRunner.importFiles(formData), 200);
       }
 
       const payload = await readJsonRequest(request);
@@ -207,6 +265,23 @@ export function createFetchHandler(appState) {
       if (pathname === "/api/autolabel") {
         const imageName = String(payload.image || "").trim();
         return jsonResponse(appState.autolabelImage(imageName, payload), 200);
+      }
+
+      if (pathname === "/api/footage/activate") {
+        const framesDir = String(payload.framesDir || "").trim();
+        return jsonResponse(appState.setFramesDir(resolveProjectPath(framesDir)), 200);
+      }
+
+      if (pathname === "/api/footage/preview") {
+        return jsonResponse(appState.footageRunner.preview(payload), 200);
+      }
+
+      if (pathname === "/api/footage/extract") {
+        return jsonResponse(appState.footageRunner.start(payload), 200);
+      }
+
+      if (pathname === "/api/footage/stop") {
+        return jsonResponse(appState.footageRunner.stop(), 200);
       }
 
       if (pathname === "/api/test/preview") {

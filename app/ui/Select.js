@@ -22,6 +22,7 @@ export default function Select({
   placeholder = "Pilih...",
   error = null,
   required = false,
+  helpText = null,
   searchable = false,
   searchPlaceholder = "Cari...",
   className = "",
@@ -40,7 +41,7 @@ export default function Select({
     <div className={`form-control w-full ${className}`}>
       {label && (
         <label className="label" htmlFor={selectId}>
-          <span className="label-text">
+          <span className="label-text font-medium">
             {label}
             {required && <span className="text-error ml-1">*</span>}
           </span>
@@ -73,6 +74,11 @@ export default function Select({
           </option>
         ))}
       </select>
+      {helpText && !error && (
+        <label className="label">
+          <span className="label-text-alt text-base-content/70">{helpText}</span>
+        </label>
+      )}
       {error && (
         <label className="label">
           <span className="label-text-alt text-error">{error}</span>

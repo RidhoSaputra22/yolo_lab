@@ -1,17 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Paragraph } from "./ui.js";
 import LabelerPage from "./pages/LabelerPage.jsx";
+import FootagePage from "./pages/FootagePage.jsx";
 import TesterPage from "./pages/TesterPage.jsx";
 import TrainingPage from "./pages/TrainingPage.jsx";
 import { joinClasses } from "./shared/utils.js";
 
 const ROUTES = {
   labeler: "/",
+  footage: "/footage",
   tester: "/tester",
   training: "/training",
 };
 
 function routeFromPath(pathname) {
+  if (pathname.startsWith("/footage")) {
+    return "footage";
+  }
   if (pathname.startsWith("/tester")) {
     return "tester";
   }
@@ -47,7 +52,14 @@ export default function App() {
 
   const pageMeta = useMemo(
     () =>
-      route === "tester"
+      route === "footage"
+        ? {
+            eyebrow: "Footage Dataset Workspace",
+            title: "Footage Dataset React",
+            description:
+              "Preview video dataset di train/footage, import footage baru, lalu ekstrak frame dengan step yang bisa diatur sebelum lanjut ke labeling.",
+          }
+        : route === "tester"
         ? {
             eyebrow: "Offline Video Runner",
             title: "YOLO Tester React",
@@ -110,6 +122,17 @@ export default function App() {
                 Manual Labeler
               </Button>
               <Button
+                variant={route === "footage" ? "info" : "ghost"}
+                isSubmit={false}
+                className={joinClasses(
+                  "rounded-sm px-5",
+                  route !== "footage" && "border border-base-300 bg-base-100",
+                )}
+                onClick={() => navigate("footage")}
+              >
+                Footage Dataset
+              </Button>
+              <Button
                 variant={route === "tester" ? "secondary" : "ghost"}
                 isSubmit={false}
                 className={joinClasses(
@@ -137,7 +160,9 @@ export default function App() {
       </header>
 
       <main className="mx-auto w-full max-w-[1800px] px-4 py-5 lg:px-6 lg:py-6">
-        {route === "tester" ? (
+        {route === "footage" ? (
+          <FootagePage onNavigate={navigate} />
+        ) : route === "tester" ? (
           <TesterPage onNavigate={navigate} />
         ) : route === "training" ? (
           <TrainingPage onNavigate={navigate} />

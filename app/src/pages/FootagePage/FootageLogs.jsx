@@ -1,15 +1,12 @@
 import React from "react";
 import { LogDock } from "../../components/LogDock.jsx";
 
-/**
- * Logs display component for TesterPage
- */
-export function TesterLogs({ job }) {
+export function FootageLogs({ job }) {
   return (
     <LogDock
-      eyebrow="Log Runner"
+      eyebrow="Log Extract"
       title="stdout + stderr"
-      emptyMessage="Belum ada proses yang dijalankan."
+      emptyMessage="Belum ada proses ekstraksi yang dijalankan."
       logs={job?.logs || []}
       state={job?.state || "idle"}
       running={Boolean(job?.running)}

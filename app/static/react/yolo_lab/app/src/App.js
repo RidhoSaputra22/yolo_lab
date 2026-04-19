@@ -1,15 +1,20 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Paragraph } from "./ui.js";
 import LabelerPage from "./pages/LabelerPage.js";
+import FootagePage from "./pages/FootagePage.js";
 import TesterPage from "./pages/TesterPage.js";
 import TrainingPage from "./pages/TrainingPage.js";
 import { joinClasses } from "./shared/utils.js";
 const ROUTES = {
     labeler: "/",
+    footage: "/footage",
     tester: "/tester",
     training: "/training",
 };
 function routeFromPath(pathname) {
+    if (pathname.startsWith("/footage")) {
+        return "footage";
+    }
     if (pathname.startsWith("/tester")) {
         return "tester";
     }
@@ -39,23 +44,29 @@ export default function App() {
         }
         setRoute(nextRoute);
     };
-    const pageMeta = useMemo(() => route === "tester"
+    const pageMeta = useMemo(() => route === "footage"
         ? {
-            eyebrow: "Offline Video Runner",
-            title: "YOLO Tester React",
-            description: "Jalankan runner test video, preview command, dan review hasil output per folder dalam app React yang berjalan di atas Bun.",
+            eyebrow: "Footage Dataset Workspace",
+            title: "Footage Dataset React",
+            description: "Preview video dataset di train/footage, import footage baru, lalu ekstrak frame dengan step yang bisa diatur sebelum lanjut ke labeling.",
         }
-        : route === "training"
+        : route === "tester"
             ? {
-                eyebrow: "Dataset Training Pipeline",
-                title: "YOLO Training React",
-                description: "Bangun dataset dari label aktif lalu jalankan training YOLO tanpa auto-label ulang, lengkap dengan preview command dan monitoring run.",
+                eyebrow: "Offline Video Runner",
+                title: "YOLO Tester React",
+                description: "Jalankan runner test video, preview command, dan review hasil output per folder dalam app React yang berjalan di atas Bun.",
             }
-            : {
-                eyebrow: "Frame Annotation Workspace",
-                title: "Manual Labeler React",
-                description: "Review frame, koreksi bounding box YOLO, dan simpan label langsung dari canvas interaktif dalam app React Bun.",
-            }, [route]);
+            : route === "training"
+                ? {
+                    eyebrow: "Dataset Training Pipeline",
+                    title: "YOLO Training React",
+                    description: "Bangun dataset dari label aktif lalu jalankan training YOLO tanpa auto-label ulang, lengkap dengan preview command dan monitoring run.",
+                }
+                : {
+                    eyebrow: "Frame Annotation Workspace",
+                    title: "Manual Labeler React",
+                    description: "Review frame, koreksi bounding box YOLO, dan simpan label langsung dari canvas interaktif dalam app React Bun.",
+                }, [route]);
     return (React.createElement("div", { className: "min-h-screen bg-white text-base-content" },
         React.createElement("header", { className: "sticky top-0 z-30 border-b border-base-300/70 bg-base-100/85 backdrop-blur-xl" },
             React.createElement("div", { className: "mx-auto flex w-full max-w-[1800px] flex-col gap-4 px-4 py-4 lg:px-6" },
@@ -70,7 +81,8 @@ export default function App() {
                             React.createElement(Paragraph, { className: "mt-2 max-w-4xl text-sm leading-6 text-slate-600 opacity-100" }, pageMeta.description))),
                     React.createElement("nav", { className: "flex flex-wrap gap-2" },
                         React.createElement(Button, { variant: route === "labeler" ? "primary" : "ghost", isSubmit: false, className: joinClasses("rounded-sm px-5", route !== "labeler" && "border border-base-300 bg-base-100"), onClick: () => navigate("labeler") }, "Manual Labeler"),
+                        React.createElement(Button, { variant: route === "footage" ? "info" : "ghost", isSubmit: false, className: joinClasses("rounded-sm px-5", route !== "footage" && "border border-base-300 bg-base-100"), onClick: () => navigate("footage") }, "Footage Dataset"),
                         React.createElement(Button, { variant: route === "tester" ? "secondary" : "ghost", isSubmit: false, className: joinClasses("rounded-sm px-5", route !== "tester" && "border border-base-300 bg-base-100"), onClick: () => navigate("tester") }, "YOLO Tester"),
                         React.createElement(Button, { variant: route === "training" ? "warning" : "ghost", isSubmit: false, className: joinClasses("rounded-sm px-5", route !== "training" && "border border-base-300 bg-base-100"), onClick: () => navigate("training") }, "YOLO Training"))))),
-        React.createElement("main", { className: "mx-auto w-full max-w-[1800px] px-4 py-5 lg:px-6 lg:py-6" }, route === "tester" ? (React.createElement(TesterPage, { onNavigate: navigate })) : route === "training" ? (React.createElement(TrainingPage, { onNavigate: navigate })) : (React.createElement(LabelerPage, { onNavigate: navigate })))));
+        React.createElement("main", { className: "mx-auto w-full max-w-[1800px] px-4 py-5 lg:px-6 lg:py-6" }, route === "footage" ? (React.createElement(FootagePage, { onNavigate: navigate })) : route === "tester" ? (React.createElement(TesterPage, { onNavigate: navigate })) : route === "training" ? (React.createElement(TrainingPage, { onNavigate: navigate })) : (React.createElement(LabelerPage, { onNavigate: navigate })))));
 }

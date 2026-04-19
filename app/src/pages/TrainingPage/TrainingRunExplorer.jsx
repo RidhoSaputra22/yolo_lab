@@ -1,6 +1,6 @@
 import React from "react";
 import { Alert, Badge, Button, Card, Paragraph } from "../../ui.js";
-import { formatCount, joinClasses } from "../../shared/utils.js";
+import { formatCount, formatTimestamp, joinClasses } from "../../shared/utils.js";
 import { formatMetric } from "../../shared/formHelpers.js";
 
 /**
@@ -14,9 +14,9 @@ export function TrainingRunExplorer({
   onSelectRun,
 }) {
   return (
-    <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+    <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
       {/* Run list sidebar */}
-      <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-xl">
+      <Card className="h-fit rounded-sm border border-base-300 bg-base-100/90 shadow-xl xl:sticky xl:top-28">
         <div className="space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -41,28 +41,42 @@ export function TrainingRunExplorer({
                   type="button"
                   onClick={() => onSelectRun(run.key)}
                   className={joinClasses(
-                    "rounded-sm border p-4 text-left transition duration-150",
+                    "w-full rounded-sm border p-4 text-left transition duration-150",
                     run.key === selectedRunKey
                       ? "border-warning bg-warning/10 shadow-md"
                       : "border-base-300 bg-base-100 hover:-translate-y-0.5 hover:border-base-content/20",
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{run.key}</p>
-                      <p className="mt-1 text-[11px] text-slate-500">{run.path}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-slate-900">{run.key}</p>
+                      <p className="mt-1 break-all font-mono text-[11px] leading-5 text-slate-500">
+                        {run.path}
+                      </p>
                     </div>
-                    <Badge type={run.key === selectedRunKey ? "warning" : "ghost"} className="px-3 py-3">
+                    <Badge
+                      type={run.key === selectedRunKey ? "warning" : "ghost"}
+                      className="shrink-0 px-3 py-2"
+                    >
                       {run.metrics?.lastEpoch ? `ep ${run.metrics.lastEpoch}` : run.fileCount}
                     </Badge>
                   </div>
-                  <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-slate-500">
-                    <span>{run.totalSizeLabel}</span>
-                    <span>{run.updatedAt}</span>
+                  <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-[11px]">
+                    <div>
+                      <p className="uppercase tracking-[0.18em] text-slate-400">Size</p>
+                      <p className="mt-1 font-medium text-slate-600">{run.totalSizeLabel}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="uppercase tracking-[0.18em] text-slate-400">Updated</p>
+                      <p className="mt-1 font-medium text-slate-600">{formatTimestamp(run.updatedAt)}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="uppercase tracking-[0.18em] text-slate-400">mAP50-95</p>
+                      <p className="mt-1 font-medium text-slate-500">
+                        {formatMetric(run.metrics?.bestMap50_95, { percent: true })}
+                      </p>
+                    </div>
                   </div>
-                  <p className="mt-2 text-[11px] text-slate-400">
-                    mAP50-95 {formatMetric(run.metrics?.bestMap50_95, { percent: true })}
-                  </p>
                 </button>
               ))
             ) : (

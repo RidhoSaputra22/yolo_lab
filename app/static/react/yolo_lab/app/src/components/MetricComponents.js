@@ -15,7 +15,7 @@ export function StatusMetric({ label, value, detail, tone = "" }) {
  */
 export function MetricTile({ label, value, detail, tone = "" }) {
     return (React.createElement("div", { className: "rounded-sm border border-base-300 bg-base-200/40 p-3" },
-        React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, label),
-        React.createElement("p", { className: joinClasses("mt-2 text-base font-semibold text-slate-900", tone) }, value),
-        detail ? React.createElement("p", { className: "mt-1 text-[11px] text-slate-500" }, detail) : null));
+        React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-white" }, label),
+        React.createElement("p", { className: joinClasses("mt-2 text-base font-semibold ", tone) }, value),
+        detail ? React.createElement("p", { className: "mt-1 text-[11px] text-white" }, detail) : null));
 }

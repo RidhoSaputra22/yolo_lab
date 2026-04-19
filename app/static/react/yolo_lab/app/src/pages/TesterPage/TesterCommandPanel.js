@@ -12,14 +12,6 @@ export function TesterCommandPanel({ preview, previewError, previewState, job, d
         error: { type: "error", label: "error" },
     }[previewState] || { type: "ghost", label: "menunggu" };
     return (React.createElement("div", { className: "grid gap-4" },
-        React.createElement(Card, { className: "rounded-sm border border-base-300 bg-slate-950 text-slate-100 shadow-lg" },
-            React.createElement("div", { className: "space-y-3" },
-                React.createElement("div", { className: "flex items-center justify-between gap-3" },
-                    React.createElement("h3", { className: "text-lg font-bold" }, "Command"),
-                    React.createElement(Badge, { type: previewBadge.type, className: "border-none px-3 py-3" }, previewBadge.label)),
-                React.createElement("pre", { className: "max-h-[260px] overflow-auto rounded-sm bg-slate-900/70 p-4 text-xs leading-6 text-slate-100" }, previewError ||
-                    preview?.commandDisplay ||
-                    "Isi form konfigurasi untuk melihat command runner."))),
         React.createElement(Card, { className: "rounded-sm border border-base-300 bg-base-100/90 shadow-lg" },
             React.createElement("div", { className: "space-y-4" },
                 React.createElement("div", { className: "flex flex-wrap items-center justify-between gap-2" },

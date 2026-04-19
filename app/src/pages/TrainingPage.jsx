@@ -162,7 +162,7 @@ export default function TrainingPage() {
         : job?.running ? "warning" : "ghost";
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4 pb-[260px] md:pb-[300px]">
       {/* Top action bar: status + actions + warnings */}
       <section className="flex flex-col gap-3 rounded-sm border border-base-300 bg-base-100/90 p-4 shadow-lg xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-wrap items-center gap-3">
@@ -257,9 +257,10 @@ export default function TrainingPage() {
             onSelectRun={setSelectedRunKey}
           />
 
-          <TrainingLogs job={job} />
         </section>
       </div>
+
+      <TrainingLogs job={job} />
     </div>
   );
 }

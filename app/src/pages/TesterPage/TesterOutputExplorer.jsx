@@ -1,6 +1,58 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, Badge, Card, Button, Paragraph } from "../../ui.js";
 import { formatCount, joinClasses } from "../../shared/utils.js";
+
+function RunVideoPreview({ run }) {
+  const initialPlaybackError =
+    run.video?.videoPlayback && run.video.videoPlayback.playable === false
+      ? run.video.videoPlayback.issue
+      : "";
+  const [playbackError, setPlaybackError] = useState(initialPlaybackError);
+
+  useEffect(() => {
+    setPlaybackError(
+      run.video?.videoPlayback && run.video.videoPlayback.playable === false
+        ? run.video.videoPlayback.issue
+        : "",
+    );
+  }, [run.video?.path, run.video?.videoPlayback?.playable, run.video?.videoPlayback?.issue]);
+
+  if (!run.video?.downloadUrl) {
+    return (
+      <div className="grid aspect-video place-items-center border-b border-base-300 bg-slate-950 px-4 text-center text-sm text-slate-400">
+        File video belum tersedia untuk run ini.
+      </div>
+    );
+  }
+
+  if (playbackError) {
+    return (
+      <div className="grid aspect-video place-items-center border-b border-base-300 bg-slate-950 px-6 text-center">
+        <div className="max-w-xl space-y-3">
+          <p className="text-base font-semibold text-slate-100">Video belum bisa diputar di browser</p>
+          <p className="text-sm leading-6 text-slate-400">{playbackError}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-b border-base-300 bg-slate-950">
+      <video
+        className="aspect-video w-full bg-slate-950"
+        controls
+        preload="metadata"
+        onError={() =>
+          setPlaybackError(
+            "Browser gagal memutar video ini. Codec video mungkin tidak didukung atau file output belum final.",
+          )
+        }
+      >
+        <source src={run.video.downloadUrl} type="video/mp4" />
+      </video>
+    </div>
+  );
+}
 
 /**
  * Output explorer and results viewer for TesterPage
@@ -117,20 +169,7 @@ export function TesterOutputExplorer({
                       key={run.key}
                       className="overflow-hidden rounded-sm border border-base-300 bg-base-100 shadow-md"
                     >
-                      {run.video?.downloadUrl ? (
-                        <div className="border-b border-base-300 bg-slate-950">
-                          <video
-                            className="aspect-video w-full bg-slate-950"
-                            controls
-                            preload="metadata"
-                            src={run.video.downloadUrl}
-                          />
-                        </div>
-                      ) : (
-                        <div className="grid aspect-video place-items-center border-b border-base-300 bg-slate-950 px-4 text-center text-sm text-slate-400">
-                          File video belum tersedia untuk run ini.
-                        </div>
-                      )}
+                      <RunVideoPreview run={run} />
 
                       <div className="grid gap-4 p-5">
                         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -146,8 +185,21 @@ export function TesterOutputExplorer({
                         </div>
 
                         <div className="flex flex-wrap gap-2">
-                          <Badge type={run.video ? "success" : "ghost"} className="px-3 py-3">
-                            {run.video ? "Video" : "Tanpa video"}
+                          <Badge
+                            type={
+                              run.video?.videoPlayback?.playable === false
+                                ? "warning"
+                                : run.video
+                                  ? "success"
+                                  : "ghost"
+                            }
+                            className="px-3 py-3"
+                          >
+                            {run.video?.videoPlayback?.playable === false
+                              ? "Video belum final"
+                              : run.video
+                                ? "Video"
+                                : "Tanpa video"}
                           </Badge>
                           {run.summary ? (
                             <Badge type="warning" className="px-3 py-3">

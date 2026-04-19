@@ -25,11 +25,11 @@ export function StatusMetric({ label, value, detail, tone = "" }) {
 export function MetricTile({ label, value, detail, tone = "" }) {
   return (
     <div className="rounded-sm border border-base-300 bg-base-200/40 p-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
         {label}
       </p>
-      <p className={joinClasses("mt-2 text-base font-semibold text-slate-900", tone)}>{value}</p>
-      {detail ? <p className="mt-1 text-[11px] text-slate-500">{detail}</p> : null}
+      <p className={joinClasses("mt-2 text-base font-semibold ", tone)}>{value}</p>
+      {detail ? <p className="mt-1 text-[11px] text-white">{detail}</p> : null}
     </div>
   );
 }

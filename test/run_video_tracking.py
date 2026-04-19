@@ -7,6 +7,8 @@ import argparse
 import csv
 import json
 import os
+import shutil
+import subprocess
 import sys
 import time
 from datetime import datetime
@@ -517,6 +519,60 @@ def _writer_fps(source_fps: float, output_fps: float, frame_step: int) -> float:
     return max(adjusted, 1.0)
 
 
+def _release_writer(writer: Any) -> None:
+    if writer is None:
+        return
+    try:
+        writer.release()
+    except Exception:
+        pass
+
+
+def _transcode_video_for_browser(video_path: Path) -> Tuple[bool, Optional[str]]:
+    if not video_path.exists() or video_path.stat().st_size <= 0:
+        return False, "File output video belum terbentuk penuh sehingga tidak bisa ditranskode."
+
+    ffmpeg_bin = shutil.which("ffmpeg")
+    if not ffmpeg_bin:
+        return False, "ffmpeg tidak tersedia, output disimpan dengan codec desktop dan mungkin gagal diputar di browser."
+
+    temp_path = video_path.with_name(f"{video_path.stem}.browser_tmp{video_path.suffix}")
+    if temp_path.exists():
+        temp_path.unlink()
+
+    command = [
+        ffmpeg_bin,
+        "-y",
+        "-loglevel",
+        "error",
+        "-i",
+        str(video_path),
+        "-an",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "23",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        str(temp_path),
+    ]
+
+    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    if completed.returncode != 0 or not temp_path.exists() or temp_path.stat().st_size <= 0:
+        if temp_path.exists():
+            temp_path.unlink()
+        error_text = (completed.stderr or completed.stdout or "").strip()
+        error_detail = error_text.splitlines()[-1] if error_text else "detail error tidak tersedia"
+        return False, f"Gagal menyiapkan video H.264 browser-friendly: {error_detail}"
+
+    os.replace(temp_path, video_path)
+    return True, None
+
+
 def _build_tracker(args: argparse.Namespace) -> Tuple[Any, str]:
     if not args.force_centroid and DEEPSORT_AVAILABLE:
         tracker = DeepSORTTracker(
@@ -621,6 +677,8 @@ def main() -> int:
         print(f"Gagal membuka video: {input_path}", file=sys.stderr)
         return 1
 
+    writer: Optional[Any] = None
+    writer_released = False
     try:
         source_fps = float(capture.get(cv2.CAP_PROP_FPS) or 0.0)
         source_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
@@ -1010,6 +1068,14 @@ def main() -> int:
         unique_visitors_exited_roi = len(canonical_unique_event_visitors["exit_roi"])
         repeat_entry_events = max(0, event_counts["enter_roi"] - unique_visitors_entered_roi)
         repeat_exit_events = max(0, event_counts["exit_roi"] - unique_visitors_exited_roi)
+        _release_writer(writer)
+        writer_released = True
+
+        browser_video_ready, browser_video_issue = _transcode_video_for_browser(video_path)
+        if browser_video_ready:
+            print(f"[info] browser : siap diputar di browser ({video_path.name})")
+        elif browser_video_issue:
+            print(f"[warn] browser : {browser_video_issue}", file=sys.stderr)
 
         summary = {
             "input_video": str(input_path),
@@ -1033,6 +1099,8 @@ def main() -> int:
             "output_fps": round(writer_fps, 3),
             "source_size": [source_width, source_height],
             "output_size": [frame_width, frame_height],
+            "browser_video_ready": browser_video_ready,
+            "browser_video_issue": browser_video_issue,
             "frames_processed": processed_frames,
             "frames_with_detections": frames_with_detections,
             "track_rows_written": csv_rows,
@@ -1105,10 +1173,8 @@ def main() -> int:
         return 0
     finally:
         capture.release()
-        try:
-            writer.release()
-        except UnboundLocalError:
-            pass
+        if not writer_released:
+            _release_writer(writer)
 
 
 if __name__ == "__main__":

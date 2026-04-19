@@ -21,21 +21,7 @@ export function TesterCommandPanel({
 
   return (
     <div className="grid gap-4">
-      <Card className="rounded-sm border border-base-300 bg-slate-950 text-slate-100 shadow-lg">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-lg font-bold">Command</h3>
-            <Badge type={previewBadge.type} className="border-none px-3 py-3">
-              {previewBadge.label}
-            </Badge>
-          </div>
-          <pre className="max-h-[260px] overflow-auto rounded-sm bg-slate-900/70 p-4 text-xs leading-6 text-slate-100">
-            {previewError ||
-              preview?.commandDisplay ||
-              "Isi form konfigurasi untuk melihat command runner."}
-          </pre>
-        </div>
-      </Card>
+      
 
       <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
         <div className="space-y-4">
