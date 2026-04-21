@@ -29,6 +29,7 @@ function routeFromPath(pathname) {
 
 export default function App() {
   const [route, setRoute] = useState(() => routeFromPath(window.location.pathname));
+  const isLabelerRoute = route === "labeler";
 
   useEffect(() => {
     const handlePopState = () => {
@@ -85,83 +86,177 @@ export default function App() {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-white text-base-content">
-        <header className="sticky top-0 z-30 border-b border-base-300/70 bg-base-100/85 backdrop-blur-xl">
-          <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4 px-4 py-4 lg:px-6">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge type="warning" className="gap-1 border-none px-3 py-3">
-                    Train Toolkit
-                  </Badge>
-                  <Badge type="info" outline className="px-3 py-3">
-                    React + Bun
-                  </Badge>
+      <div
+        className={joinClasses(
+          isLabelerRoute ? "flex h-screen flex-col overflow-hidden" : "min-h-screen",
+          "bg-white text-base-content",
+        )}
+      >
+        <header
+          className={joinClasses(
+            "z-30 border-b border-base-300/70 bg-base-100/85 backdrop-blur-xl",
+            isLabelerRoute ? "shrink-0" : "sticky top-0",
+          )}
+        >
+          <div
+            className={joinClasses(
+              "mx-auto flex w-full max-w-[1800px] px-4 lg:px-6",
+              isLabelerRoute ? "items-center justify-between gap-4 py-3" : "flex-col gap-4 py-4",
+            )}
+          >
+            {isLabelerRoute ? (
+              <>
+                <div className="min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge type="warning" className="gap-1 border-none px-3 py-3">
+                      Train Toolkit
+                    </Badge>
+                    <Badge type="info" outline className="px-3 py-3">
+                      React + Bun
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-700">
+                      {pageMeta.eyebrow}
+                    </p>
+                    <h1 className="mt-1 truncate text-xl font-bold tracking-tight text-slate-900">
+                      {pageMeta.title}
+                    </h1>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-700">
-                    {pageMeta.eyebrow}
-                  </p>
-                  <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-                    {pageMeta.title}
-                  </h1>
-                  <Paragraph className="mt-2 max-w-4xl text-sm leading-6 text-slate-600 opacity-100">
-                    {pageMeta.description}
-                  </Paragraph>
-                </div>
-              </div>
 
-              <nav className="flex flex-wrap gap-2">
-                <Button
-                  variant={route === "labeler" ? "primary" : "ghost"}
-                  isSubmit={false}
-                  className={joinClasses(
-                    "rounded-sm px-5",
-                    route !== "labeler" && "border border-base-300 bg-base-100",
-                  )}
-                  onClick={() => navigate("labeler")}
-                >
-                  Manual Labeler
-                </Button>
-                <Button
-                  variant={route === "footage" ? "info" : "ghost"}
-                  isSubmit={false}
-                  className={joinClasses(
-                    "rounded-sm px-5",
-                    route !== "footage" && "border border-base-300 bg-base-100",
-                  )}
-                  onClick={() => navigate("footage")}
-                >
-                  Footage Dataset
-                </Button>
-                <Button
-                  variant={route === "tester" ? "secondary" : "ghost"}
-                  isSubmit={false}
-                  className={joinClasses(
-                    "rounded-sm px-5",
-                    route !== "tester" && "border border-base-300 bg-base-100",
-                  )}
-                  onClick={() => navigate("tester")}
-                >
-                  YOLO Tester
-                </Button>
-                <Button
-                  variant={route === "training" ? "warning" : "ghost"}
-                  isSubmit={false}
-                  className={joinClasses(
-                    "rounded-sm px-5",
-                    route !== "training" && "border border-base-300 bg-base-100",
-                  )}
-                  onClick={() => navigate("training")}
-                >
-                  YOLO Training
-                </Button>
-              </nav>
-            </div>
+                <nav className="flex flex-wrap justify-end gap-2">
+                  <Button
+                    variant={route === "labeler" ? "primary" : "ghost"}
+                    isSubmit={false}
+                    size="sm"
+                    className={joinClasses(
+                      "rounded-sm px-4",
+                      route !== "labeler" && "border border-base-300 bg-base-100",
+                    )}
+                    onClick={() => navigate("labeler")}
+                  >
+                    Manual Labeler
+                  </Button>
+                  <Button
+                    variant={route === "footage" ? "info" : "ghost"}
+                    isSubmit={false}
+                    size="sm"
+                    className={joinClasses(
+                      "rounded-sm px-4",
+                      route !== "footage" && "border border-base-300 bg-base-100",
+                    )}
+                    onClick={() => navigate("footage")}
+                  >
+                    Footage Dataset
+                  </Button>
+                  <Button
+                    variant={route === "tester" ? "secondary" : "ghost"}
+                    isSubmit={false}
+                    size="sm"
+                    className={joinClasses(
+                      "rounded-sm px-4",
+                      route !== "tester" && "border border-base-300 bg-base-100",
+                    )}
+                    onClick={() => navigate("tester")}
+                  >
+                    YOLO Tester
+                  </Button>
+                  <Button
+                    variant={route === "training" ? "warning" : "ghost"}
+                    isSubmit={false}
+                    size="sm"
+                    className={joinClasses(
+                      "rounded-sm px-4",
+                      route !== "training" && "border border-base-300 bg-base-100",
+                    )}
+                    onClick={() => navigate("training")}
+                  >
+                    YOLO Training
+                  </Button>
+                </nav>
+              </>
+            ) : (
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge type="warning" className="gap-1 border-none px-3 py-3">
+                      Train Toolkit
+                    </Badge>
+                    <Badge type="info" outline className="px-3 py-3">
+                      React + Bun
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-700">
+                      {pageMeta.eyebrow}
+                    </p>
+                    <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                      {pageMeta.title}
+                    </h1>
+                    <Paragraph className="mt-2 max-w-4xl text-sm leading-6 text-slate-600 opacity-100">
+                      {pageMeta.description}
+                    </Paragraph>
+                  </div>
+                </div>
+
+                <nav className="flex flex-wrap gap-2">
+                  <Button
+                    variant={route === "labeler" ? "primary" : "ghost"}
+                    isSubmit={false}
+                    className={joinClasses(
+                      "rounded-sm px-5",
+                      route !== "labeler" && "border border-base-300 bg-base-100",
+                    )}
+                    onClick={() => navigate("labeler")}
+                  >
+                    Manual Labeler
+                  </Button>
+                  <Button
+                    variant={route === "footage" ? "info" : "ghost"}
+                    isSubmit={false}
+                    className={joinClasses(
+                      "rounded-sm px-5",
+                      route !== "footage" && "border border-base-300 bg-base-100",
+                    )}
+                    onClick={() => navigate("footage")}
+                  >
+                    Footage Dataset
+                  </Button>
+                  <Button
+                    variant={route === "tester" ? "secondary" : "ghost"}
+                    isSubmit={false}
+                    className={joinClasses(
+                      "rounded-sm px-5",
+                      route !== "tester" && "border border-base-300 bg-base-100",
+                    )}
+                    onClick={() => navigate("tester")}
+                  >
+                    YOLO Tester
+                  </Button>
+                  <Button
+                    variant={route === "training" ? "warning" : "ghost"}
+                    isSubmit={false}
+                    className={joinClasses(
+                      "rounded-sm px-5",
+                      route !== "training" && "border border-base-300 bg-base-100",
+                    )}
+                    onClick={() => navigate("training")}
+                  >
+                    YOLO Training
+                  </Button>
+                </nav>
+              </div>
+            )}
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1800px] px-4 py-5 lg:px-6 lg:py-6">
+        <main
+          className={joinClasses(
+            "mx-auto w-full max-w-[1800px] px-4 lg:px-6",
+            isLabelerRoute ? "flex-1 min-h-0 overflow-hidden py-4 lg:py-4" : "py-5 lg:py-6",
+          )}
+        >
           {route === "footage" ? (
             <FootagePage onNavigate={navigate} />
           ) : route === "tester" ? (

@@ -62,17 +62,17 @@ export function boxesEqual(leftBoxes, rightBoxes) {
  * Calculate display metrics for image with zoom level
  */
 export function getDisplayMetricsForZoom(naturalSize, stageSize, zoomLevel) {
-  if (!naturalSize.width || !naturalSize.height || !stageSize.width || !stageSize.height) {
+  if (!naturalSize.width || !naturalSize.height) {
     return {
-      fitScale: 0,
+      fitScale: 1,
       displayScale: 0,
       width: 0,
       height: 0,
     };
   }
 
-  const fitScale = Math.min(stageSize.width / naturalSize.width, stageSize.height / naturalSize.height);
-  const displayScale = fitScale * clamp(zoomLevel, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL);
+  const fitScale = 1;
+  const displayScale = clamp(zoomLevel, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL);
 
   return {
     fitScale,

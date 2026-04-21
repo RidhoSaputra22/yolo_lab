@@ -1,6 +1,7 @@
 import React from "react";
-import { Alert, Badge, Button, Card, Select } from "../../ui.js";
+import { Alert, Badge, Button, Input, Select } from "../../ui.js";
 import { joinClasses } from "../../shared/utils.js";
+import { LabelerSidebarSection } from "./LabelerSidebarSection.jsx";
 
 /**
  * Left sidebar component for LabelerPage
@@ -36,14 +37,31 @@ export function LabelerSidebar({
   ];
 
   return (
-    <aside className="grid h-fit gap-4 xl:sticky xl:top-28">
-      <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+    <div className="grid gap-4">
+      <LabelerSidebarSection
+        title="Dataset"
+        eyebrow="Navigator"
+        description="Atur folder aktif, filter daftar frame, dan ringkas progres labeling dari satu panel."
+        badge={
+          <Badge type="warning" className="px-3 py-3">
+            {frameFolders.length}
+          </Badge>
+        }
+        defaultOpen
+      >
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-lg font-bold">Folder Frame</h3>
-            <Badge type="warning" className="px-3 py-3">
-              {frameFolders.length}
-            </Badge>
+          <div className="grid grid-cols-2 gap-3">
+            {summaryCards.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-sm border border-base-300 bg-base-200/40 px-3 py-3"
+              >
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {item.label}
+                </p>
+                <p className="mt-2 text-lg font-bold text-slate-900">{item.value}</p>
+              </div>
+            ))}
           </div>
 
           <Select
@@ -59,6 +77,30 @@ export function LabelerSidebar({
             helpText="Labeler akan memuat frame dari subfolder `train/frames` yang kamu pilih."
             disabled={disabled}
           />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Select
+              name="labeler-filter"
+              label="Status frame"
+              value={filterValue}
+              onChange={(event) => onFilterChange(event.target.value)}
+              options={[
+                { value: "all", label: "Semua frame" },
+                { value: "pending", label: "Belum dilabel" },
+                { value: "done", label: "Sudah dilabel" },
+              ]}
+              disabled={disabled}
+            />
+
+            <Input
+              name="labeler-search"
+              label="Cari frame"
+              placeholder="Cari nama file..."
+              value={searchQuery}
+              onChange={(event) => onSearchChange(event.target.value)}
+              disabled={disabled}
+            />
+          </div>
 
           <div className="flex items-center justify-between gap-2 rounded-sm border border-base-300 bg-base-200/40 px-3 py-2">
             <div className="min-w-0">
@@ -81,66 +123,67 @@ export function LabelerSidebar({
             </Button>
           </div>
         </div>
-      </Card>
+      </LabelerSidebarSection>
 
-      <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-lg font-bold">Frames</h3>
-            <Badge type="info" className="px-3 py-3">
-              {visibleImages.length}
-            </Badge>
-          </div>
+      <LabelerSidebarSection
+        title="Frames"
+        eyebrow="Browser"
+        description="Pilih frame yang ingin dilabel dari daftar aktif."
+        badge={
+          <Badge type="info" className="px-3 py-3">
+            {visibleImages.length}
+          </Badge>
+        }
+        defaultOpen
+      >
+        <div className="space-y-3 h-[400px] overflow-auto">
+          {visibleImages.length ? (
+            visibleImages.map((item) => {
+              const itemState = item.parseError
+                ? { type: "error", label: "Label invalid" }
+                : item.hasLabelFile
+                  ? { type: "success", label: "Ada file label" }
+                  : { type: "ghost", label: "Belum ada file" };
 
-          <div className="max-h-[60vh] space-y-3 overflow-auto pr-1">
-            {visibleImages.length ? (
-              visibleImages.map((item) => {
-                const itemState = item.parseError
-                  ? { type: "error", label: "Label invalid" }
-                  : item.hasLabelFile
-                    ? { type: "success", label: "Ada file label" }
-                    : { type: "ghost", label: "Belum ada file" };
-
-                return (
-                  <button
-                    key={item.name}
-                    type="button"
-                    onClick={() => onImageSelect(item.name)}
-                    disabled={disabled}
-                    className={joinClasses(
-                      "w-full rounded-sm border p-4 text-left transition duration-150 disabled:cursor-not-allowed disabled:opacity-70",
-                      item.name === currentImageName
-                        ? "border-warning bg-warning/10 shadow-md"
-                        : "border-base-300 bg-base-100 hover:-translate-y-0.5 hover:border-base-content/20",
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="break-all text-sm font-semibold text-slate-900">{item.name}</p>
-                      <Badge type="warning" className="px-3 py-3">
-                        {item.boxCount || 0}
+              return (
+                <button
+                  key={item.name}
+                  type="button"
+                  onClick={() => onImageSelect(item.name)}
+                  disabled={disabled}
+                  className={joinClasses(
+                    "w-full rounded-sm border p-4 text-left transition duration-150 disabled:cursor-not-allowed disabled:opacity-70",
+                    item.name === currentImageName
+                      ? "border-warning bg-warning/10 shadow-md"
+                      : "border-base-300 bg-base-100 hover:-translate-y-0.5 hover:border-base-content/20",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="break-all text-sm font-semibold text-slate-900">{item.name}</p>
+                    <Badge type="warning" className="px-3 py-3">
+                      {item.boxCount || 0}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Badge type={itemState.type} className="px-3 py-3">
+                      {itemState.label}
+                    </Badge>
+                    {item.isCheckpoint ? (
+                      <Badge type="warning" outline className="px-3 py-3">
+                        Checkpoint
                       </Badge>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge type={itemState.type} className="px-3 py-3">
-                        {itemState.label}
-                      </Badge>
-                      {item.isCheckpoint ? (
-                        <Badge type="warning" outline className="px-3 py-3">
-                          Checkpoint
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </button>
-                );
-              })
-            ) : (
-              <Alert type="info" className="rounded-sm text-sm">
-                Tidak ada frame yang cocok dengan filter saat ini.
-              </Alert>
-            )}
-          </div>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            })
+          ) : (
+            <Alert type="info" className="rounded-sm text-sm">
+              Tidak ada frame yang cocok dengan filter saat ini.
+            </Alert>
+          )}
         </div>
-      </Card>
-    </aside>
+      </LabelerSidebarSection>
+    </div>
   );
 }

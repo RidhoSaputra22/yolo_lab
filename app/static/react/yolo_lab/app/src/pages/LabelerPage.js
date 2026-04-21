@@ -23,8 +23,8 @@ import { fetchJson } from "../shared/api.js";
 import { mergeJobLog, useJobEventStream } from "../shared/jobStream.js";
 import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
 import { useToast } from "../shared/toast.js";
-import { clamp, formatCount } from "../shared/utils.js";
-import { LabelerSidebar, LabelerCanvas, LabelerToolPanel, LabelerHeader, LabelerAutolabelModal, LabelerLogs, BOX_COLORS, MAX_UNDO_STEPS, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL, ZOOM_WHEEL_FACTOR, createNotice, filterImages, cloneBoxes, boxesEqual, getDisplayMetricsForZoom, getStageLayoutMetrics, useCanvasGeometry, useZoomInteraction, } from "./LabelerPage/index.js";
+import { clamp } from "../shared/utils.js";
+import { LabelerSidebar, LabelerCanvas, LabelerToolPanel, LabelerHeader, LabelerAutolabelModal, LabelerLogs, BOX_COLORS, MAX_UNDO_STEPS, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL, ZOOM_WHEEL_FACTOR, createNotice, filterImages, cloneBoxes, boxesEqual, getDisplayMetricsForZoom, getStageLayoutMetrics, } from "./LabelerPage/index.js";
 export default function LabelerPage() {
     // State management
     const [classNames, setClassNames] = useState([]);
@@ -44,7 +44,6 @@ export default function LabelerPage() {
     const [filterValue, setFilterValue] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [undoStack, setUndoStack] = useState([]);
-    const [interaction, setInteraction] = useState(null);
     const [imageSrc, setImageSrc] = useState("");
     const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
     const [isLoading, setIsLoading] = useState(true);
@@ -69,12 +68,15 @@ export default function LabelerPage() {
     const boxesRef = useRef(boxes);
     const selectedBoxIdRef = useRef(selectedBoxId);
     const activeClassIdRef = useRef(activeClassId);
-    const interactionRef = useRef(interaction);
+    const interactionRef = useRef(null);
     const currentImageNameRef = useRef(currentImageName);
     const naturalSizeRef = useRef(naturalSize);
     const stageSizeRef = useRef(stageSize);
+    const zoomLevelRef = useRef(zoomLevel);
     const undoStackRef = useRef(undoStack);
     const imagesRef = useRef(images);
+    const draftBoxesRef = useRef(null);
+    const overlayFrameRef = useRef(0);
     const preferencesHydratedRef = useRef(false);
     const previousAutolabelRunningRef = useRef(false);
     const { setNotice } = useToast();
@@ -92,9 +94,6 @@ export default function LabelerPage() {
         activeClassIdRef.current = activeClassId;
     }, [activeClassId]);
     useEffect(() => {
-        interactionRef.current = interaction;
-    }, [interaction]);
-    useEffect(() => {
         currentImageNameRef.current = currentImageName;
     }, [currentImageName]);
     useEffect(() => {
@@ -104,11 +103,26 @@ export default function LabelerPage() {
         stageSizeRef.current = stageSize;
     }, [stageSize]);
     useEffect(() => {
+        zoomLevelRef.current = zoomLevel;
+    }, [zoomLevel]);
+    useEffect(() => {
         undoStackRef.current = undoStack;
     }, [undoStack]);
     useEffect(() => {
         imagesRef.current = images;
     }, [images]);
+    useEffect(() => {
+        setZoomLevel((current) => {
+            const nextZoom = clamp(current, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL);
+            zoomLevelRef.current = nextZoom;
+            return nextZoom;
+        });
+    }, []);
+    useEffect(() => () => {
+        if (overlayFrameRef.current) {
+            cancelAnimationFrame(overlayFrameRef.current);
+        }
+    }, []);
     const isLabelingLocked = Boolean(autolabelJob?.running);
     useEffect(() => {
         const viewport = stageViewportRef.current;
@@ -280,6 +294,8 @@ export default function LabelerPage() {
             setParseError(labelData?.parseError || null);
             setCurrentImageName(name);
             markDirty(false);
+            interactionRef.current = null;
+            draftBoxesRef.current = null;
             setBoxes([]);
             setSelectedBoxId(null);
             setUndoStack([]);
@@ -535,6 +551,7 @@ export default function LabelerPage() {
         markDirty(true);
     };
     const resetZoom = () => {
+        zoomLevelRef.current = 1;
         setZoomLevel(1);
         if (stageViewportRef.current) {
             stageViewportRef.current.scrollLeft = 0;
@@ -543,20 +560,49 @@ export default function LabelerPage() {
     };
     const zoomAtViewportPoint = (getNextZoom, anchorClientPoint = null) => {
         const viewport = stageViewportRef.current;
-        if (!viewport || !frameShellRef.current)
+        const frameShell = frameShellRef.current;
+        const currentNaturalSize = naturalSizeRef.current;
+        const currentStageSize = stageSizeRef.current;
+        if (!viewport ||
+            !frameShell ||
+            !currentNaturalSize.width ||
+            !currentNaturalSize.height ||
+            !currentStageSize.width ||
+            !currentStageSize.height) {
             return;
+        }
         const viewportRect = viewport.getBoundingClientRect();
-        const frameRect = frameShellRef.current.getBoundingClientRect();
-        const anchorX = anchorClientPoint?.x ?? viewportRect.left + viewportRect.width / 2;
-        const anchorY = anchorClientPoint?.y ?? viewportRect.top + viewportRect.height / 2;
-        const relativeX = anchorX - frameRect.left;
-        const relativeY = anchorY - frameRect.top;
-        const nextZoom = getNextZoom(zoomLevel);
-        setZoomLevel(clamp(nextZoom, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL));
+        const frameRect = frameShell.getBoundingClientRect();
+        const currentZoom = zoomLevelRef.current;
+        const anchorX = anchorClientPoint?.x ?? viewportRect.left + viewport.clientWidth / 2;
+        const anchorY = anchorClientPoint?.y ?? viewportRect.top + viewport.clientHeight / 2;
+        const currentScaleX = frameRect.width / currentNaturalSize.width;
+        const currentScaleY = frameRect.height / currentNaturalSize.height;
+        const imagePointX = clamp((anchorX - frameRect.left) / currentScaleX, 0, currentNaturalSize.width);
+        const imagePointY = clamp((anchorY - frameRect.top) / currentScaleY, 0, currentNaturalSize.height);
+        const nextZoom = clamp(getNextZoom(currentZoom), MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL);
+        if (Math.abs(nextZoom - currentZoom) < 0.0001) {
+            return;
+        }
+        zoomLevelRef.current = nextZoom;
+        setZoomLevel(nextZoom);
         requestAnimationFrame(() => {
-            const ratio = nextZoom / zoomLevel;
-            viewport.scrollLeft = relativeX * ratio - (anchorX - viewportRect.left);
-            viewport.scrollTop = relativeY * ratio - (anchorY - viewportRect.top);
+            const nextViewport = stageViewportRef.current;
+            if (!nextViewport) {
+                return;
+            }
+            const nextDisplayMetrics = getDisplayMetricsForZoom(currentNaturalSize, currentStageSize, nextZoom);
+            const nextStageLayout = getStageLayoutMetrics(nextDisplayMetrics, currentStageSize);
+            const nextScaleX = nextDisplayMetrics.width / currentNaturalSize.width;
+            const nextScaleY = nextDisplayMetrics.height / currentNaturalSize.height;
+            const maxScrollLeft = Math.max(0, nextStageLayout.contentWidth - nextViewport.clientWidth);
+            const maxScrollTop = Math.max(0, nextStageLayout.contentHeight - nextViewport.clientHeight);
+            nextViewport.scrollLeft = clamp(nextStageLayout.frameOffsetX +
+                imagePointX * nextScaleX -
+                (anchorX - viewportRect.left), 0, maxScrollLeft);
+            nextViewport.scrollTop = clamp(nextStageLayout.frameOffsetY +
+                imagePointY * nextScaleY -
+                (anchorY - viewportRect.top), 0, maxScrollTop);
         });
     };
     const zoomFromViewportCenter = (direction) => {
@@ -637,26 +683,23 @@ export default function LabelerPage() {
             setNotice(createNotice("error", error.message));
         }
     };
-    const getScale = () => {
-        return displayMetrics.width && displayMetrics.height
-            ? {
-                x: naturalSize.width / displayMetrics.width,
-                y: naturalSize.height / displayMetrics.height,
-            }
-            : { x: 1, y: 1 };
-    };
     const toImagePointFromEvent = (event) => {
         const canvas = overlayRef.current;
-        if (!canvas || !frameShellRef.current) {
+        const currentNaturalSize = naturalSizeRef.current;
+        if (!canvas ||
+            !frameShellRef.current ||
+            !displayMetrics.width ||
+            !displayMetrics.height ||
+            !currentNaturalSize.width ||
+            !currentNaturalSize.height) {
             return { x: 0, y: 0 };
         }
-        const rect = canvas.getBoundingClientRect();
         const frameRect = frameShellRef.current.getBoundingClientRect();
         return {
-            x: ((event.clientX - frameRect.left) / displayMetrics.width) *
-                naturalSize.width,
-            y: ((event.clientY - frameRect.top) / displayMetrics.height) *
-                naturalSize.height,
+            x: clamp(((event.clientX - frameRect.left) / displayMetrics.width) *
+                currentNaturalSize.width, 0, currentNaturalSize.width),
+            y: clamp(((event.clientY - frameRect.top) / displayMetrics.height) *
+                currentNaturalSize.height, 0, currentNaturalSize.height),
         };
     };
     const isPointInsideBox = (point, box) => point.x >= box.x &&
@@ -702,17 +745,109 @@ export default function LabelerPage() {
         width: Math.abs(end.x - start.x),
         height: Math.abs(end.y - start.y),
     });
+    const getMovedBox = (startBox, delta) => ({
+        ...startBox,
+        x: clamp(startBox.x + delta.x, 0, Math.max(0, naturalSizeRef.current.width - startBox.width)),
+        y: clamp(startBox.y + delta.y, 0, Math.max(0, naturalSizeRef.current.height - startBox.height)),
+    });
+    const getResizedBox = (interactionState, delta) => {
+        const currentNaturalSize = naturalSizeRef.current;
+        const startBox = interactionState.startBox;
+        let left = startBox.x;
+        let top = startBox.y;
+        let right = startBox.x + startBox.width;
+        let bottom = startBox.y + startBox.height;
+        if (interactionState.handle?.includes("w")) {
+            left = clamp(left + delta.x, 0, currentNaturalSize.width);
+        }
+        if (interactionState.handle?.includes("e")) {
+            right = clamp(right + delta.x, 0, currentNaturalSize.width);
+        }
+        if (interactionState.handle?.includes("n")) {
+            top = clamp(top + delta.y, 0, currentNaturalSize.height);
+        }
+        if (interactionState.handle?.includes("s")) {
+            bottom = clamp(bottom + delta.y, 0, currentNaturalSize.height);
+        }
+        return {
+            ...startBox,
+            x: Math.min(left, right),
+            y: Math.min(top, bottom),
+            width: Math.abs(right - left),
+            height: Math.abs(bottom - top),
+        };
+    };
+    const drawOverlay = () => {
+        const svg = overlayRef.current;
+        if (!svg || !frameShellRef.current || !displayMetrics.width || !displayMetrics.height) {
+            return;
+        }
+        if (!naturalSizeRef.current.width || !naturalSizeRef.current.height) {
+            return;
+        }
+        const currentNaturalSize = naturalSizeRef.current;
+        const renderedBoxes = draftBoxesRef.current || boxesRef.current;
+        const interactionState = interactionRef.current;
+        const scaleX = displayMetrics.width / currentNaturalSize.width;
+        const scaleY = displayMetrics.height / currentNaturalSize.height;
+        const handleSize = 8;
+        const shapes = [];
+        const drawBoxMarkup = (box, isSelected) => {
+            const color = BOX_COLORS[box.classId % BOX_COLORS.length];
+            const x = box.x * scaleX;
+            const y = box.y * scaleY;
+            const w = box.width * scaleX;
+            const h = box.height * scaleY;
+            const lineWidth = isSelected ? 3 : 2;
+            if (isSelected) {
+                shapes.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${color}" fill-opacity="0.2" stroke="none" />`);
+            }
+            shapes.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="${color}" stroke-width="${lineWidth}" />`);
+            if (isSelected) {
+                [
+                    [x, y],
+                    [x + w, y],
+                    [x, y + h],
+                    [x + w, y + h],
+                ].forEach(([hx, hy]) => {
+                    shapes.push(`<rect x="${hx - handleSize / 2}" y="${hy - handleSize / 2}" width="${handleSize}" height="${handleSize}" fill="${color}" stroke="none" />`);
+                });
+            }
+        };
+        renderedBoxes.forEach((box) => drawBoxMarkup(box, box.id === selectedBoxIdRef.current));
+        if (interactionState?.type === "draw") {
+            const start = interactionState.startPoint;
+            const end = interactionState.endPoint;
+            const sx = start.x * scaleX;
+            const sy = start.y * scaleY;
+            const ex = end.x * scaleX;
+            const ey = end.y * scaleY;
+            shapes.push(`<rect x="${Math.min(sx, ex)}" y="${Math.min(sy, ey)}" width="${Math.abs(ex - sx)}" height="${Math.abs(ey - sy)}" fill="none" stroke="#3b82f6" stroke-width="2" />`);
+        }
+        svg.innerHTML = shapes.join("");
+    };
+    const scheduleOverlayDraw = () => {
+        if (overlayFrameRef.current) {
+            return;
+        }
+        overlayFrameRef.current = requestAnimationFrame(() => {
+            overlayFrameRef.current = 0;
+            drawOverlay();
+        });
+    };
     const handleCanvasMouseDown = (event) => {
         if (isLabelingLocked) {
             return;
         }
         if (!currentImageNameRef.current)
             return;
+        event.preventDefault();
         const point = toImagePointFromEvent(event);
         const target = findInteractionTarget(point);
         if (target) {
             setSelectedBoxId(target.boxId);
-            setInteraction({
+            selectedBoxIdRef.current = target.boxId;
+            interactionRef.current = {
                 type: target.handle ? "resize" : "move",
                 boxId: target.boxId,
                 handle: target.handle,
@@ -720,109 +855,72 @@ export default function LabelerPage() {
                 startBox: {
                     ...boxesRef.current.find((b) => b.id === target.boxId),
                 },
-            });
+            };
+            draftBoxesRef.current = cloneBoxes(boxesRef.current);
         }
         else {
             setSelectedBoxId(null);
-            setInteraction({
+            selectedBoxIdRef.current = null;
+            interactionRef.current = {
                 type: "draw",
                 startPoint: point,
                 endPoint: point,
-            });
+            };
+            draftBoxesRef.current = null;
         }
+        scheduleOverlayDraw();
     };
     // Canvas drawing and interaction
     useEffect(() => {
-        if (!overlayRef.current || !frameShellRef.current)
-            return;
-        const canvas = overlayRef.current;
-        canvas.width = displayMetrics.width || 0;
-        canvas.height = displayMetrics.height || 0;
-        const ctx = canvas.getContext("2d");
-        if (!ctx)
-            return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const drawBox = (box, isSelected) => {
-            const color = BOX_COLORS[box.classId % BOX_COLORS.length];
-            const x = (box.x / naturalSize.width) * displayMetrics.width;
-            const y = (box.y / naturalSize.height) * displayMetrics.height;
-            const w = (box.width / naturalSize.width) * displayMetrics.width;
-            const h = (box.height / naturalSize.height) * displayMetrics.height;
-            ctx.strokeStyle = color;
-            ctx.lineWidth = isSelected ? 3 : 2;
-            ctx.strokeRect(x, y, w, h);
-            if (isSelected) {
-                ctx.fillStyle = `${color}33`;
-                ctx.fillRect(x, y, w, h);
-                const handleSize = 8;
-                ctx.fillStyle = color;
-                [
-                    [x, y],
-                    [x + w, y],
-                    [x, y + h],
-                    [x + w, y + h],
-                ].forEach(([hx, hy]) => {
-                    ctx.fillRect(hx - handleSize / 2, hy - handleSize / 2, handleSize, handleSize);
-                });
-            }
-        };
-        boxes.forEach((box) => drawBox(box, box.id === selectedBoxId));
-        if (interaction?.type === "draw") {
-            const start = interaction.startPoint;
-            const end = interaction.endPoint;
-            const sx = (start.x / naturalSize.width) * displayMetrics.width;
-            const sy = (start.y / naturalSize.height) * displayMetrics.height;
-            const ex = (end.x / naturalSize.width) * displayMetrics.width;
-            const ey = (end.y / naturalSize.height) * displayMetrics.height;
-            ctx.strokeStyle = "#3b82f6";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(Math.min(sx, ex), Math.min(sy, ey), Math.abs(ex - sx), Math.abs(ey - sy));
-        }
-    }, [boxes, selectedBoxId, interaction, displayMetrics]);
+        scheduleOverlayDraw();
+    }, [boxes, selectedBoxId, displayMetrics.width, displayMetrics.height, currentImageName]);
     useEffect(() => {
         if (!overlayRef.current)
             return;
         const canvas = overlayRef.current;
-        const handleMouseMove = (event) => {
-            canvas.style.cursor = getCursorForPoint(toImagePointFromEvent(event));
-            if (!interaction)
+        const handleHoverMove = (event) => {
+            if (interactionRef.current || !currentImageNameRef.current) {
                 return;
-            const point = toImagePointFromEvent(event);
-            if (interaction.type === "draw") {
-                setInteraction({ ...interaction, endPoint: point });
             }
-            else if (interaction.type === "move" && interaction.startBox) {
-                const delta = {
-                    x: point.x - interaction.startPoint.x,
-                    y: point.y - interaction.startPoint.y,
-                };
-                const updated = {
-                    ...interaction.startBox,
-                    x: Math.max(0, interaction.startBox.x + delta.x),
-                    y: Math.max(0, interaction.startBox.y + delta.y),
-                };
-                setBoxes((current) => current.map((b) => (b.id === interaction.boxId ? updated : b)));
-            }
-            else if (interaction.type === "resize" && interaction.startBox) {
-                const delta = {
-                    x: point.x - interaction.startPoint.x,
-                    y: point.y - interaction.startPoint.y,
-                };
-                const updated = { ...interaction.startBox };
-                if (interaction.handle?.includes("n"))
-                    updated.y += delta.y;
-                if (interaction.handle?.includes("s"))
-                    updated.height += delta.y;
-                if (interaction.handle?.includes("w"))
-                    updated.x += delta.x;
-                if (interaction.handle?.includes("e"))
-                    updated.width += delta.x;
-                setBoxes((current) => current.map((b) => (b.id === interaction.boxId ? updated : b)));
-            }
+            canvas.style.cursor = getCursorForPoint(toImagePointFromEvent(event));
         };
-        const handleMouseUp = () => {
-            if (interaction?.type === "draw") {
-                const rect = normalizeRect(interaction.startPoint, interaction.endPoint);
+        const handleWindowMouseMove = (event) => {
+            const interactionState = interactionRef.current;
+            if (!interactionState) {
+                return;
+            }
+            const point = toImagePointFromEvent(event);
+            if (interactionState.type === "draw") {
+                interactionRef.current = {
+                    ...interactionState,
+                    endPoint: point,
+                };
+            }
+            else if (interactionState.type === "move" && interactionState.startBox) {
+                const delta = {
+                    x: point.x - interactionState.startPoint.x,
+                    y: point.y - interactionState.startPoint.y,
+                };
+                const updated = getMovedBox(interactionState.startBox, delta);
+                draftBoxesRef.current = boxesRef.current.map((box) => box.id === interactionState.boxId ? updated : { ...box });
+            }
+            else if (interactionState.type === "resize" && interactionState.startBox) {
+                const delta = {
+                    x: point.x - interactionState.startPoint.x,
+                    y: point.y - interactionState.startPoint.y,
+                };
+                const updated = getResizedBox(interactionState, delta);
+                draftBoxesRef.current = boxesRef.current.map((box) => box.id === interactionState.boxId ? updated : { ...box });
+            }
+            scheduleOverlayDraw();
+        };
+        const handleWindowMouseUp = () => {
+            const interactionState = interactionRef.current;
+            if (!interactionState) {
+                return;
+            }
+            if (interactionState.type === "draw") {
+                const rect = normalizeRect(interactionState.startPoint, interactionState.endPoint);
                 if (rect.width > 5 && rect.height > 5) {
                     const newBox = createBox({
                         classId: activeClassIdRef.current,
@@ -831,26 +929,51 @@ export default function LabelerPage() {
                     pushUndoSnapshot(takeUndoSnapshot());
                     setBoxes((current) => [...current, newBox]);
                     setSelectedBoxId(newBox.id);
+                    selectedBoxIdRef.current = newBox.id;
                     markDirty(true);
                 }
             }
-            setInteraction(null);
+            else if (draftBoxesRef.current &&
+                !boxesEqual(draftBoxesRef.current, boxesRef.current)) {
+                pushUndoSnapshot(takeUndoSnapshot());
+                setBoxes(cloneBoxes(draftBoxesRef.current));
+                markDirty(true);
+            }
+            interactionRef.current = null;
+            draftBoxesRef.current = null;
+            canvas.style.cursor = "crosshair";
+            scheduleOverlayDraw();
         };
-        const handleWheel = (event) => {
-            if (!event.ctrlKey && !event.metaKey)
-                return;
-            event.preventDefault();
-            zoomFromViewportCenter(event.deltaY > 0 ? -1 : 1);
-        };
-        canvas.addEventListener("mousemove", handleMouseMove);
-        canvas.addEventListener("mouseup", handleMouseUp);
-        canvas.addEventListener("wheel", handleWheel, { passive: false });
+        canvas.addEventListener("mousemove", handleHoverMove);
+        window.addEventListener("mousemove", handleWindowMouseMove);
+        window.addEventListener("mouseup", handleWindowMouseUp);
         return () => {
-            canvas.removeEventListener("mousemove", handleMouseMove);
-            canvas.removeEventListener("mouseup", handleMouseUp);
-            canvas.removeEventListener("wheel", handleWheel);
+            canvas.removeEventListener("mousemove", handleHoverMove);
+            window.removeEventListener("mousemove", handleWindowMouseMove);
+            window.removeEventListener("mouseup", handleWindowMouseUp);
         };
-    }, [interaction, activeClassId]);
+    }, [displayMetrics.width, displayMetrics.height, currentImageName]);
+    useEffect(() => {
+        const viewport = stageViewportRef.current;
+        if (!viewport) {
+            return undefined;
+        }
+        const handleViewportWheel = (event) => {
+            if ((!event.ctrlKey && !event.metaKey) || !currentImageNameRef.current) {
+                return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            zoomAtViewportPoint((currentZoom) => currentZoom *
+                (event.deltaY > 0 ? 1 / ZOOM_WHEEL_FACTOR : ZOOM_WHEEL_FACTOR), { x: event.clientX, y: event.clientY });
+        };
+        viewport.addEventListener("wheel", handleViewportWheel, {
+            passive: false,
+        });
+        return () => {
+            viewport.removeEventListener("wheel", handleViewportWheel);
+        };
+    }, [zoomLevel, currentImageName, naturalSize, stageSize]);
     // Keyboard shortcuts
     useEffect(() => {
         if (!currentImageName)
@@ -954,15 +1077,16 @@ export default function LabelerPage() {
             ? "Fit"
             : `${Math.round(zoomLevel * 100)}%`
         : "-";
-    return (React.createElement("div", { className: "grid gap-4 pb-[260px] md:pb-[300px] xl:grid-cols-[330px_minmax(0,1fr)]" },
-        React.createElement(LabelerSidebar, { images: images, visibleImages: visibleImages, activeFramesDir: activeFramesDir, frameFolders: frameFolders, filterValue: filterValue, searchQuery: searchQuery, isLoading: isLoading, disabled: isLabelingLocked, onFramesDirChange: changeFramesDirectory, onFilterChange: setFilterValue, onSearchChange: setSearchQuery, onRefresh: () => reloadConfig(true), onImageSelect: selectImage, currentImageName: currentImageName }),
-        React.createElement("section", { className: "grid gap-4" },
-            React.createElement(LabelerHeader, { currentImageItem: currentImageItem, visibleImages: visibleImages, hasFrames: images.length > 0, interactionLocked: isLabelingLocked, currentIndex: currentIndex, currentIsCheckpoint: currentIsCheckpoint, checkpointImageName: checkpointImageName, naturalSize: naturalSize, zoomLabel: zoomLabel, onNavigate: navigate, onOpenCheckpoint: openCheckpoint, onSaveCheckpoint: saveCheckpoint, onOpenAutolabelModal: () => setIsAutolabelModalOpen(true), onSaveLabel: () => saveCurrentLabel(false), onSaveLabelAndNext: () => saveCurrentLabel(true) }),
-            React.createElement(LabelerAutolabelModal, { open: isAutolabelModalOpen, onClose: () => setIsAutolabelModalOpen(false), activeFramesDir: activeFramesDir, totalImages: images.length, currentImageName: currentImageName, autolabelConfig: autolabelConfig, autolabelSuggestions: autolabelSuggestions, autolabelWarnings: autolabelWarnings, job: autolabelJob, onAutolabelConfigChange: setAutolabelConfig, onAutolabelCurrent: handleAutolabelCurrent, onAutolabelAll: handleAutolabelAll }),
-            React.createElement("div", { className: "grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]" },
-                React.createElement(LabelerCanvas, { currentImageName: currentImageName, imageSrc: imageSrc, stageViewportRef: stageViewportRef, frameShellRef: frameShellRef, overlayRef: overlayRef, displayMetrics: displayMetrics, stageLayout: stageLayout, zoomLabel: zoomLabel, zoomLevel: zoomLevel, minZoomLevel: MIN_ZOOM_LEVEL, maxZoomLevel: MAX_ZOOM_LEVEL, interactionDisabled: isLabelingLocked, onZoomIn: zoomIn, onZoomOut: zoomOut, onResetZoom: resetZoom, onCanvasMouseDown: handleCanvasMouseDown }),
+    return (React.createElement("div", { className: "grid h-full min-h-0 gap-4 grid-rows-[minmax(280px,42vh)_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] lg:grid-rows-1" },
+        React.createElement("aside", { className: "min-h-0 overflow-y-scroll pr-1" },
+            React.createElement("div", { className: "grid gap-4" },
+                React.createElement(LabelerHeader, { currentImageItem: currentImageItem, visibleImages: visibleImages, hasFrames: images.length > 0, interactionLocked: isLabelingLocked, currentIndex: currentIndex, currentIsCheckpoint: currentIsCheckpoint, checkpointImageName: checkpointImageName, naturalSize: naturalSize, zoomLabel: zoomLabel, onNavigate: navigate, onOpenCheckpoint: openCheckpoint, onSaveCheckpoint: saveCheckpoint, onOpenAutolabelModal: () => setIsAutolabelModalOpen(true), onSaveLabel: () => saveCurrentLabel(false), onSaveLabelAndNext: () => saveCurrentLabel(true) }),
+                React.createElement(LabelerSidebar, { images: images, visibleImages: visibleImages, activeFramesDir: activeFramesDir, frameFolders: frameFolders, filterValue: filterValue, searchQuery: searchQuery, isLoading: isLoading, disabled: isLabelingLocked, onFramesDirChange: changeFramesDirectory, onFilterChange: setFilterValue, onSearchChange: setSearchQuery, onRefresh: () => reloadConfig(true), onImageSelect: selectImage, currentImageName: currentImageName }),
                 React.createElement(LabelerToolPanel, { classNames: classNames, boxes: boxes, selectedBox: selectedBox, selectedBoxId: selectedBoxId, activeClassId: activeClassId, dirty: dirty, hasLabelFile: hasLabelFile, parseError: parseError, undoStack: undoStack, zoomLabel: zoomLabel, currentImageName: currentImageName, currentIsCheckpoint: currentIsCheckpoint, checkpointImageName: checkpointImageName, disabled: isLabelingLocked, onSyncSelectedBoxClass: syncSelectedBoxClass, onUndo: undoLastChange, onRemoveBox: removeBox, onClearAllBoxes: clearAllBoxes, onReloadLabel: () => selectImage(currentImageNameRef.current || "", {
                         force: true,
-                    }), onBoxSelect: setSelectedBoxId })),
-            React.createElement(LabelerLogs, { job: autolabelJob }))));
+                    }), onBoxSelect: setSelectedBoxId }),
+                React.createElement(LabelerLogs, { job: autolabelJob }))),
+        React.createElement("section", { className: "min-h-0" },
+            React.createElement(LabelerCanvas, { currentImageName: currentImageName, imageSrc: imageSrc, stageViewportRef: stageViewportRef, frameShellRef: frameShellRef, overlayRef: overlayRef, displayMetrics: displayMetrics, stageLayout: stageLayout, zoomLabel: zoomLabel, zoomLevel: zoomLevel, minZoomLevel: MIN_ZOOM_LEVEL, maxZoomLevel: MAX_ZOOM_LEVEL, interactionDisabled: isLabelingLocked, onZoomIn: zoomIn, onZoomOut: zoomOut, onResetZoom: resetZoom, onCanvasMouseDown: handleCanvasMouseDown })),
+        React.createElement(LabelerAutolabelModal, { open: isAutolabelModalOpen, onClose: () => setIsAutolabelModalOpen(false), activeFramesDir: activeFramesDir, totalImages: images.length, currentImageName: currentImageName, autolabelConfig: autolabelConfig, autolabelSuggestions: autolabelSuggestions, autolabelWarnings: autolabelWarnings, job: autolabelJob, onAutolabelConfigChange: setAutolabelConfig, onAutolabelCurrent: handleAutolabelCurrent, onAutolabelAll: handleAutolabelAll })));
 }

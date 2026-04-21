@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Badge, Button, Card, Paragraph } from "../../ui.js";
+import { Alert, Button, Card, Paragraph } from "../../ui.js";
 
 /**
  * Canvas and image rendering component for LabelerPage
@@ -26,14 +26,19 @@ export function LabelerCanvas({
   onCanvasMouseLeave,
 }) {
   return (
-    <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-xl">
-      <div className="space-y-4">
+    <Card className="h-full rounded-sm border border-base-300 bg-base-100/90 shadow-xl">
+      <div className="flex h-full min-h-0 flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-emerald-700">
               Canvas
             </p>
             <h2 className="mt-2 text-xl font-bold tracking-tight">Stage Labeling</h2>
+            <Paragraph className="mt-2 text-sm leading-6 text-slate-600 opacity-100">
+              {currentImageName
+                ? "Ctrl/Cmd + scroll akan zoom canvas tanpa ikut men-zoom browser."
+                : "Pilih frame dari sidebar untuk mulai anotasi."}
+            </Paragraph>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -70,13 +75,13 @@ export function LabelerCanvas({
         </div>
 
         {!currentImageName ? (
-          <div className="grid min-h-[420px] place-items-center rounded-sm border border-dashed border-base-300 bg-base-200/40 p-8 text-center text-sm text-slate-500">
+          <div className="grid min-h-0 flex-1 place-items-center rounded-sm border border-dashed border-base-300 bg-base-200/40 p-8 text-center text-sm text-slate-500">
             Frame belum dimuat. Pilih salah satu item di sidebar.
           </div>
         ) : (
           <div
             ref={stageViewportRef}
-            className="relative max-h-[72vh] min-h-[420px] overflow-auto rounded-sm border border-base-300 bg-base-100 p-4"
+            className="relative min-h-0 max-h-[550px] flex-1 overflow-auto rounded-sm border border-base-300 bg-base-100 p-4"
             style={{
               overscrollBehavior: "contain",
               backgroundImage:
@@ -119,12 +124,17 @@ export function LabelerCanvas({
                     height: displayMetrics.height || undefined,
                   }}
                 />
-                <canvas
+                <svg
                   ref={overlayRef}
                   onMouseDown={onCanvasMouseDown}
                   onMouseMove={onCanvasMouseMove}
                   onMouseLeave={onCanvasMouseLeave}
+                  xmlns="http://www.w3.org/2000/svg"
+                  width={displayMetrics.width || 0}
+                  height={displayMetrics.height || 0}
+                  viewBox={`0 0 ${displayMetrics.width || 0} ${displayMetrics.height || 0}`}
                   className="absolute inset-0 h-full w-full"
+                  aria-label="Bounding box overlay"
                   style={{
                     width: displayMetrics.width || undefined,
                     height: displayMetrics.height || undefined,
