@@ -216,6 +216,11 @@ export default function LabelerPage() {
     setDirty(nextDirty);
   };
 
+  const syncSelectedBoxId = (nextSelectedBoxId) => {
+    selectedBoxIdRef.current = nextSelectedBoxId;
+    setSelectedBoxId(nextSelectedBoxId);
+  };
+
   // Derived state
   const visibleImages = useMemo(
     () => filterImages(images, filterValue, searchQuery),
@@ -293,7 +298,7 @@ export default function LabelerPage() {
     const nextBoxes = cloneBoxes(snapshot.boxes || []);
     syncNextBoxId(nextBoxes);
     setBoxes(nextBoxes);
-    setSelectedBoxId(
+    syncSelectedBoxId(
       nextBoxes.some((box) => box.id === snapshot.selectedBoxId)
         ? snapshot.selectedBoxId
         : nextBoxes[0]?.id || null,
@@ -396,7 +401,7 @@ export default function LabelerPage() {
       interactionRef.current = null;
       draftBoxesRef.current = null;
       setBoxes([]);
-      setSelectedBoxId(null);
+      syncSelectedBoxId(null);
       setUndoStack([]);
 
       if (labelData?.boxes?.length) {
@@ -405,7 +410,7 @@ export default function LabelerPage() {
           .filter((box) => box.width > 0 && box.height > 0);
         syncNextBoxId(nextBoxes);
         setBoxes(nextBoxes);
-        setSelectedBoxId(nextBoxes[0]?.id || null);
+        syncSelectedBoxId(nextBoxes[0]?.id || null);
       }
 
       setNotice(null);
@@ -638,7 +643,7 @@ export default function LabelerPage() {
     pushUndoSnapshot(takeUndoSnapshot());
     syncNextBoxId(nextBoxes);
     setBoxes(nextBoxes);
-    setSelectedBoxId(nextBoxes[0]?.id || null);
+    syncSelectedBoxId(nextBoxes[0]?.id || null);
     markDirty(true);
   };
 
@@ -650,7 +655,7 @@ export default function LabelerPage() {
     if (!boxesRef.current.length) return;
     pushUndoSnapshot(takeUndoSnapshot());
     setBoxes([]);
-    setSelectedBoxId(null);
+    syncSelectedBoxId(null);
     markDirty(true);
   };
 
@@ -1108,8 +1113,7 @@ export default function LabelerPage() {
     const target = findInteractionTarget(point);
 
     if (target) {
-      setSelectedBoxId(target.boxId);
-      selectedBoxIdRef.current = target.boxId;
+      syncSelectedBoxId(target.boxId);
       interactionRef.current = {
         type: target.handle ? "resize" : "move",
         boxId: target.boxId,
@@ -1121,8 +1125,7 @@ export default function LabelerPage() {
       };
       draftBoxesRef.current = cloneBoxes(boxesRef.current);
     } else {
-      setSelectedBoxId(null);
-      selectedBoxIdRef.current = null;
+      syncSelectedBoxId(null);
       interactionRef.current = {
         type: "draw",
         startPoint: point,
@@ -1204,8 +1207,7 @@ export default function LabelerPage() {
           });
           pushUndoSnapshot(takeUndoSnapshot());
           setBoxes((current) => [...current, newBox]);
-          setSelectedBoxId(newBox.id);
-          selectedBoxIdRef.current = newBox.id;
+          syncSelectedBoxId(newBox.id);
           markDirty(true);
         }
       } else if (
@@ -1269,6 +1271,18 @@ export default function LabelerPage() {
     if (!currentImageName) return;
     if (isLabelingLocked) return;
     const handleKeyDown = (event) => {
+      const target = event.target;
+      const isTypingField =
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+
+      if (isTypingField) {
+        return;
+      }
+
       if (event.ctrlKey || event.metaKey) {
         if (event.key === "z" || event.key === "Z") {
           event.preventDefault();
@@ -1280,6 +1294,18 @@ export default function LabelerPage() {
           event.preventDefault();
           resetZoom();
         }
+        return;
+      }
+
+      if (
+        (event.key === "Delete" || event.key === "Backspace") &&
+        selectedBoxIdRef.current != null
+      ) {
+        if (event.repeat) {
+          return;
+        }
+        event.preventDefault();
+        removeBox(selectedBoxIdRef.current);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -1444,7 +1470,7 @@ export default function LabelerPage() {
                   force: true,
                 })
               }
-              onBoxSelect={setSelectedBoxId}
+              onBoxSelect={syncSelectedBoxId}
             />
           </div>
         </aside>

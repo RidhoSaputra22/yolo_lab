@@ -15,7 +15,7 @@ export function LabelerToolPanel({ classNames, selectedBox, selectedBoxId, activ
                     })), disabled: disabled }),
                 React.createElement("div", { className: "grid gap-2 sm:grid-cols-2" },
                     React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-sm border border-base-300 bg-base-100", disabled: !undoStack.length || disabled, onClick: onUndo }, "Undo (Ctrl+Z)"),
-                    React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-sm border border-base-300 bg-base-100", disabled: !selectedBox || disabled, onClick: () => selectedBox && onRemoveBox(selectedBox.id) }, "Hapus box"),
+                    React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-sm border border-base-300 bg-base-100", disabled: !selectedBox || disabled, onClick: () => selectedBox && onRemoveBox(selectedBox.id) }, "Hapus box (Del)"),
                     React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-sm border border-base-300 bg-base-100", disabled: !boxes.length || disabled, onClick: () => {
                             const ok = window.confirm("Hapus semua box pada frame ini?");
                             if (ok) {
@@ -66,7 +66,10 @@ export function LabelerToolPanel({ classNames, selectedBox, selectedBoxId, activ
                     " untuk undo,",
                     " ",
                     React.createElement("code", { className: "rounded-sm bg-base-200 px-2 py-1 text-xs" }, "Ctrl+S"),
-                    " untuk simpan."),
+                    " untuk simpan,",
+                    " ",
+                    React.createElement("code", { className: "rounded-sm bg-base-200 px-2 py-1 text-xs" }, "Delete"),
+                    " untuk hapus box aktif."),
                 React.createElement("li", null,
                     React.createElement("code", { className: "rounded-sm bg-base-200 px-2 py-1 text-xs" }, "Ctrl + scroll"),
                     " untuk zoom,",

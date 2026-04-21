@@ -73,7 +73,7 @@ export function LabelerToolPanel({
               disabled={!selectedBox || disabled}
               onClick={() => selectedBox && onRemoveBox(selectedBox.id)}
             >
-              Hapus box
+              Hapus box (Del)
             </Button>
             <Button
               variant="ghost"
@@ -193,7 +193,8 @@ export function LabelerToolPanel({
           <li>Drag sudut box untuk resize.</li>
           <li>
             <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+Z</code> untuk undo,{" "}
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+S</code> untuk simpan.
+            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+S</code> untuk simpan,{" "}
+            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Delete</code> untuk hapus box aktif.
           </li>
           <li>
             <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl + scroll</code> untuk zoom,{" "}

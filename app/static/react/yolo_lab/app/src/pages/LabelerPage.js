@@ -166,6 +166,10 @@ export default function LabelerPage() {
         dirtyRef.current = nextDirty;
         setDirty(nextDirty);
     };
+    const syncSelectedBoxId = (nextSelectedBoxId) => {
+        selectedBoxIdRef.current = nextSelectedBoxId;
+        setSelectedBoxId(nextSelectedBoxId);
+    };
     // Derived state
     const visibleImages = useMemo(() => filterImages(images, filterValue, searchQuery), [images, filterValue, searchQuery]);
     const currentImageItem = useMemo(() => images.find((item) => item.name === currentImageName) || null, [images, currentImageName]);
@@ -212,7 +216,7 @@ export default function LabelerPage() {
         const nextBoxes = cloneBoxes(snapshot.boxes || []);
         syncNextBoxId(nextBoxes);
         setBoxes(nextBoxes);
-        setSelectedBoxId(nextBoxes.some((box) => box.id === snapshot.selectedBoxId)
+        syncSelectedBoxId(nextBoxes.some((box) => box.id === snapshot.selectedBoxId)
             ? snapshot.selectedBoxId
             : nextBoxes[0]?.id || null);
         setActiveClassId(Number(snapshot.activeClassId) || 0);
@@ -297,7 +301,7 @@ export default function LabelerPage() {
             interactionRef.current = null;
             draftBoxesRef.current = null;
             setBoxes([]);
-            setSelectedBoxId(null);
+            syncSelectedBoxId(null);
             setUndoStack([]);
             if (labelData?.boxes?.length) {
                 const nextBoxes = labelData.boxes
@@ -305,7 +309,7 @@ export default function LabelerPage() {
                     .filter((box) => box.width > 0 && box.height > 0);
                 syncNextBoxId(nextBoxes);
                 setBoxes(nextBoxes);
-                setSelectedBoxId(nextBoxes[0]?.id || null);
+                syncSelectedBoxId(nextBoxes[0]?.id || null);
             }
             setNotice(null);
         }
@@ -504,7 +508,7 @@ export default function LabelerPage() {
         pushUndoSnapshot(takeUndoSnapshot());
         syncNextBoxId(nextBoxes);
         setBoxes(nextBoxes);
-        setSelectedBoxId(nextBoxes[0]?.id || null);
+        syncSelectedBoxId(nextBoxes[0]?.id || null);
         markDirty(true);
     };
     const clearAllBoxes = () => {
@@ -516,7 +520,7 @@ export default function LabelerPage() {
             return;
         pushUndoSnapshot(takeUndoSnapshot());
         setBoxes([]);
-        setSelectedBoxId(null);
+        syncSelectedBoxId(null);
         markDirty(true);
     };
     const undoLastChange = () => {
@@ -845,8 +849,7 @@ export default function LabelerPage() {
         const point = toImagePointFromEvent(event);
         const target = findInteractionTarget(point);
         if (target) {
-            setSelectedBoxId(target.boxId);
-            selectedBoxIdRef.current = target.boxId;
+            syncSelectedBoxId(target.boxId);
             interactionRef.current = {
                 type: target.handle ? "resize" : "move",
                 boxId: target.boxId,
@@ -859,8 +862,7 @@ export default function LabelerPage() {
             draftBoxesRef.current = cloneBoxes(boxesRef.current);
         }
         else {
-            setSelectedBoxId(null);
-            selectedBoxIdRef.current = null;
+            syncSelectedBoxId(null);
             interactionRef.current = {
                 type: "draw",
                 startPoint: point,
@@ -928,8 +930,7 @@ export default function LabelerPage() {
                     });
                     pushUndoSnapshot(takeUndoSnapshot());
                     setBoxes((current) => [...current, newBox]);
-                    setSelectedBoxId(newBox.id);
-                    selectedBoxIdRef.current = newBox.id;
+                    syncSelectedBoxId(newBox.id);
                     markDirty(true);
                 }
             }
@@ -981,6 +982,15 @@ export default function LabelerPage() {
         if (isLabelingLocked)
             return;
         const handleKeyDown = (event) => {
+            const target = event.target;
+            const isTypingField = target instanceof HTMLElement &&
+                (target.tagName === "INPUT" ||
+                    target.tagName === "TEXTAREA" ||
+                    target.tagName === "SELECT" ||
+                    target.isContentEditable);
+            if (isTypingField) {
+                return;
+            }
             if (event.ctrlKey || event.metaKey) {
                 if (event.key === "z" || event.key === "Z") {
                     event.preventDefault();
@@ -994,6 +1004,15 @@ export default function LabelerPage() {
                     event.preventDefault();
                     resetZoom();
                 }
+                return;
+            }
+            if ((event.key === "Delete" || event.key === "Backspace") &&
+                selectedBoxIdRef.current != null) {
+                if (event.repeat) {
+                    return;
+                }
+                event.preventDefault();
+                removeBox(selectedBoxIdRef.current);
             }
         };
         window.addEventListener("keydown", handleKeyDown);
@@ -1087,7 +1106,7 @@ export default function LabelerPage() {
                     React.createElement(LabelerSidebar, { images: images, visibleImages: visibleImages, activeFramesDir: activeFramesDir, frameFolders: frameFolders, filterValue: filterValue, searchQuery: searchQuery, isLoading: isLoading, disabled: isLabelingLocked, onFramesDirChange: changeFramesDirectory, onFilterChange: setFilterValue, onSearchChange: setSearchQuery, onRefresh: () => reloadConfig(true), onImageSelect: selectImage, currentImageName: currentImageName }),
                     React.createElement(LabelerToolPanel, { classNames: classNames, boxes: boxes, selectedBox: selectedBox, selectedBoxId: selectedBoxId, activeClassId: activeClassId, dirty: dirty, hasLabelFile: hasLabelFile, parseError: parseError, undoStack: undoStack, zoomLabel: zoomLabel, currentImageName: currentImageName, currentIsCheckpoint: currentIsCheckpoint, checkpointImageName: checkpointImageName, disabled: isLabelingLocked, onSyncSelectedBoxClass: syncSelectedBoxClass, onUndo: undoLastChange, onRemoveBox: removeBox, onClearAllBoxes: clearAllBoxes, onReloadLabel: () => selectImage(currentImageNameRef.current || "", {
                             force: true,
-                        }), onBoxSelect: setSelectedBoxId }))),
+                        }), onBoxSelect: syncSelectedBoxId }))),
             React.createElement("section", { className: "min-h-0" },
                 React.createElement(LabelerCanvas, { currentImageName: currentImageName, imageSrc: imageSrc, stageViewportRef: stageViewportRef, frameShellRef: frameShellRef, overlayRef: overlayRef, displayMetrics: displayMetrics, stageLayout: stageLayout, zoomLabel: zoomLabel, zoomLevel: zoomLevel, minZoomLevel: MIN_ZOOM_LEVEL, maxZoomLevel: MAX_ZOOM_LEVEL, interactionDisabled: isLabelingLocked, onZoomIn: zoomIn, onZoomOut: zoomOut, onResetZoom: resetZoom, onCanvasMouseDown: handleCanvasMouseDown }))),
         React.createElement(LabelerLogs, { job: autolabelJob }),
