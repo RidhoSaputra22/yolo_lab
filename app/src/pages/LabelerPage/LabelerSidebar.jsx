@@ -1,6 +1,6 @@
 import React from "react";
-import { Alert, Badge, Button, Card, Input, Paragraph, Select } from "../../ui.js";
-import { formatCount, joinClasses } from "../../shared/utils.js";
+import { Alert, Badge, Button, Card, Select } from "../../ui.js";
+import { joinClasses } from "../../shared/utils.js";
 
 /**
  * Left sidebar component for LabelerPage
@@ -10,9 +10,13 @@ export function LabelerSidebar({
   images,
   visibleImages,
   currentImageName,
+  activeFramesDir,
+  frameFolders,
   filterValue,
   searchQuery,
   isLoading,
+  disabled = false,
+  onFramesDirChange,
   onFilterChange,
   onSearchChange,
   onRefresh,
@@ -33,7 +37,52 @@ export function LabelerSidebar({
 
   return (
     <aside className="grid h-fit gap-4 xl:sticky xl:top-28">
-     
+      <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-lg font-bold">Folder Frame</h3>
+            <Badge type="warning" className="px-3 py-3">
+              {frameFolders.length}
+            </Badge>
+          </div>
+
+          <Select
+            name="labeler-frames-dir"
+            label="Pilih subfolder frames"
+            value={activeFramesDir || ""}
+            onChange={(event) => onFramesDirChange(event.target.value)}
+            options={frameFolders.map((folder) => ({
+              value: folder.path,
+              label: folder.label,
+            }))}
+            placeholder="Pilih folder frame..."
+            helpText="Labeler akan memuat frame dari subfolder `train/frames` yang kamu pilih."
+            disabled={disabled}
+          />
+
+          <div className="flex items-center justify-between gap-2 rounded-sm border border-base-300 bg-base-200/40 px-3 py-2">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Aktif
+              </p>
+              <p className="mt-1 break-all font-mono text-[11px] text-slate-700">
+                {activeFramesDir || "-"}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              isSubmit={false}
+              size="sm"
+              className="rounded-sm border border-base-300 px-4"
+              onClick={onRefresh}
+              disabled={isLoading || disabled}
+            >
+              Refresh
+            </Button>
+          </div>
+        </div>
+      </Card>
+
       <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">
@@ -57,8 +106,9 @@ export function LabelerSidebar({
                     key={item.name}
                     type="button"
                     onClick={() => onImageSelect(item.name)}
+                    disabled={disabled}
                     className={joinClasses(
-                      "w-full rounded-sm border p-4 text-left transition duration-150",
+                      "w-full rounded-sm border p-4 text-left transition duration-150 disabled:cursor-not-allowed disabled:opacity-70",
                       item.name === currentImageName
                         ? "border-warning bg-warning/10 shadow-md"
                         : "border-base-300 bg-base-100 hover:-translate-y-0.5 hover:border-base-content/20",

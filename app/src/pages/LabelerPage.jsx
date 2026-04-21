@@ -21,12 +21,15 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchJson } from "../shared/api.js";
+import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
 import { clamp, formatCount } from "../shared/utils.js";
 import {
   LabelerSidebar,
   LabelerCanvas,
   LabelerToolPanel,
   LabelerHeader,
+  LabelerAutolabelModal,
+  LabelerLogs,
   BOX_COLORS,
   MAX_UNDO_STEPS,
   MIN_ZOOM_LEVEL,
@@ -46,6 +49,8 @@ export default function LabelerPage() {
   // State management
   const [classNames, setClassNames] = useState([]);
   const [images, setImages] = useState([]);
+  const [frameFolders, setFrameFolders] = useState([]);
+  const [activeFramesDir, setActiveFramesDir] = useState("");
   const [currentImageName, setCurrentImageName] = useState(null);
   const [checkpointImageName, setCheckpointImageName] = useState(null);
   const [boxes, setBoxes] = useState([]);
@@ -72,7 +77,9 @@ export default function LabelerPage() {
   });
   const [autolabelSuggestions, setAutolabelSuggestions] = useState([]);
   const [autolabelWarnings, setAutolabelWarnings] = useState([]);
-  const [isAutolabeling, setIsAutolabeling] = useState(false);
+  const [autolabelJob, setAutolabelJob] = useState(null);
+  const [isAutolabelModalOpen, setIsAutolabelModalOpen] = useState(false);
+  const [isPreferenceReady, setIsPreferenceReady] = useState(false);
 
   // Refs for imperative updates and event handling
   const nextBoxIdRef = useRef(1);
@@ -90,6 +97,8 @@ export default function LabelerPage() {
   const stageSizeRef = useRef(stageSize);
   const undoStackRef = useRef(undoStack);
   const imagesRef = useRef(images);
+  const preferencesHydratedRef = useRef(false);
+  const previousAutolabelRunningRef = useRef(false);
 
   // Sync refs with state
   useEffect(() => {
@@ -131,6 +140,8 @@ export default function LabelerPage() {
   useEffect(() => {
     imagesRef.current = images;
   }, [images]);
+
+  const isLabelingLocked = Boolean(autolabelJob?.running);
 
   useEffect(() => {
     const viewport = stageViewportRef.current;
@@ -211,6 +222,21 @@ export default function LabelerPage() {
     () => getStageLayoutMetrics(displayMetrics, stageSize),
     [displayMetrics, stageSize],
   );
+
+  const labelerPreferences = useMemo(
+    () => ({
+      framesDir: activeFramesDir || "",
+      filterValue,
+      searchQuery,
+      activeClassId,
+      autolabelConfig,
+    }),
+    [activeFramesDir, filterValue, searchQuery, activeClassId, autolabelConfig],
+  );
+
+  usePagePreferencesAutosave("labeler", labelerPreferences, {
+    enabled: isPreferenceReady && !isLoading,
+  });
 
   // Box ID management
   const syncNextBoxId = (nextBoxes) => {
@@ -318,6 +344,10 @@ export default function LabelerPage() {
     });
 
   const selectImage = async (name, { force = false } = {}) => {
+    if (!force && isLabelingLocked) {
+      setNotice(createNotice("warning", "Tunggu auto-label selesai sebelum pindah frame."));
+      return;
+    }
     if (!force && dirtyRef.current) {
       setNotice(
         createNotice(
@@ -371,16 +401,42 @@ export default function LabelerPage() {
       const config = await fetchJson("/api/config");
       const checkpointName = config.checkpointImage || null;
       const autolabelDefaults = config.autolabel?.defaults || {};
+      const pagePreferences = config.preferences || {};
 
       setClassNames(config.classNames || []);
       setCheckpointImageName(checkpointName);
-      setAutolabelConfig((current) =>
-        preserveSelection
-          ? { ...autolabelDefaults, ...current }
-          : { ...current, ...autolabelDefaults },
-      );
+      setFrameFolders(config.frameFolders || []);
+      setActiveFramesDir(config.activeFramesDir || "");
+      if (!preferencesHydratedRef.current) {
+        setFilterValue(
+          typeof pagePreferences.filterValue === "string" && pagePreferences.filterValue
+            ? pagePreferences.filterValue
+            : "all",
+        );
+        setSearchQuery(
+          typeof pagePreferences.searchQuery === "string" ? pagePreferences.searchQuery : "",
+        );
+        setActiveClassId(
+          Number.isFinite(Number(pagePreferences.activeClassId))
+            ? Number(pagePreferences.activeClassId)
+            : 0,
+        );
+        setAutolabelConfig({
+          ...autolabelDefaults,
+          ...(pagePreferences.autolabelConfig || {}),
+        });
+        preferencesHydratedRef.current = true;
+        setIsPreferenceReady(true);
+      } else {
+        setAutolabelConfig((current) =>
+          preserveSelection
+            ? { ...autolabelDefaults, ...current }
+            : { ...current, ...autolabelDefaults },
+        );
+      }
       setAutolabelSuggestions(config.autolabel?.suggestions?.model || []);
       setAutolabelWarnings(config.autolabel?.runtimeWarnings || []);
+      setAutolabelJob(config.autolabel?.job || null);
 
       const nextImages = (config.images || []).map((item) => ({
         ...item,
@@ -392,7 +448,7 @@ export default function LabelerPage() {
         const stillExists = nextImages.some(
           (item) => item.name === currentImageNameRef.current,
         );
-        if (stillExists) return;
+        if (stillExists) return { config, images: nextImages };
       }
 
       if (nextImages.length) {
@@ -401,14 +457,52 @@ export default function LabelerPage() {
         setCurrentImageName(null);
         setBoxes([]);
       }
+      return { config, images: nextImages };
     } catch (error) {
       setNotice(createNotice("error", error.message));
+      return null;
     } finally {
       setIsLoading(false);
     }
   };
 
+  const changeFramesDirectory = async (nextFramesDir) => {
+    const normalizedDir = String(nextFramesDir || "").trim();
+    if (!normalizedDir || normalizedDir === activeFramesDir) {
+      return;
+    }
+    if (isLabelingLocked) {
+      setNotice(createNotice("warning", "Tunggu auto-label selesai sebelum pindah folder."));
+      return;
+    }
+    if (dirtyRef.current) {
+      setNotice(
+        createNotice(
+          "warning",
+          "Frame aktif punya perubahan yang belum disimpan. Simpan dulu sebelum pindah folder.",
+        ),
+      );
+      return;
+    }
+
+    setNotice(createNotice("info", "Memindahkan labeler ke folder frame terpilih..."));
+    try {
+      await fetchJson("/api/frames/activate", {
+        method: "POST",
+        body: JSON.stringify({ framesDir: normalizedDir }),
+      });
+      await reloadConfig(false);
+      setNotice(createNotice("success", `Folder frame aktif diganti ke ${normalizedDir}.`));
+    } catch (error) {
+      setNotice(createNotice("error", error.message));
+    }
+  };
+
   const navigate = (step) => {
+    if (isLabelingLocked) {
+      setNotice(createNotice("warning", "Navigasi frame dikunci saat auto-label berjalan."));
+      return;
+    }
     if (!visibleImages.length) {
       setNotice(createNotice("warning", "Tidak ada frame yang tersedia."));
       return;
@@ -432,6 +526,10 @@ export default function LabelerPage() {
   };
 
   const saveCurrentLabel = async (advance = false) => {
+    if (isLabelingLocked) {
+      setNotice(createNotice("warning", "Simpan label dinonaktifkan sampai auto-label selesai."));
+      return;
+    }
     if (!currentImageNameRef.current) {
       setNotice(createNotice("warning", "Tidak ada frame yang aktif."));
       return;
@@ -470,6 +568,10 @@ export default function LabelerPage() {
   };
 
   const saveCheckpoint = async (name = currentImageNameRef.current) => {
+    if (isLabelingLocked) {
+      setNotice(createNotice("warning", "Checkpoint dinonaktifkan saat auto-label berjalan."));
+      return;
+    }
     if (!name) {
       setNotice(
         createNotice(
@@ -505,6 +607,10 @@ export default function LabelerPage() {
   };
 
   const removeBox = (boxId) => {
+    if (isLabelingLocked) {
+      setNotice(createNotice("warning", "Edit bounding box dikunci saat auto-label berjalan."));
+      return;
+    }
     const currentBoxes = boxesRef.current;
     const nextBoxes = currentBoxes.filter((box) => box.id !== boxId);
     if (nextBoxes.length === currentBoxes.length) return;
@@ -516,6 +622,10 @@ export default function LabelerPage() {
   };
 
   const clearAllBoxes = () => {
+    if (isLabelingLocked) {
+      setNotice(createNotice("warning", "Edit bounding box dikunci saat auto-label berjalan."));
+      return;
+    }
     if (!boxesRef.current.length) return;
     pushUndoSnapshot(takeUndoSnapshot());
     setBoxes([]);
@@ -524,6 +634,10 @@ export default function LabelerPage() {
   };
 
   const undoLastChange = () => {
+    if (isLabelingLocked) {
+      setNotice(createNotice("warning", "Undo dinonaktifkan saat auto-label berjalan."));
+      return;
+    }
     if (!undoStackRef.current.length) {
       setNotice(
         createNotice("warning", "Tidak ada perubahan untuk dibatalkan."),
@@ -539,6 +653,10 @@ export default function LabelerPage() {
   };
 
   const syncSelectedBoxClass = (nextClassId) => {
+    if (isLabelingLocked) {
+      setNotice(createNotice("warning", "Perubahan class dikunci saat auto-label berjalan."));
+      return;
+    }
     const parsedClassId = Number(nextClassId) || 0;
     setActiveClassId(parsedClassId);
     const selected = boxesRef.current.find(
@@ -604,55 +722,90 @@ export default function LabelerPage() {
   };
 
   const handleAutolabelCurrent = async () => {
-    if (!currentImageNameRef.current || !autolabelConfig.model) return;
+    if (isLabelingLocked) {
+      setNotice(createNotice("warning", "Masih ada proses auto-label yang berjalan."));
+      return;
+    }
+    if (!currentImageNameRef.current) {
+      setNotice(createNotice("warning", "Tidak ada frame aktif untuk auto-label."));
+      return;
+    }
+    if (!String(autolabelConfig.model || "").trim()) {
+      setNotice(createNotice("warning", "Model auto-label wajib diisi."));
+      return;
+    }
+    if (dirtyRef.current) {
+      setNotice(
+        createNotice(
+          "warning",
+          "Simpan perubahan frame aktif terlebih dahulu sebelum menjalankan auto-label.",
+        ),
+      );
+      return;
+    }
 
     const imageName = currentImageNameRef.current;
-    setIsAutolabeling(true);
     try {
-      const response = await fetchJson("/api/autolabel", {
+      const nextJob = await fetchJson("/api/autolabel", {
         method: "POST",
         body: JSON.stringify({
           image: imageName,
           ...autolabelConfig,
         }),
       });
-
-      setHasLabelFile(Boolean(response.hasLabelFile));
-      setParseError(response.parseError || null);
-      setImages((current) =>
-        current.map((item) =>
-          item.name === imageName
-            ? {
-                ...item,
-                hasLabelFile: Boolean(response.hasLabelFile),
-                boxCount: Number(response.boxCount || 0),
-              }
-            : item,
-        ),
-      );
-
-      if (response.boxes?.length) {
-        const nextBoxes = response.boxes.map((item) =>
-          normalizedToBox(item, naturalSizeRef.current),
-        );
-        syncNextBoxId(nextBoxes);
-        setBoxes(nextBoxes);
-        setSelectedBoxId(nextBoxes[0]?.id || null);
-        markDirty(false);
-        setNotice(
-          createNotice("success", `Auto-labeled ${nextBoxes.length} box(es).`),
-        );
-      } else {
-        syncNextBoxId([]);
-        setBoxes([]);
-        setSelectedBoxId(null);
-        markDirty(false);
-        setNotice(createNotice("info", "Tidak ada objek terdeteksi."));
-      }
+      setAutolabelJob(nextJob);
+      setIsAutolabelModalOpen(false);
+      setNotice(createNotice("info", "Auto-label frame dimulai. Panel labeling dikunci sampai selesai."));
     } catch (error) {
       setNotice(createNotice("error", error.message));
-    } finally {
-      setIsAutolabeling(false);
+    }
+  };
+
+  const handleAutolabelAll = async () => {
+    if (isLabelingLocked) {
+      setNotice(createNotice("warning", "Masih ada proses auto-label yang berjalan."));
+      return;
+    }
+    if (!imagesRef.current.length) {
+      setNotice(createNotice("warning", "Folder frame aktif belum memiliki frame."));
+      return;
+    }
+    if (!String(autolabelConfig.model || "").trim()) {
+      setNotice(createNotice("warning", "Model auto-label wajib diisi."));
+      return;
+    }
+    if (dirtyRef.current) {
+      setNotice(
+        createNotice(
+          "warning",
+          "Simpan perubahan frame aktif terlebih dahulu sebelum auto-label semua frame.",
+        ),
+      );
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Jalankan auto-label untuk semua frame pada folder aktif? Label yang sudah ada akan dipertahankan.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const nextJob = await fetchJson("/api/autolabel/all", {
+        method: "POST",
+        body: JSON.stringify(autolabelConfig),
+      });
+      setAutolabelJob(nextJob);
+      setIsAutolabelModalOpen(false);
+      setNotice(
+        createNotice(
+          "info",
+          `Auto-label semua frame dimulai untuk ${imagesRef.current.length} frame. Panel labeling dikunci sampai selesai.`,
+        ),
+      );
+    } catch (error) {
+      setNotice(createNotice("error", error.message));
     }
   };
 
@@ -725,6 +878,9 @@ export default function LabelerPage() {
   });
 
   const handleCanvasMouseDown = (event) => {
+    if (isLabelingLocked) {
+      return;
+    }
     if (!currentImageNameRef.current) return;
 
     const point = toImagePointFromEvent(event);
@@ -894,6 +1050,7 @@ export default function LabelerPage() {
   // Keyboard shortcuts
   useEffect(() => {
     if (!currentImageName) return;
+    if (isLabelingLocked) return;
     const handleKeyDown = (event) => {
       if (event.ctrlKey || event.metaKey) {
         if (event.key === "z" || event.key === "Z") {
@@ -912,12 +1069,72 @@ export default function LabelerPage() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [currentImageName]);
+  }, [currentImageName, isLabelingLocked]);
 
   // Initialize on mount
   useEffect(() => {
     void reloadConfig(false);
   }, []);
+
+  useEffect(() => {
+    const delay = autolabelJob?.running ? 1500 : 5000;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        const nextJob = await fetchJson("/api/autolabel/status");
+        if (!cancelled) {
+          setAutolabelJob(nextJob);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setNotice(createNotice("error", error.message));
+        }
+      }
+    }, delay);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [autolabelJob?.running, autolabelJob?.jobId, autolabelJob?.state]);
+
+  useEffect(() => {
+    const wasRunning = previousAutolabelRunningRef.current;
+    const isRunning = Boolean(autolabelJob?.running);
+    previousAutolabelRunningRef.current = isRunning;
+
+    if (!wasRunning || isRunning || !autolabelJob?.jobId) {
+      return;
+    }
+
+    const activeImageName = currentImageNameRef.current;
+    void (async () => {
+      const refreshedConfig = await reloadConfig(true);
+      const refreshedImages = refreshedConfig?.images || [];
+      if (activeImageName && refreshedImages.some((item) => item.name === activeImageName)) {
+        await selectImage(activeImageName, { force: true });
+      }
+
+      if (autolabelJob.state === "finished") {
+        const successMessage =
+          autolabelJob.targetMode === "current"
+            ? `Auto-label frame ${autolabelJob.targetImage || ""} selesai.`
+            : "Auto-label semua frame selesai. Cek log runner untuk detail output.";
+        setNotice(createNotice("success", successMessage.trim()));
+      } else if (autolabelJob.state === "failed") {
+        setNotice(createNotice("error", autolabelJob.error || "Auto-label gagal dijalankan."));
+      } else if (autolabelJob.state === "stopped") {
+        setNotice(createNotice("warning", "Proses auto-label dihentikan."));
+      }
+    })();
+  }, [
+    autolabelJob?.running,
+    autolabelJob?.jobId,
+    autolabelJob?.state,
+    autolabelJob?.targetMode,
+    autolabelJob?.targetImage,
+    autolabelJob?.error,
+  ]);
 
   // Computed values
   const currentIsCheckpoint = Boolean(
@@ -933,13 +1150,17 @@ export default function LabelerPage() {
     : "-";
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[330px_minmax(0,1fr)]">
+    <div className="grid gap-4 pb-[260px] md:pb-[300px] xl:grid-cols-[330px_minmax(0,1fr)]">
       <LabelerSidebar
         images={images}
         visibleImages={visibleImages}
+        activeFramesDir={activeFramesDir}
+        frameFolders={frameFolders}
         filterValue={filterValue}
         searchQuery={searchQuery}
         isLoading={isLoading}
+        disabled={isLabelingLocked}
+        onFramesDirChange={changeFramesDirectory}
         onFilterChange={setFilterValue}
         onSearchChange={setSearchQuery}
         onRefresh={() => reloadConfig(true)}
@@ -951,6 +1172,8 @@ export default function LabelerPage() {
         <LabelerHeader
           currentImageItem={currentImageItem}
           visibleImages={visibleImages}
+          hasFrames={images.length > 0}
+          interactionLocked={isLabelingLocked}
           currentIndex={currentIndex}
           currentIsCheckpoint={currentIsCheckpoint}
           checkpointImageName={checkpointImageName}
@@ -960,8 +1183,24 @@ export default function LabelerPage() {
           onNavigate={navigate}
           onOpenCheckpoint={openCheckpoint}
           onSaveCheckpoint={saveCheckpoint}
+          onOpenAutolabelModal={() => setIsAutolabelModalOpen(true)}
           onSaveLabel={() => saveCurrentLabel(false)}
           onSaveLabelAndNext={() => saveCurrentLabel(true)}
+        />
+
+        <LabelerAutolabelModal
+          open={isAutolabelModalOpen}
+          onClose={() => setIsAutolabelModalOpen(false)}
+          activeFramesDir={activeFramesDir}
+          totalImages={images.length}
+          currentImageName={currentImageName}
+          autolabelConfig={autolabelConfig}
+          autolabelSuggestions={autolabelSuggestions}
+          autolabelWarnings={autolabelWarnings}
+          job={autolabelJob}
+          onAutolabelConfigChange={setAutolabelConfig}
+          onAutolabelCurrent={handleAutolabelCurrent}
+          onAutolabelAll={handleAutolabelAll}
         />
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -977,6 +1216,7 @@ export default function LabelerPage() {
             zoomLevel={zoomLevel}
             minZoomLevel={MIN_ZOOM_LEVEL}
             maxZoomLevel={MAX_ZOOM_LEVEL}
+            interactionDisabled={isLabelingLocked}
             onZoomIn={zoomIn}
             onZoomOut={zoomOut}
             onResetZoom={resetZoom}
@@ -997,13 +1237,8 @@ export default function LabelerPage() {
             currentImageName={currentImageName}
             currentIsCheckpoint={currentIsCheckpoint}
             checkpointImageName={checkpointImageName}
-            autolabelConfig={autolabelConfig}
-            autolabelSuggestions={autolabelSuggestions}
-            autolabelWarnings={autolabelWarnings}
-            isAutolabeling={isAutolabeling}
+            disabled={isLabelingLocked}
             onSyncSelectedBoxClass={syncSelectedBoxClass}
-            onAutolabel={handleAutolabelCurrent}
-            onAutolabelConfigChange={setAutolabelConfig}
             onUndo={undoLastChange}
             onRemoveBox={removeBox}
             onClearAllBoxes={clearAllBoxes}
@@ -1015,6 +1250,8 @@ export default function LabelerPage() {
             onBoxSelect={setSelectedBoxId}
           />
         </div>
+
+        <LabelerLogs job={autolabelJob} />
       </section>
     </div>
   );

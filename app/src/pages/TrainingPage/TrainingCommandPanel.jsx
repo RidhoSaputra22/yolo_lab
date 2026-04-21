@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Badge, Card, Paragraph } from "../../ui.js";
+import { Alert, Badge, Card, Paragraph, Select } from "../../ui.js";
 import { formatCount } from "../../shared/utils.js";
 import { FormFieldControl } from "../../components/FormFieldControl.jsx";
 
@@ -11,11 +11,13 @@ export function TrainingCommandPanel({
   layout,
   formValues,
   suggestions,
+  frameFolders,
   preview,
   previewError,
   previewState,
   presetSummary,
   onFieldChange,
+  onFrameFolderChange,
 }) {
   const previewBadge = {
     idle: { type: "ghost", label: "menunggu" },
@@ -47,6 +49,37 @@ export function TrainingCommandPanel({
       <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         {/* Form sections */}
         <div className="grid gap-3">
+          <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
+                    Frame Folder
+                  </p>
+                  <Paragraph className="mt-2 text-sm leading-6 opacity-100">
+                    Pilih subfolder di `train/frames` yang mau dipakai untuk labeling lanjut dan training.
+                  </Paragraph>
+                </div>
+                <Badge type="info" className="px-3 py-3">
+                  {formatCount(frameFolders.length, "folder")}
+                </Badge>
+              </div>
+
+              <Select
+                name="training-frames-dir"
+                label="Folder frame aktif"
+                value={formValues.framesDir || ""}
+                onChange={(event) => onFrameFolderChange(event.target.value)}
+                options={frameFolders.map((folder) => ({
+                  value: folder.path,
+                  label: folder.label,
+                }))}
+                placeholder="Pilih folder frame..."
+                helpText="Nilai ini otomatis mengisi `framesDir` dan pasangan `labelsDir` dengan nama folder yang sama."
+              />
+            </div>
+          </Card>
+
           {(layout || []).map((section) => (
             <details
               key={section.id}

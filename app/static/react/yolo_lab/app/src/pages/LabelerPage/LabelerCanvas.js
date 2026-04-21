@@ -4,7 +4,7 @@ import { Alert, Badge, Button, Card, Paragraph } from "../../ui.js";
  * Canvas and image rendering component for LabelerPage
  * Handles drawing boxes and mouse interactions on the canvas overlay
  */
-export function LabelerCanvas({ currentImageName, imageSrc, displayMetrics, stageLayout, stageViewportRef, frameShellRef, overlayRef, zoomLevel, zoomLabel, minZoomLevel, maxZoomLevel, onZoomIn, onZoomOut, onResetZoom, onCanvasMouseDown, onCanvasMouseMove, onCanvasMouseLeave, }) {
+export function LabelerCanvas({ currentImageName, imageSrc, displayMetrics, stageLayout, stageViewportRef, frameShellRef, overlayRef, zoomLevel, zoomLabel, minZoomLevel, maxZoomLevel, interactionDisabled = false, onZoomIn, onZoomOut, onResetZoom, onCanvasMouseDown, onCanvasMouseMove, onCanvasMouseLeave, }) {
     return (React.createElement(Card, { className: "rounded-sm border border-base-300 bg-base-100/90 shadow-xl" },
         React.createElement("div", { className: "space-y-4" },
             React.createElement("div", { className: "flex flex-wrap items-center justify-between gap-3" },
@@ -19,6 +19,8 @@ export function LabelerCanvas({ currentImageName, imageSrc, displayMetrics, stag
                     overscrollBehavior: "contain",
                     backgroundImage: "linear-gradient(135deg, rgba(216, 91, 52, 0.06), transparent 34%), linear-gradient(315deg, rgba(29, 111, 82, 0.07), transparent 28%)",
                 } },
+                interactionDisabled ? (React.createElement("div", { className: "pointer-events-none absolute inset-x-4 top-4 z-10" },
+                    React.createElement(Alert, { type: "warning", className: "rounded-sm shadow-md" }, "Auto-label sedang berjalan. Edit bounding box dikunci sampai proses selesai."))) : null,
                 React.createElement("div", { className: "relative", style: {
                         width: stageLayout.contentWidth || "100%",
                         height: stageLayout.contentHeight || "100%",
@@ -38,5 +40,6 @@ export function LabelerCanvas({ currentImageName, imageSrc, displayMetrics, stag
                         React.createElement("canvas", { ref: overlayRef, onMouseDown: onCanvasMouseDown, onMouseMove: onCanvasMouseMove, onMouseLeave: onCanvasMouseLeave, className: "absolute inset-0 h-full w-full", style: {
                                 width: displayMetrics.width || undefined,
                                 height: displayMetrics.height || undefined,
+                                pointerEvents: interactionDisabled ? "none" : "auto",
                             } }))))))));
 }

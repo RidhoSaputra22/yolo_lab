@@ -91,7 +91,7 @@ export function printUsage() {
   console.log("");
   console.log("Opsi:");
   console.log("  --frames-dir <path>   Folder frame. Default: train/frames");
-  console.log("  --labels-dir <path>   Folder label. Default: train/labels");
+  console.log("  --labels-dir <path>   Root folder label. Subfolder aktif akan mengikuti nama folder frame.");
   console.log("  --dataset-dir <path>  Folder dataset. Default: train/dataset");
   console.log("  --class-name <name>   Nama class, bisa dipakai berulang.");
   console.log("  --host <host>         Host bind. Default: 127.0.0.1");

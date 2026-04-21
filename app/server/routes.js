@@ -26,6 +26,28 @@ function requestRangeHeader(request) {
   );
 }
 
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function labelerPreferencesPayload(appState, storedPreferences, autolabelDefaults) {
+  const safePreferences = isPlainObject(storedPreferences) ? storedPreferences : {};
+  return {
+    framesDir: displayPath(appState.framesDir),
+    filterValue: typeof safePreferences.filterValue === "string" && safePreferences.filterValue
+      ? safePreferences.filterValue
+      : "all",
+    searchQuery: typeof safePreferences.searchQuery === "string" ? safePreferences.searchQuery : "",
+    activeClassId: Number.isFinite(Number(safePreferences.activeClassId))
+      ? Number(safePreferences.activeClassId)
+      : 0,
+    autolabelConfig: {
+      ...autolabelDefaults,
+      ...(isPlainObject(safePreferences.autolabelConfig) ? safePreferences.autolabelConfig : {}),
+    },
+  };
+}
+
 export function createFetchHandler(appState) {
   return async function handleRequest(request) {
     const url = new URL(request.url);
@@ -81,14 +103,29 @@ export function createFetchHandler(appState) {
         }
 
         if (pathname === "/api/config") {
+          const storedPreferences = appState.pagePreferences.read("labeler");
+          const storedAutolabelConfig = isPlainObject(storedPreferences.autolabelConfig)
+            ? storedPreferences.autolabelConfig
+            : {};
+          const autolabelConfig = appState.autolabelConfigPayload(storedAutolabelConfig);
+          const preferences = labelerPreferencesPayload(
+            appState,
+            storedPreferences,
+            autolabelConfig.defaults || {},
+          );
+          appState.pagePreferences.write("labeler", preferences);
           const images = appState.listImages();
           const labeledCount = images.filter((item) => item.hasLabelFile).length;
           const totalBoxes = images.reduce((sum, item) => sum + Number(item.boxCount || 0), 0);
-          const autolabelConfig = appState.autolabelConfigPayload();
           return jsonResponse({
             classNames: appState.classNames,
             images,
             checkpointImage: appState.readCheckpointImage(),
+            activeFramesDir: displayPath(appState.framesDir),
+            activeLabelsDir: displayPath(appState.labelsDir),
+            framesRootDir: displayPath(appState.framesRootDir),
+            frameFolders: appState.listFrameFolders(),
+            preferences,
             autolabel: autolabelConfig,
             summary: {
               totalImages: images.length,
@@ -96,6 +133,14 @@ export function createFetchHandler(appState) {
               pendingImages: images.length - labeledCount,
               totalBoxes,
             },
+          });
+        }
+
+        if (pathname === "/api/preferences") {
+          const page = requireQueryValue(url, "page");
+          return jsonResponse({
+            page: String(page).trim().toLowerCase(),
+            values: appState.pagePreferences.read(page),
           });
         }
 
@@ -110,12 +155,26 @@ export function createFetchHandler(appState) {
           });
         }
 
+        if (pathname === "/api/autolabel/status") {
+          return jsonResponse(appState.autolabelJobSnapshot(), 200);
+        }
+
         if (pathname === "/api/test/config") {
-          return jsonResponse(appState.testRunner.configPayload());
+          const configPayload = appState.testRunner.configPayload(appState.pagePreferences.read("tester"));
+          appState.pagePreferences.write("tester", configPayload.defaults || {});
+          return jsonResponse({
+            ...configPayload,
+            preferences: configPayload.defaults || {},
+          });
         }
 
         if (pathname === "/api/footage/config") {
-          return jsonResponse(appState.footageRunner.configPayload());
+          const configPayload = appState.footageRunner.configPayload(appState.pagePreferences.read("footage"));
+          appState.pagePreferences.write("footage", configPayload.defaults || {});
+          return jsonResponse({
+            ...configPayload,
+            preferences: configPayload.defaults || {},
+          });
         }
 
         if (pathname === "/api/footage/status") {
@@ -157,11 +216,42 @@ export function createFetchHandler(appState) {
         }
 
         if (pathname === "/api/train/config") {
-          return jsonResponse(appState.trainingRunner.configPayload());
+          const storedPreferences = appState.pagePreferences.read("training");
+          const configPayload = appState.trainingRunner.configPayload({
+            framesDir: displayPath(appState.framesDir),
+            labelsDir: displayPath(appState.labelsDir),
+            ...(isPlainObject(storedPreferences) ? storedPreferences : {}),
+          });
+          appState.pagePreferences.write("training", configPayload.defaults || {});
+          const frameFolders = (configPayload.frameFolders || []).map((item) => ({
+            ...item,
+            labelsDir: displayPath(appState.labelsDirForFramesDir(resolveProjectPath(item.path))),
+          }));
+          return jsonResponse({
+            ...configPayload,
+            frameFolders,
+            activeFramesDir: configPayload.defaults?.framesDir || displayPath(appState.framesDir),
+            activeLabelsDir: configPayload.defaults?.labelsDir || displayPath(appState.labelsDir),
+            preferences: configPayload.defaults || {},
+            suggestions: {
+              ...(configPayload.suggestions || {}),
+              labelsDir: [
+                ...new Set([
+                  configPayload.defaults?.labelsDir || displayPath(appState.labelsDir),
+                  ...frameFolders.map((item) => item.labelsDir).filter(Boolean),
+                ]),
+              ],
+            },
+          });
         }
 
         if (pathname === "/api/train/status") {
-          return jsonResponse(appState.trainingRunner.snapshot());
+          return jsonResponse(
+            appState.trainingRunner.snapshot({
+              framesDir: displayPath(appState.framesDir),
+              labelsDir: displayPath(appState.labelsDir),
+            }),
+          );
         }
 
         if (pathname === "/api/train/artifact") {
@@ -245,6 +335,19 @@ export function createFetchHandler(appState) {
 
       const payload = await readJsonRequest(request);
 
+      if (pathname === "/api/preferences") {
+        const page = String(payload.page || "").trim();
+        if (!isPlainObject(payload.values)) {
+          throw new HttpError(400, "Payload `values` wajib berupa object.");
+        }
+        const result = appState.pagePreferences.write(page, payload.values);
+        return jsonResponse({
+          page: result.page,
+          path: displayPath(result.path),
+          values: result.values,
+        }, 200);
+      }
+
       if (pathname === "/api/labels") {
         const imageName = requireQueryValue(url, "image");
         const result = appState.saveLabelData(
@@ -264,10 +367,23 @@ export function createFetchHandler(appState) {
 
       if (pathname === "/api/autolabel") {
         const imageName = String(payload.image || "").trim();
-        return jsonResponse(appState.autolabelImage(imageName, payload), 200);
+        return jsonResponse(appState.startAutolabelImage(imageName, payload), 200);
+      }
+
+      if (pathname === "/api/autolabel/all") {
+        return jsonResponse(appState.startAutolabelAll(payload), 200);
+      }
+
+      if (pathname === "/api/autolabel/stop") {
+        return jsonResponse(appState.stopAutolabel(), 200);
       }
 
       if (pathname === "/api/footage/activate") {
+        const framesDir = String(payload.framesDir || "").trim();
+        return jsonResponse(appState.setFramesDir(resolveProjectPath(framesDir)), 200);
+      }
+
+      if (pathname === "/api/frames/activate") {
         const framesDir = String(payload.framesDir || "").trim();
         return jsonResponse(appState.setFramesDir(resolveProjectPath(framesDir)), 200);
       }

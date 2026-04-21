@@ -78,6 +78,49 @@ export function listTopLevelDirectories(directoryPath) {
     .sort((left, right) => left.localeCompare(right));
 }
 
+export function listFrameDirectoryChoices(rootDir, extensions, activeDir = null) {
+  const resolvedRootDir = path.resolve(rootDir);
+  const resolvedActiveDir = activeDir ? path.resolve(activeDir) : null;
+  const directories = [];
+
+  const registerDirectory = (directoryPath, { isRoot = false } = {}) => {
+    if (!existsSync(directoryPath) || !statSync(directoryPath).isDirectory()) {
+      return;
+    }
+
+    const resolvedDir = path.resolve(directoryPath);
+    const frameCount = listTopLevelFiles(resolvedDir, extensions).length;
+    const isActive = Boolean(resolvedActiveDir && resolvedActiveDir === resolvedDir);
+    if (!frameCount && !isActive) {
+      return;
+    }
+
+    const displayDir = displayPath(resolvedDir);
+    const name = isRoot ? path.basename(resolvedRootDir) : path.basename(resolvedDir);
+    directories.push({
+      name,
+      path: displayDir,
+      frameCount,
+      isActive,
+      isRoot,
+      label: `${isRoot ? `${displayDir} (root)` : name} • ${frameCount} frame`,
+    });
+  };
+
+  registerDirectory(resolvedRootDir, { isRoot: true });
+  for (const subDirectory of listTopLevelDirectories(resolvedRootDir)) {
+    registerDirectory(subDirectory);
+  }
+
+  return directories.sort((left, right) => {
+    const activeDiff = Number(right.isActive) - Number(left.isActive);
+    if (activeDiff !== 0) {
+      return activeDiff;
+    }
+    return right.path.localeCompare(left.path);
+  });
+}
+
 export function recursiveFileStats(rootDir) {
   if (!rootDir || !existsSync(rootDir)) {
     return { fileCount: 0, totalSizeBytes: 0, updatedMs: 0, files: [] };

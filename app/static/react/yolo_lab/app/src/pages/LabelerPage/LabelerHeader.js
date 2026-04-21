@@ -1,9 +1,9 @@
 import React from "react";
-import { Alert, Badge, Button, Card, Paragraph } from "../../ui.js";
+import { Alert, Button, Card, Paragraph } from "../../ui.js";
 /**
  * Header component for LabelerPage showing current image info and navigation
  */
-export function LabelerHeader({ currentImageItem, visibleImages, currentIndex, currentIsCheckpoint, checkpointImageName, naturalSize, zoomLabel, notice, onNavigate, onOpenCheckpoint, onSaveCheckpoint, onSaveLabel, onSaveLabelAndNext, }) {
+export function LabelerHeader({ currentImageItem, visibleImages, hasFrames, interactionLocked, currentIndex, currentIsCheckpoint, checkpointImageName, naturalSize, zoomLabel, notice, onNavigate, onOpenCheckpoint, onSaveCheckpoint, onOpenAutolabelModal, onSaveLabel, onSaveLabelAndNext, }) {
     return (React.createElement("section", { className: "grid gap-4" },
         notice?.message ? (React.createElement(Alert, { type: notice.type === "error" ? "error" : notice.type === "success" ? "success" : "info", className: "rounded-sm shadow-md" }, notice.message)) : null,
         React.createElement(Card, { className: "rounded-sm border border-base-300 bg-base-100/90 shadow-xl" },
@@ -15,10 +15,11 @@ export function LabelerHeader({ currentImageItem, visibleImages, currentIndex, c
                         ? `${currentIndex >= 0 ? `${currentIndex + 1}/${visibleImages.length}` : "frame aktif"} • ${naturalSize.width || "-"} x ${naturalSize.height || "-"} px${currentIsCheckpoint ? " • checkpoint aktif" : ""}`
                         : "Pilih frame di panel kiri.")),
                 React.createElement("div", { className: "flex flex-wrap gap-2" },
-                    React.createElement(Button, { variant: "ghost", isSubmit: false, className: "rounded-sm border border-base-300 bg-base-100", disabled: !visibleImages.length, onClick: () => onNavigate(-1) }, "Prev"),
-                    React.createElement(Button, { variant: "ghost", isSubmit: false, className: "rounded-sm border border-base-300 bg-base-100", disabled: !visibleImages.length, onClick: () => onNavigate(1) }, "Next"),
-                    React.createElement(Button, { variant: "warning", outline: true, isSubmit: false, className: "rounded-sm", disabled: !checkpointImageName, onClick: onOpenCheckpoint }, "Buka checkpoint"),
-                    React.createElement(Button, { variant: "warning", isSubmit: false, className: "rounded-sm", disabled: !currentImageItem?.name || currentIsCheckpoint, onClick: () => onSaveCheckpoint() }, currentIsCheckpoint ? "Checkpoint aktif" : "Jadikan checkpoint"),
-                    React.createElement(Button, { variant: "primary", isSubmit: false, className: "rounded-sm", disabled: !currentImageItem?.name, onClick: onSaveLabel }, "Simpan"),
-                    React.createElement(Button, { variant: "success", isSubmit: false, className: "rounded-sm", disabled: !currentImageItem?.name, onClick: onSaveLabelAndNext }, "Simpan + Next"))))));
+                    React.createElement(Button, { variant: "ghost", isSubmit: false, className: "rounded-sm border border-base-300 bg-base-100", disabled: !visibleImages.length || interactionLocked, onClick: () => onNavigate(-1) }, "Prev"),
+                    React.createElement(Button, { variant: "ghost", isSubmit: false, className: "rounded-sm border border-base-300 bg-base-100", disabled: !visibleImages.length || interactionLocked, onClick: () => onNavigate(1) }, "Next"),
+                    React.createElement(Button, { variant: "warning", outline: true, isSubmit: false, className: "rounded-sm", disabled: !checkpointImageName || interactionLocked, onClick: onOpenCheckpoint }, "Buka checkpoint"),
+                    React.createElement(Button, { variant: "warning", isSubmit: false, className: "rounded-sm", disabled: !currentImageItem?.name || currentIsCheckpoint || interactionLocked, onClick: () => onSaveCheckpoint() }, currentIsCheckpoint ? "Checkpoint aktif" : "Jadikan checkpoint"),
+                    React.createElement(Button, { variant: "warning", outline: true, isSubmit: false, className: "rounded-sm", disabled: !hasFrames, onClick: onOpenAutolabelModal }, "Auto Labeling"),
+                    React.createElement(Button, { variant: "primary", isSubmit: false, className: "rounded-sm", disabled: !currentImageItem?.name || interactionLocked, onClick: onSaveLabel }, "Simpan"),
+                    React.createElement(Button, { variant: "success", isSubmit: false, className: "rounded-sm", disabled: !currentImageItem?.name || interactionLocked, onClick: onSaveLabelAndNext }, "Simpan + Next"))))));
 }

@@ -11,10 +11,12 @@ import { Alert, Badge, Button } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
 import { formatCount, formatTimestamp, joinClasses } from "../shared/utils.js";
 import { noticeTone, PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
+import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
 import { TrainingSidebar, TrainingCommandPanel, TrainingRunExplorer, TrainingLogs, } from "./TrainingPage/index.js";
 export default function TrainingPage() {
     const [layout, setLayout] = useState([]);
     const [suggestions, setSuggestions] = useState({});
+    const [frameFolders, setFrameFolders] = useState([]);
     const [defaults, setDefaults] = useState({});
     const [formValues, setFormValues] = useState({});
     const [runtimePaths, setRuntimePaths] = useState(null);
@@ -26,7 +28,7 @@ export default function TrainingPage() {
     const [notice, setNotice] = useState(null);
     const [selectedRunKey, setSelectedRunKey] = useState("");
     const [isConfigLoading, setIsConfigLoading] = useState(true);
-    const workspace = job?.workspace || null;
+    const workspace = job?.running || job?.jobId ? job?.workspace || null : preview?.workspace || job?.workspace || null;
     const runs = job?.runs || [];
     useEffect(() => {
         if (!runs.length) {
@@ -39,6 +41,9 @@ export default function TrainingPage() {
     }, [runs, selectedRunKey]);
     const selectedRun = useMemo(() => runs.find((run) => run.key === selectedRunKey) || runs[0] || null, [runs, selectedRunKey]);
     const latestRun = runs[0] || null;
+    usePagePreferencesAutosave("training", formValues, {
+        enabled: !isConfigLoading && Object.keys(formValues).length > 0,
+    });
     useEffect(() => {
         let cancelled = false;
         async function loadConfig() {
@@ -49,6 +54,7 @@ export default function TrainingPage() {
                     return;
                 setLayout(config.layout || []);
                 setSuggestions(config.suggestions || {});
+                setFrameFolders(config.frameFolders || []);
                 setDefaults(config.defaults || {});
                 setFormValues(config.defaults || {});
                 setRuntimePaths(config.paths || null);
@@ -117,6 +123,14 @@ export default function TrainingPage() {
     const handleFieldChange = (name, value) => {
         setFormValues((current) => ({ ...current, [name]: value }));
     };
+    const handleFrameFolderChange = (framesDir) => {
+        const selectedFolder = frameFolders.find((folder) => folder.path === framesDir);
+        setFormValues((current) => ({
+            ...current,
+            framesDir,
+            labelsDir: selectedFolder?.labelsDir || current.labelsDir,
+        }));
+    };
     const handleRun = async () => {
         setNotice({ type: "info", message: "Menjalankan prepare + training YOLO..." });
         try {
@@ -184,7 +198,7 @@ export default function TrainingPage() {
         React.createElement("div", { className: "grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]" },
             React.createElement(TrainingSidebar, { workspace: workspace, runtimePaths: runtimePaths }),
             React.createElement("section", { className: "grid gap-4" },
-                React.createElement(TrainingCommandPanel, { layout: layout, formValues: formValues, suggestions: suggestions, defaults: defaults, preview: preview, previewError: previewError, previewState: previewState, presetSummary: presetSummary, onFieldChange: handleFieldChange }),
+                React.createElement(TrainingCommandPanel, { layout: layout, formValues: formValues, suggestions: suggestions, frameFolders: frameFolders, defaults: defaults, preview: preview, previewError: previewError, previewState: previewState, presetSummary: presetSummary, onFieldChange: handleFieldChange, onFrameFolderChange: handleFrameFolderChange }),
                 React.createElement(TrainingRunExplorer, { runs: runs, selectedRunKey: selectedRunKey, selectedRun: selectedRun, onSelectRun: setSelectedRunKey }))),
         React.createElement(TrainingLogs, { job: job })));
 }

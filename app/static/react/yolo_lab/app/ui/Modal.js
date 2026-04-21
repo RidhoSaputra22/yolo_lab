@@ -19,7 +19,7 @@ export default function Modal({ open, onClose, title = null, size = "lg", closeB
     }[size] || "max-w-lg";
     if (!open)
         return null;
-    return (React.createElement("div", { className: "modal modal-open modal-bottom sm:modal-middle", tabIndex: -1, ...rest },
+    return (React.createElement("div", { className: "modal modal-open ", tabIndex: -1, ...rest },
         React.createElement("div", { className: `modal-box ${sizeClass}` },
             (title || closeButton) && (React.createElement("div", { className: "flex justify-between items-center mb-4" },
                 title && React.createElement("h3", { className: "font-bold text-lg" }, title),

@@ -17,6 +17,7 @@ export function LabelerCanvas({
   zoomLabel,
   minZoomLevel,
   maxZoomLevel,
+  interactionDisabled = false,
   onZoomIn,
   onZoomOut,
   onResetZoom,
@@ -82,6 +83,13 @@ export function LabelerCanvas({
                 "linear-gradient(135deg, rgba(216, 91, 52, 0.06), transparent 34%), linear-gradient(315deg, rgba(29, 111, 82, 0.07), transparent 28%)",
             }}
           >
+            {interactionDisabled ? (
+              <div className="pointer-events-none absolute inset-x-4 top-4 z-10">
+                <Alert type="warning" className="rounded-sm shadow-md">
+                  Auto-label sedang berjalan. Edit bounding box dikunci sampai proses selesai.
+                </Alert>
+              </div>
+            ) : null}
             <div
               className="relative"
               style={{
@@ -120,6 +128,7 @@ export function LabelerCanvas({
                   style={{
                     width: displayMetrics.width || undefined,
                     height: displayMetrics.height || undefined,
+                    pointerEvents: interactionDisabled ? "none" : "auto",
                   }}
                 />
               </div>

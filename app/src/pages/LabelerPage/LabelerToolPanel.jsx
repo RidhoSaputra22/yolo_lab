@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Badge, Button, Card, Input, Paragraph, Select } from "../../ui.js";
+import { Alert, Badge, Button, Card, Paragraph, Select } from "../../ui.js";
 
 /**
  * Right sidebar tool panel component for LabelerPage
@@ -19,17 +19,12 @@ export function LabelerToolPanel({
   currentIsCheckpoint,
   checkpointImageName,
   zoomLabel,
-  autolabelConfig,
-  autolabelSuggestions,
-  autolabelWarnings,
-  isAutolabeling,
+  disabled = false,
   onSyncSelectedBoxClass,
   onUndo,
   onRemoveBox,
   onClearAllBoxes,
   onReloadLabel,
-  onAutolabel,
-  onAutolabelConfigChange,
   onBoxSelect,
 }) {
   return (
@@ -52,70 +47,15 @@ export function LabelerToolPanel({
               value: String(index),
               label: `${index} - ${name}`,
             }))}
+            disabled={disabled}
           />
-
-          <div className="space-y-3 rounded-sm border border-base-300 bg-base-200/30 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">
-                  Auto-label
-                </p>
-                <Paragraph className="mt-1 text-xs opacity-100">
-                  Label otomatis hanya untuk frame yang sedang tampil.
-                </Paragraph>
-              </div>
-              <Badge type="warning" className="px-3 py-3">
-                Frame aktif
-              </Badge>
-            </div>
-
-            <Input
-              name="autolabel-model"
-              label="Auto-label model"
-              placeholder="edge/yolo26x.pt"
-              helpText="Path file `.pt` lokal atau nama model Ultralytics untuk bootstrap label."
-              value={autolabelConfig.model}
-              onChange={(event) =>
-                onAutolabelConfigChange({
-                  ...autolabelConfig,
-                  model: event.target.value,
-                })
-              }
-              list={autolabelSuggestions.length ? "autolabel-model-suggestions" : undefined}
-            />
-
-            {autolabelSuggestions.length ? (
-              <datalist id="autolabel-model-suggestions">
-                {autolabelSuggestions.map((item) => (
-                  <option key={item} value={item} />
-                ))}
-              </datalist>
-            ) : null}
-
-            <Button
-              variant="warning"
-              isSubmit={false}
-              className="rounded-sm"
-              disabled={!currentImageName || !autolabelConfig.model}
-              loading={isAutolabeling}
-              onClick={onAutolabel}
-            >
-              Auto-label frame ini
-            </Button>
-
-            {autolabelWarnings.length ? (
-              <Alert type="warning" className="rounded-sm text-sm">
-                {autolabelWarnings[0]}
-              </Alert>
-            ) : null}
-          </div>
 
           <div className="grid gap-3">
             <Button
               variant="ghost"
               isSubmit={false}
               className="rounded-sm border border-base-300 bg-base-100"
-              disabled={!undoStack.length}
+              disabled={!undoStack.length || disabled}
               onClick={onUndo}
             >
               Undo (Ctrl+Z)
@@ -124,7 +64,7 @@ export function LabelerToolPanel({
               variant="ghost"
               isSubmit={false}
               className="rounded-sm border border-base-300 bg-base-100"
-              disabled={!selectedBox}
+              disabled={!selectedBox || disabled}
               onClick={() => selectedBox && onRemoveBox(selectedBox.id)}
             >
               Hapus box terpilih
@@ -133,7 +73,7 @@ export function LabelerToolPanel({
               variant="ghost"
               isSubmit={false}
               className="rounded-sm border border-base-300 bg-base-100"
-              disabled={!boxes.length}
+              disabled={!boxes.length || disabled}
               onClick={() => {
                 const ok = window.confirm("Hapus semua box pada frame ini?");
                 if (ok) {
@@ -147,7 +87,7 @@ export function LabelerToolPanel({
               variant="ghost"
               isSubmit={false}
               className="rounded-sm border border-base-300 bg-base-100"
-              disabled={!currentImageName}
+              disabled={!currentImageName || disabled}
               onClick={onReloadLabel}
             >
               Reload label
@@ -197,8 +137,9 @@ export function LabelerToolPanel({
                     <button
                       key={box.id}
                       type="button"
+                      disabled={disabled}
                       onClick={() => onBoxSelect(box.id)}
-                      className={`w-full rounded-sm border bg-base-100 p-4 text-left transition ${
+                      className={`w-full rounded-sm border bg-base-100 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-70 ${
                         box.id === selectedBoxId
                           ? "border-warning bg-warning/10 shadow-md"
                           : "border-base-300"

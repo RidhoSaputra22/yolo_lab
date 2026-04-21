@@ -3,6 +3,7 @@ import { Alert, Badge, Button } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
 import { formatCount } from "../shared/utils.js";
 import { noticeTone, PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
+import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
 import {
   FootageSidebar,
   FootageImportPanel,
@@ -48,6 +49,10 @@ export default function FootagePage({ onNavigate }) {
     [footageItems, selectedFootagePath],
   );
   const activeFramesDir = preview?.config?.framesDir || job?.config?.framesDir || library?.framesDir || "";
+
+  usePagePreferencesAutosave("footage", formValues, {
+    enabled: !isConfigLoading && Object.keys(formValues).length > 0,
+  });
 
   useEffect(() => {
     let cancelled = false;

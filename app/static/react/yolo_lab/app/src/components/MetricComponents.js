@@ -13,9 +13,9 @@ export function StatusMetric({ label, value, detail, tone = "" }) {
 /**
  * Metric tile component for displaying key metrics
  */
-export function MetricTile({ label, value, detail, tone = "" }) {
+export function MetricTile({ label, value, detail, tone = "", textColor = "text-slate-900" }) {
     return (React.createElement("div", { className: "rounded-sm border border-base-300 bg-base-200/40 p-3" },
-        React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-white" }, label),
+        React.createElement("p", { className: joinClasses("text-[11px] font-semibold uppercase tracking-[0.18em] ", textColor) }, label),
         React.createElement("p", { className: joinClasses("mt-2 text-base font-semibold ", tone) }, value),
-        detail ? React.createElement("p", { className: "mt-1 text-[11px] text-white" }, detail) : null));
+        detail ? React.createElement("p", { className: joinClasses("mt-1 text-[11px] ", textColor) }, detail) : null));
 }

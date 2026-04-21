@@ -29,6 +29,19 @@ export function pathInside(targetPath, rootPath) {
   return relativePath === "" || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath));
 }
 
+export function rebaseSubdirectoryPath(sourceRootPath, sourcePath, targetRootPath) {
+  const resolvedSourceRoot = path.resolve(sourceRootPath);
+  const resolvedSourcePath = path.resolve(sourcePath);
+  const resolvedTargetRoot = path.resolve(targetRootPath);
+
+  if (!pathInside(resolvedSourcePath, resolvedSourceRoot)) {
+    throw new HttpError(400, `Path di luar root sumber: ${resolvedSourcePath}`);
+  }
+
+  const relativePath = path.relative(resolvedSourceRoot, resolvedSourcePath);
+  return relativePath ? path.resolve(resolvedTargetRoot, relativePath) : resolvedTargetRoot;
+}
+
 export function resolveProjectPath(value, { allowEmpty = false } = {}) {
   const rawValue = String(value ?? "").trim();
   if (!rawValue) {

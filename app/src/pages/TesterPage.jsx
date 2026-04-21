@@ -3,6 +3,7 @@ import { Alert, Badge, Button } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
 import { formatCount, formatTimestamp, groupArtifactsByFolder } from "../shared/utils.js";
 import { noticeTone, PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
+import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
 import {
   TesterSidebar,
   TesterFormSection,
@@ -43,6 +44,10 @@ export default function TesterPage() {
   }, [folders, selectedFolderKey]);
 
   const selectedFolder = folders.find((f) => f.key === selectedFolderKey) || folders[0] || null;
+
+  usePagePreferencesAutosave("tester", formValues, {
+    enabled: !isConfigLoading && Object.keys(formValues).length > 0,
+  });
 
   useEffect(() => {
     let cancelled = false;

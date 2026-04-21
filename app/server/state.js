@@ -4,7 +4,6 @@
 
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync, unlinkSync } from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 import {
   DEFAULT_DATASET_DIR,
   DEFAULT_EDGE_PYTHON,
@@ -16,17 +15,15 @@ import {
   DEFAULT_TRAIN_OUTPUT_DIR,
   DEFAULT_TRAIN_RUNNER,
   IMAGE_EXTENSIONS,
-  LAB_DIR,
   PROJECT_DIR,
-  WEIGHTS_EXTENSIONS,
 } from "./constants.js";
 import { envValue } from "./env.js";
 import { HttpError } from "./errors.js";
-import { shellJoin } from "./format.js";
-import { discoverFiles, listTopLevelFiles } from "./files.js";
-import { displayPath, pathInside, resolveProjectPath } from "./paths.js";
+import { listFrameDirectoryChoices, listTopLevelFiles } from "./files.js";
+import { displayPath, pathInside, rebaseSubdirectoryPath, resolveProjectPath } from "./paths.js";
 import { classNamesFromDataYaml } from "./parsers.js";
-import { defaultLabelerAutolabelConfig } from "./forms/training-form.js";
+import { PagePreferenceStore } from "./preferences.js";
+import { AutolabelRunManager } from "./managers/autolabel-manager.js";
 import { FootageRunManager } from "./managers/footage-manager.js";
 import { TestRunManager } from "./managers/test-manager.js";
 import { TrainingRunManager } from "./managers/training-manager.js";
@@ -41,22 +38,30 @@ function defaultPythonBin() {
 export class AppState {
   constructor({
     framesDir,
+    framesRootDir,
+    labelsRootDir,
     labelsDir,
     classNames,
     checkpointPath,
     footageRunner,
     testRunner,
     trainingRunner,
+    autolabelRunner,
+    pagePreferences,
     pythonBin,
     trainScript,
   }) {
     this.framesDir = path.resolve(framesDir);
+    this.framesRootDir = path.resolve(framesRootDir);
+    this.labelsRootDir = path.resolve(labelsRootDir);
     this.labelsDir = path.resolve(labelsDir);
     this.classNames = [...classNames];
     this.checkpointPath = path.resolve(checkpointPath);
     this.footageRunner = footageRunner;
     this.testRunner = testRunner;
     this.trainingRunner = trainingRunner;
+    this.autolabelRunner = autolabelRunner;
+    this.pagePreferences = pagePreferences;
     this.pythonBin = pythonBin;
     this.trainScript = path.resolve(trainScript);
   }
@@ -75,19 +80,50 @@ export class AppState {
     });
   }
 
+  listFrameFolders() {
+    return listFrameDirectoryChoices(this.framesRootDir, IMAGE_EXTENSIONS, this.framesDir)
+      .map((item) => ({
+        ...item,
+        labelsDir: displayPath(this.labelsDirForFramesDir(resolveProjectPath(item.path))),
+      }));
+  }
+
+  labelsDirForFramesDir(nextFramesDir = this.framesDir) {
+    return rebaseSubdirectoryPath(this.framesRootDir, nextFramesDir, this.labelsRootDir);
+  }
+
+  activateFrameDirectory(nextFramesDir, { createLabelsDir = true } = {}) {
+    const resolvedFramesDir = path.resolve(nextFramesDir);
+    const nextLabelsDir = this.labelsDirForFramesDir(resolvedFramesDir);
+    if (createLabelsDir) {
+      mkdirSync(nextLabelsDir, { recursive: true });
+    }
+
+    this.framesDir = resolvedFramesDir;
+    this.labelsDir = nextLabelsDir;
+    this.checkpointPath = path.join(nextLabelsDir, ".manual_labeler_checkpoint.json");
+
+    return {
+      framesDir: displayPath(this.framesDir),
+      labelsDir: displayPath(this.labelsDir),
+      checkpointPath: displayPath(this.checkpointPath),
+    };
+  }
+
   setFramesDir(nextFramesDir) {
     const resolvedPath = path.resolve(nextFramesDir);
     if (
       !existsSync(resolvedPath)
       || !statSync(resolvedPath).isDirectory()
-      || !pathInside(resolvedPath, PROJECT_DIR)
+      || !pathInside(resolvedPath, this.framesRootDir)
     ) {
       throw new HttpError(400, `Folder frame aktif tidak valid: ${nextFramesDir}`);
     }
-    this.framesDir = resolvedPath;
+    const activePaths = this.activateFrameDirectory(resolvedPath);
     return {
-      framesDir: displayPath(this.framesDir),
+      ...activePaths,
       imageCount: listTopLevelFiles(this.framesDir, IMAGE_EXTENSIONS).length,
+      frameFolders: this.listFrameFolders(),
     };
   }
 
@@ -182,105 +218,36 @@ export class AppState {
     return { saved: true, boxCount: lines.length, labelPath: String(labelPath) };
   }
 
-  autolabelConfigPayload() {
-    const defaults = defaultLabelerAutolabelConfig();
-    return {
-      defaults,
-      suggestions: {
-        model: discoverFiles(
-          [path.join(PROJECT_DIR, "edge"), path.join(LAB_DIR, "train", "runs")],
-          WEIGHTS_EXTENSIONS,
-        ),
-      },
-      runtimeWarnings: this.autolabelRuntimeWarnings(defaults),
-    };
+  autolabelConfigPayload(overrides = {}) {
+    return this.autolabelRunner.configPayload(overrides);
   }
 
-  autolabelRuntimeWarnings(defaults = defaultLabelerAutolabelConfig()) {
-    const warnings = [];
-    if (!existsSync(this.trainScript)) {
-      warnings.push(`Script training tidak ditemukan: ${this.trainScript}`);
-    }
-    if (path.isAbsolute(this.pythonBin) && !existsSync(this.pythonBin)) {
-      warnings.push(`Python edge tidak ditemukan: ${this.pythonBin}`);
-    }
-    const modelPath = resolveProjectPath(defaults.model, { allowEmpty: true });
-    if (modelPath && !existsSync(modelPath)) {
-      warnings.push(`Model auto-label default belum ditemukan: ${displayPath(modelPath)}`);
-    }
-    return warnings;
+  autolabelRuntimeWarnings(config) {
+    return this.autolabelRunner.runtimeWarnings(config);
   }
 
-  autolabelImage(imageName, payload) {
+  startAutolabelImage(imageName, payload) {
     const safeImageName = path.basename(this.imagePath(imageName));
-    const defaults = defaultLabelerAutolabelConfig();
-    const raw = { ...defaults, ...(payload || {}) };
-
-    const modelSource = String(raw.model ?? "").trim();
-    if (!modelSource) {
-      throw new HttpError(400, "Model auto-label wajib diisi.");
-    }
-
-    const conf = Number.parseFloat(String(raw.conf ?? defaults.conf));
-    if (!Number.isFinite(conf) || conf <= 0 || conf >= 1) {
-      throw new HttpError(400, "`conf` auto-label harus berada di rentang 0..1.");
-    }
-
-    const imgsz = Number.parseInt(String(raw.imgsz ?? defaults.imgsz), 10);
-    if (!Number.isFinite(imgsz) || imgsz < 32) {
-      throw new HttpError(400, "`imgsz` auto-label minimal 32.");
-    }
-
-    const device = String(raw.device ?? defaults.device ?? "auto").trim() || "auto";
-    const command = [
-      this.pythonBin,
-      this.trainScript,
-      "autolabel",
-      "--frames-dir",
-      displayPath(this.framesDir),
-      "--labels-dir",
-      displayPath(this.labelsDir),
-      "--model",
-      modelSource,
-      "--conf",
-      String(conf),
-      "--imgsz",
-      String(imgsz),
-      "--device",
-      device,
-      "--image-name",
-      safeImageName,
-      "--overwrite-labels",
-    ];
-
-    const result = spawnSync(command[0], command.slice(1), {
-      cwd: PROJECT_DIR,
-      env: {
-        ...process.env,
-        PYTHONUNBUFFERED: "1",
-        MPLCONFIGDIR: process.env.MPLCONFIGDIR || "/tmp/matplotlib",
-      },
-      encoding: "utf8",
-      stdio: "pipe",
+    return this.autolabelRunner.startImage(payload, {
+      framesDir: this.framesDir,
+      labelsDir: this.labelsDir,
+      imageName: safeImageName,
     });
+  }
 
-    if (result.status !== 0) {
-      const output = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
-      const message = output || "Auto-label frame gagal dijalankan.";
-      throw new HttpError(500, message);
-    }
+  startAutolabelAll(payload) {
+    return this.autolabelRunner.startAll(payload, {
+      framesDir: this.framesDir,
+      labelsDir: this.labelsDir,
+    });
+  }
 
-    const labelData = this.readLabelData(safeImageName);
-    return {
-      image: safeImageName,
-      commandDisplay: shellJoin(command),
-      hasLabelFile: labelData.hasLabelFile,
-      parseError: labelData.parseError,
-      boxes: labelData.boxes,
-      boxCount: labelData.boxes.length,
-      stdout: (result.stdout || "").trim(),
-      stderr: (result.stderr || "").trim(),
-    };
+  autolabelJobSnapshot(config) {
+    return this.autolabelRunner.snapshot(config);
+  }
+
+  stopAutolabel() {
+    return this.autolabelRunner.stop();
   }
 
   readCheckpointImage() {
@@ -344,23 +311,49 @@ export class AppState {
 }
 
 export function createServerState(options) {
-  const framesDir = path.resolve(options.framesDir);
-  const labelsDir = path.resolve(options.labelsDir);
+  const defaultFramesDir = path.resolve(options.framesDir);
+  const defaultFramesRootDir = path.resolve(DEFAULT_FRAMES_DIR);
+  const framesRootDir = pathInside(defaultFramesDir, defaultFramesRootDir) ? defaultFramesRootDir : defaultFramesDir;
+  const labelsRootDir = path.resolve(options.labelsDir);
   const datasetDir = path.resolve(options.datasetDir);
   const pythonBin = defaultPythonBin();
+  const pagePreferences = new PagePreferenceStore();
   const cliClassNames = options.classNames.filter(Boolean);
   const datasetClassNames = classNamesFromDataYaml(datasetDir);
   const classNames = cliClassNames.length > 0 ? cliClassNames : datasetClassNames.length ? datasetClassNames : ["person"];
+  const savedLabelerPreferences = pagePreferences.read("labeler");
+  let framesDir = defaultFramesDir;
+
+  const savedFramesDirValue = String(savedLabelerPreferences.framesDir || "").trim();
+  if (savedFramesDirValue) {
+    try {
+      const resolvedSavedFramesDir = resolveProjectPath(savedFramesDirValue);
+      if (
+        existsSync(resolvedSavedFramesDir)
+        && statSync(resolvedSavedFramesDir).isDirectory()
+        && pathInside(resolvedSavedFramesDir, framesRootDir)
+      ) {
+        framesDir = resolvedSavedFramesDir;
+      }
+    } catch {
+      // Abaikan preference lama yang tidak valid dan fallback ke opsi CLI/default.
+    }
+  }
+
+  const labelsDir = rebaseSubdirectoryPath(framesRootDir, framesDir, labelsRootDir);
 
   if (!existsSync(framesDir)) {
     throw new Error(`Folder frame tidak ditemukan: ${framesDir}`);
   }
 
+  mkdirSync(labelsRootDir, { recursive: true });
   mkdirSync(labelsDir, { recursive: true });
   const checkpointPath = path.join(labelsDir, ".manual_labeler_checkpoint.json");
 
   return new AppState({
     framesDir,
+    framesRootDir,
+    labelsRootDir,
     labelsDir,
     classNames,
     checkpointPath,
@@ -385,6 +378,12 @@ export function createServerState(options) {
       pythonBin,
       defaultRunsDir: DEFAULT_TRAIN_OUTPUT_DIR,
     }),
+    autolabelRunner: new AutolabelRunManager({
+      projectDir: PROJECT_DIR,
+      trainScript: DEFAULT_TRAIN_RUNNER,
+      pythonBin,
+    }),
+    pagePreferences,
     pythonBin,
     trainScript: DEFAULT_TRAIN_RUNNER,
   });

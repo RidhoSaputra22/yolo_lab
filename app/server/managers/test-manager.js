@@ -135,8 +135,8 @@ export class TestRunManager extends BaseRunManager {
     };
   }
 
-  configPayload() {
-    const defaults = defaultTestFormData();
+  configPayload(defaultOverrides = {}) {
+    const defaults = { ...defaultTestFormData(), ...(defaultOverrides || {}) };
     const outputSuggestions = [displayPath(this.defaultOutputDir)];
     if (existsSync(this.defaultOutputDir)) {
       const directDirs = readdirSync(this.defaultOutputDir, { withFileTypes: true })

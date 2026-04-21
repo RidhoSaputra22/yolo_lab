@@ -109,14 +109,20 @@ export function fileResponse(filePath, { method = "GET", contentType = null, ran
 }
 
 export async function readJsonRequest(request) {
-  const contentLength = Number.parseInt(request.headers.get("content-length") || "0", 10);
-  if (!Number.isFinite(contentLength) || contentLength <= 0) {
+  let rawBody = "";
+  try {
+    rawBody = await request.text();
+  } catch (error) {
+    throw new HttpError(400, `Request tidak valid: ${error.message}`);
+  }
+
+  if (!String(rawBody || "").trim()) {
     return {};
   }
 
   let payload;
   try {
-    payload = await request.json();
+    payload = JSON.parse(rawBody);
   } catch (error) {
     throw new HttpError(400, `Request tidak valid: ${error.message}`);
   }

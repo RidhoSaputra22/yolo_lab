@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import {
+  DEFAULT_FRAMES_DIR,
   IMAGE_EXTENSIONS,
   LABEL_EXTENSIONS,
   LAB_DIR,
@@ -14,7 +15,13 @@ import {
 } from "../constants.js";
 import { HttpError } from "../errors.js";
 import { fileSizeLabel, shellJoin, toLocalIso } from "../format.js";
-import { discoverFiles, listTopLevelDirectories, listTopLevelFiles, recursiveFileStats } from "../files.js";
+import {
+  discoverFiles,
+  listFrameDirectoryChoices,
+  listTopLevelDirectories,
+  listTopLevelFiles,
+  recursiveFileStats,
+} from "../files.js";
 import { displayPath, encodePathQuery, pathInside, resolveProjectPath } from "../paths.js";
 import { classNamesFromDataYaml, displayYamlValue, parseResultsCsvSummary, parseSimpleYamlObject } from "../parsers.js";
 import { defaultTrainingFormData, trainingFormLayout } from "../forms/training-form.js";
@@ -45,10 +52,11 @@ export class TrainingRunManager extends BaseRunManager {
     };
   }
 
-  configPayload() {
-    const defaults = defaultTrainingFormData();
+  configPayload(defaultOverrides = {}) {
+    const defaults = { ...defaultTrainingFormData(), ...(defaultOverrides || {}) };
+    const frameFolders = listFrameDirectoryChoices(DEFAULT_FRAMES_DIR, IMAGE_EXTENSIONS, resolveProjectPath(defaults.framesDir));
     const suggestions = {
-      framesDir: [defaults.framesDir],
+      framesDir: [...new Set([defaults.framesDir, ...frameFolders.map((item) => item.path)])],
       labelsDir: [defaults.labelsDir],
       datasetDir: [defaults.datasetDir],
       runsDir: [defaults.runsDir],
@@ -66,8 +74,9 @@ export class TrainingRunManager extends BaseRunManager {
     }
 
     return {
-      layout: trainingFormLayout(),
+      layout: trainingFormLayout({ includeFramesDirField: false }),
       defaults,
+      frameFolders,
       paths: {
         projectDir: this.projectDir,
         trainScript: displayPath(this.trainScript),
@@ -115,6 +124,7 @@ export class TrainingRunManager extends BaseRunManager {
       config,
       command,
       commandDisplay: shellJoin(command),
+      workspace: this.workspaceSnapshot(config),
     };
   }
 

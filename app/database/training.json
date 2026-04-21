@@ -1,0 +1,7 @@
+{
+  "framesDir": "train/frames/frame_20260421_3199",
+  "labelsDir": "train/labels/frame_20260421_3199",
+  "datasetDir": "train/dataset",
+  "runsDir": "train/runs",
+  "classNames": "person"
+}

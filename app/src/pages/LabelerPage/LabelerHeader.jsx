@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Badge, Button, Card, Paragraph } from "../../ui.js";
+import { Alert, Button, Card, Paragraph } from "../../ui.js";
 
 /**
  * Header component for LabelerPage showing current image info and navigation
@@ -7,6 +7,8 @@ import { Alert, Badge, Button, Card, Paragraph } from "../../ui.js";
 export function LabelerHeader({
   currentImageItem,
   visibleImages,
+  hasFrames,
+  interactionLocked,
   currentIndex,
   currentIsCheckpoint,
   checkpointImageName,
@@ -16,6 +18,7 @@ export function LabelerHeader({
   onNavigate,
   onOpenCheckpoint,
   onSaveCheckpoint,
+  onOpenAutolabelModal,
   onSaveLabel,
   onSaveLabelAndNext,
 }) {
@@ -53,7 +56,7 @@ export function LabelerHeader({
               variant="ghost"
               isSubmit={false}
               className="rounded-sm border border-base-300 bg-base-100"
-              disabled={!visibleImages.length}
+              disabled={!visibleImages.length || interactionLocked}
               onClick={() => onNavigate(-1)}
             >
               Prev
@@ -62,7 +65,7 @@ export function LabelerHeader({
               variant="ghost"
               isSubmit={false}
               className="rounded-sm border border-base-300 bg-base-100"
-              disabled={!visibleImages.length}
+              disabled={!visibleImages.length || interactionLocked}
               onClick={() => onNavigate(1)}
             >
               Next
@@ -72,7 +75,7 @@ export function LabelerHeader({
               outline
               isSubmit={false}
               className="rounded-sm"
-              disabled={!checkpointImageName}
+              disabled={!checkpointImageName || interactionLocked}
               onClick={onOpenCheckpoint}
             >
               Buka checkpoint
@@ -81,16 +84,26 @@ export function LabelerHeader({
               variant="warning"
               isSubmit={false}
               className="rounded-sm"
-              disabled={!currentImageItem?.name || currentIsCheckpoint}
+              disabled={!currentImageItem?.name || currentIsCheckpoint || interactionLocked}
               onClick={() => onSaveCheckpoint()}
             >
               {currentIsCheckpoint ? "Checkpoint aktif" : "Jadikan checkpoint"}
             </Button>
             <Button
+              variant="warning"
+              outline
+              isSubmit={false}
+              className="rounded-sm"
+              disabled={!hasFrames}
+              onClick={onOpenAutolabelModal}
+            >
+              Auto Labeling
+            </Button>
+            <Button
               variant="primary"
               isSubmit={false}
               className="rounded-sm"
-              disabled={!currentImageItem?.name}
+              disabled={!currentImageItem?.name || interactionLocked}
               onClick={onSaveLabel}
             >
               Simpan
@@ -99,7 +112,7 @@ export function LabelerHeader({
               variant="success"
               isSubmit={false}
               className="rounded-sm"
-              disabled={!currentImageItem?.name}
+              disabled={!currentImageItem?.name || interactionLocked}
               onClick={onSaveLabelAndNext}
             >
               Simpan + Next

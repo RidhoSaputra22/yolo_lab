@@ -1,12 +1,12 @@
 import React from "react";
-import { Alert, Badge, Card, Paragraph } from "../../ui.js";
+import { Alert, Badge, Card, Paragraph, Select } from "../../ui.js";
 import { formatCount } from "../../shared/utils.js";
 import { FormFieldControl } from "../../components/FormFieldControl.js";
 /**
  * Training command preview and configuration panel
  * Shows form fields and renders command preview
  */
-export function TrainingCommandPanel({ layout, formValues, suggestions, preview, previewError, previewState, presetSummary, onFieldChange, }) {
+export function TrainingCommandPanel({ layout, formValues, suggestions, frameFolders, preview, previewError, previewState, presetSummary, onFieldChange, onFrameFolderChange, }) {
     const previewBadge = {
         idle: { type: "ghost", label: "menunggu" },
         loading: { type: "info", label: "memuat" },
@@ -21,16 +21,28 @@ export function TrainingCommandPanel({ layout, formValues, suggestions, preview,
                 React.createElement(Paragraph, { className: "mt-2 max-w-3xl text-sm leading-6 text-slate-600 opacity-100" }, "Form ini menjalankan `prepare-train` dari `yolo_train.py`: bangun dataset dari label aktif, lalu langsung train model tanpa auto-label ulang.")),
             React.createElement(Badge, { type: previewBadge.type, className: "self-start px-3 py-3" }, previewBadge.label)),
         React.createElement("div", { className: "mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]" },
-            React.createElement("div", { className: "grid gap-3" }, (layout || []).map((section) => (React.createElement("details", { key: section.id, className: "rounded-sm border border-base-300 bg-base-100/85", open: section.id === "dataset" || section.id === "training" },
-                React.createElement("summary", { className: "cursor-pointer list-none px-5 py-4" },
-                    React.createElement("div", { className: "flex items-start justify-between gap-3" },
-                        React.createElement("div", null,
-                            React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700" }, section.title),
-                            React.createElement(Paragraph, { className: "mt-2 text-sm leading-6 opacity-100" }, section.description)),
-                        React.createElement(Badge, { type: "ghost", className: "px-3 py-3" }, formatCount((section.fields || []).length, "field")))),
-                React.createElement("div", { className: "border-t border-base-300 px-5 py-5" },
-                    React.createElement("div", { className: section.columns === 1 ? "grid gap-4" : "grid gap-4 md:grid-cols-2" }, (section.fields || []).map((field) => (React.createElement("div", { key: field.name },
-                        React.createElement(FormFieldControl, { field: field, value: formValues[field.name], suggestions: suggestions[field.name] || [], onChange: onFieldChange })))))))))),
+            React.createElement("div", { className: "grid gap-3" },
+                React.createElement(Card, { className: "rounded-sm border border-base-300 bg-base-100/90 shadow-lg" },
+                    React.createElement("div", { className: "space-y-3" },
+                        React.createElement("div", { className: "flex items-start justify-between gap-3" },
+                            React.createElement("div", null,
+                                React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700" }, "Frame Folder"),
+                                React.createElement(Paragraph, { className: "mt-2 text-sm leading-6 opacity-100" }, "Pilih subfolder di `train/frames` yang mau dipakai untuk labeling lanjut dan training.")),
+                            React.createElement(Badge, { type: "info", className: "px-3 py-3" }, formatCount(frameFolders.length, "folder"))),
+                        React.createElement(Select, { name: "training-frames-dir", label: "Folder frame aktif", value: formValues.framesDir || "", onChange: (event) => onFrameFolderChange(event.target.value), options: frameFolders.map((folder) => ({
+                                value: folder.path,
+                                label: folder.label,
+                            })), placeholder: "Pilih folder frame...", helpText: "Nilai ini otomatis mengisi `framesDir` dan pasangan `labelsDir` dengan nama folder yang sama." }))),
+                (layout || []).map((section) => (React.createElement("details", { key: section.id, className: "rounded-sm border border-base-300 bg-base-100/85", open: section.id === "dataset" || section.id === "training" },
+                    React.createElement("summary", { className: "cursor-pointer list-none px-5 py-4" },
+                        React.createElement("div", { className: "flex items-start justify-between gap-3" },
+                            React.createElement("div", null,
+                                React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700" }, section.title),
+                                React.createElement(Paragraph, { className: "mt-2 text-sm leading-6 opacity-100" }, section.description)),
+                            React.createElement(Badge, { type: "ghost", className: "px-3 py-3" }, formatCount((section.fields || []).length, "field")))),
+                    React.createElement("div", { className: "border-t border-base-300 px-5 py-5" },
+                        React.createElement("div", { className: section.columns === 1 ? "grid gap-4" : "grid gap-4 md:grid-cols-2" }, (section.fields || []).map((field) => (React.createElement("div", { key: field.name },
+                            React.createElement(FormFieldControl, { field: field, value: formValues[field.name], suggestions: suggestions[field.name] || [], onChange: onFieldChange })))))))))),
             React.createElement("div", { className: "grid gap-4" },
                 React.createElement(Card, { className: "rounded-sm border border-base-300 bg-slate-950 text-slate-100 shadow-lg" },
                     React.createElement("div", { className: "space-y-3" },

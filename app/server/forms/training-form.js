@@ -2,6 +2,7 @@
  * Form layout & defaults untuk Training dan Autolabel.
  */
 
+import { existsSync } from "node:fs";
 import path from "node:path";
 import {
   DEFAULT_DATASET_DIR,
@@ -12,6 +13,39 @@ import {
 } from "../constants.js";
 import { displayPath } from "../paths.js";
 
+function firstExistingPath(candidates) {
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return displayPath(candidate);
+    }
+  }
+  return displayPath(candidates[0]);
+}
+
+function defaultTrainingModelPath() {
+  return firstExistingPath([
+    path.join(PROJECT_DIR, "model", "yolov5nu.pt"),
+    path.join(PROJECT_DIR, "edge", "yolov5nu.pt"),
+    path.join(PROJECT_DIR, "model", "yolov5s.pt"),
+    path.join(PROJECT_DIR, "edge", "yolov5s.pt"),
+  ]);
+}
+
+function defaultAutolabelModelPath() {
+  return firstExistingPath([
+    path.join(PROJECT_DIR, "model", "yolo26x.pt"),
+    path.join(PROJECT_DIR, "edge", "yolo26x.pt"),
+    path.join(PROJECT_DIR, "model", "yolo26n.pt"),
+    path.join(PROJECT_DIR, "edge", "yolo26n.pt"),
+    path.join(PROJECT_DIR, "model", "yolov5x6u.pt"),
+    path.join(PROJECT_DIR, "edge", "yolov5x6u.pt"),
+    path.join(PROJECT_DIR, "model", "yolov5nu.pt"),
+    path.join(PROJECT_DIR, "edge", "yolov5nu.pt"),
+    path.join(PROJECT_DIR, "model", "yolov5s.pt"),
+    path.join(PROJECT_DIR, "edge", "yolov5s.pt"),
+  ]);
+}
+
 export function defaultTrainingFormData() {
   return {
     framesDir: displayPath(DEFAULT_FRAMES_DIR),
@@ -19,7 +53,7 @@ export function defaultTrainingFormData() {
     datasetDir: displayPath(DEFAULT_DATASET_DIR),
     runsDir: displayPath(DEFAULT_TRAIN_OUTPUT_DIR),
     classNames: "person",
-    trainModel: displayPath(path.join(PROJECT_DIR, "edge", "yolov5nu.pt")),
+    trainModel: defaultTrainingModelPath(),
     imgsz: 640,
     epochs: 10,
     batch: 4,
@@ -36,56 +70,62 @@ export function defaultTrainingFormData() {
 
 export function defaultLabelerAutolabelConfig() {
   return {
-    model: displayPath(path.join(PROJECT_DIR, "edge", "yolo26x.pt")),
+    model: defaultAutolabelModelPath(),
     conf: 0.35,
     imgsz: 960,
     device: "auto",
   };
 }
 
-export function trainingFormLayout() {
+export function trainingFormLayout({ includeFramesDirField = true } = {}) {
+  const pathFields = [
+    ...(includeFramesDirField
+      ? [
+          {
+            name: "framesDir",
+            label: "Frames directory",
+            type: "path",
+            required: true,
+            helpText: "Folder output frame hasil ekstraksi.",
+          },
+        ]
+      : []),
+    {
+      name: "labelsDir",
+      label: "Labels directory",
+      type: "path",
+      required: true,
+      helpText: "Folder file label YOLO (.txt) per frame. Default akan mengikuti subfolder frame aktif.",
+    },
+    {
+      name: "datasetDir",
+      label: "Dataset directory",
+      type: "path",
+      required: true,
+      helpText: "Folder dataset YOLO train/val yang akan dibuat.",
+    },
+    {
+      name: "runsDir",
+      label: "Runs directory",
+      type: "path",
+      required: true,
+      helpText: "Folder output training Ultralytics.",
+    },
+    {
+      name: "classNames",
+      label: "Class names",
+      type: "text",
+      placeholder: "person, helmet",
+      helpText: "Pisahkan dengan koma bila multi-class. Default tetap `person` bila dikosongkan.",
+    },
+  ];
+
   return [
     {
       id: "paths",
       title: "Path Dataset",
       description: "Folder frame, label, dataset, dan hasil run training yang sudah siap dipakai.",
-      fields: [
-        {
-          name: "framesDir",
-          label: "Frames directory",
-          type: "path",
-          required: true,
-          helpText: "Folder output frame hasil ekstraksi.",
-        },
-        {
-          name: "labelsDir",
-          label: "Labels directory",
-          type: "path",
-          required: true,
-          helpText: "Folder file label YOLO (.txt) per frame.",
-        },
-        {
-          name: "datasetDir",
-          label: "Dataset directory",
-          type: "path",
-          required: true,
-          helpText: "Folder dataset YOLO train/val yang akan dibuat.",
-        },
-        {
-          name: "runsDir",
-          label: "Runs directory",
-          type: "path",
-          required: true,
-          helpText: "Folder output training Ultralytics.",
-        },
-        {
-          name: "classNames",
-          label: "Class names",
-          type: "text",
-          placeholder: "person, helmet",
-          helpText: "Pisahkan dengan koma bila multi-class. Default tetap `person` bila dikosongkan.",
-        },
-      ],
+      fields: pathFields,
     },
     {
       id: "dataset",

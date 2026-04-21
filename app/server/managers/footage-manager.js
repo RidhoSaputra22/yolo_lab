@@ -19,7 +19,7 @@ import { HttpError } from "../errors.js";
 import { fileSizeLabel, shellJoin, toLocalIso } from "../format.js";
 import { listTopLevelFiles } from "../files.js";
 import { defaultFootageFormData, footageFormLayout } from "../forms/footage-form.js";
-import { displayPath, encodePathQuery, pathInside, resolveProjectPath } from "../paths.js";
+import { displayPath, encodePathQuery, pathInside, rebaseSubdirectoryPath, resolveProjectPath } from "../paths.js";
 import { BaseRunManager } from "./base-manager.js";
 
 const VIDEO_FRAME_COUNT_SCRIPT = `
@@ -104,8 +104,9 @@ export class FootageRunManager extends BaseRunManager {
     };
   }
 
-  configPayload() {
-    const defaults = this.normalizePayload(defaultFootageFormData(), { validatePaths: false });
+  configPayload(defaultOverrides = {}) {
+    const requestedDefaults = { ...defaultFootageFormData(), ...(defaultOverrides || {}) };
+    const defaults = this.normalizePayload(requestedDefaults, { validatePaths: false });
     let preview = { config: defaults, command: [], commandDisplay: "" };
     try {
       preview = this.preview(defaults);
@@ -178,7 +179,9 @@ export class FootageRunManager extends BaseRunManager {
     }
 
     const framesDir = resolveProjectPath(config.framesDir);
+    const labelsDir = this.labelsDirForFramesDir(framesDir);
     mkdirSync(framesDir, { recursive: true });
+    mkdirSync(labelsDir, { recursive: true });
 
     const env = {
       ...process.env,
@@ -349,6 +352,10 @@ export class FootageRunManager extends BaseRunManager {
     }, 0);
   }
 
+  labelsDirForFramesDir(framesDir) {
+    return rebaseSubdirectoryPath(this.defaultFramesDir, framesDir, this.defaultLabelsDir);
+  }
+
   buildAutoFramesDir(rawFramesDir, footageDir, sampleEvery, maxFramesPerVideo) {
     const requestedPath = resolveProjectPath(rawFramesDir);
     const rootDir = this.framesRootDir(rawFramesDir);
@@ -376,7 +383,7 @@ export class FootageRunManager extends BaseRunManager {
     const raw = { ...defaultFootageFormData(), ...(config || {}) };
     const footageDir = resolveProjectPath(raw.footageDir);
     const framesDir = resolveProjectPath(raw.framesDir);
-    const labelsDir = this.defaultLabelsDir;
+    const labelsDir = this.labelsDirForFramesDir(framesDir);
     const datasetDir = this.defaultDatasetDir;
     const hasFootageDir = existsSync(footageDir) && statSync(footageDir).isDirectory();
     const hasFramesDir = existsSync(framesDir) && statSync(framesDir).isDirectory();
@@ -415,7 +422,7 @@ export class FootageRunManager extends BaseRunManager {
     const framePreview = [...framePaths]
       .sort((left, right) => statSync(right).mtimeMs - statSync(left).mtimeMs)
       .slice(0, 18)
-      .map((framePath) => this.framePayload(framePath, labelStemSet));
+      .map((framePath) => this.framePayload(framePath, labelStemSet, labelsDir));
 
     return {
       footageDir: displayPath(footageDir),
@@ -463,13 +470,13 @@ export class FootageRunManager extends BaseRunManager {
     };
   }
 
-  framePayload(targetPath, labelStemSet) {
+  framePayload(targetPath, labelStemSet, labelsDir) {
     const stats = statSync(targetPath);
     const name = path.basename(targetPath);
     const stem = path.parse(name).name;
     const sourceStem = frameSourceStem(stem);
     const hasLabelFile = labelStemSet.has(stem);
-    const labelPath = path.join(this.defaultLabelsDir, `${stem}.txt`);
+    const labelPath = path.join(labelsDir, `${stem}.txt`);
     const relativePath = displayPath(targetPath);
 
     return {

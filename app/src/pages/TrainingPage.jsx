@@ -12,6 +12,7 @@ import { Alert, Badge, Button } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
 import { formatCount, formatTimestamp, joinClasses } from "../shared/utils.js";
 import { noticeTone, PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
+import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
 import {
   TrainingSidebar,
   TrainingCommandPanel,
@@ -22,6 +23,7 @@ import {
 export default function TrainingPage() {
   const [layout, setLayout] = useState([]);
   const [suggestions, setSuggestions] = useState({});
+  const [frameFolders, setFrameFolders] = useState([]);
   const [defaults, setDefaults] = useState({});
   const [formValues, setFormValues] = useState({});
   const [runtimePaths, setRuntimePaths] = useState(null);
@@ -34,7 +36,7 @@ export default function TrainingPage() {
   const [selectedRunKey, setSelectedRunKey] = useState("");
   const [isConfigLoading, setIsConfigLoading] = useState(true);
 
-  const workspace = job?.workspace || null;
+  const workspace = job?.running || job?.jobId ? job?.workspace || null : preview?.workspace || job?.workspace || null;
   const runs = job?.runs || [];
 
   useEffect(() => {
@@ -50,6 +52,10 @@ export default function TrainingPage() {
   );
   const latestRun = runs[0] || null;
 
+  usePagePreferencesAutosave("training", formValues, {
+    enabled: !isConfigLoading && Object.keys(formValues).length > 0,
+  });
+
   useEffect(() => {
     let cancelled = false;
     async function loadConfig() {
@@ -59,6 +65,7 @@ export default function TrainingPage() {
         if (cancelled) return;
         setLayout(config.layout || []);
         setSuggestions(config.suggestions || {});
+        setFrameFolders(config.frameFolders || []);
         setDefaults(config.defaults || {});
         setFormValues(config.defaults || {});
         setRuntimePaths(config.paths || null);
@@ -114,6 +121,15 @@ export default function TrainingPage() {
 
   const handleFieldChange = (name, value) => {
     setFormValues((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleFrameFolderChange = (framesDir) => {
+    const selectedFolder = frameFolders.find((folder) => folder.path === framesDir);
+    setFormValues((current) => ({
+      ...current,
+      framesDir,
+      labelsDir: selectedFolder?.labelsDir || current.labelsDir,
+    }));
   };
 
   const handleRun = async () => {
@@ -242,12 +258,14 @@ export default function TrainingPage() {
             layout={layout}
             formValues={formValues}
             suggestions={suggestions}
+            frameFolders={frameFolders}
             defaults={defaults}
             preview={preview}
             previewError={previewError}
             previewState={previewState}
             presetSummary={presetSummary}
             onFieldChange={handleFieldChange}
+            onFrameFolderChange={handleFrameFolderChange}
           />
 
           <TrainingRunExplorer

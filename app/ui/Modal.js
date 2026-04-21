@@ -33,7 +33,7 @@ export default function Modal({
 
   return (
     <div
-      className="modal modal-open modal-bottom sm:modal-middle"
+      className="modal modal-open "
       tabIndex={-1}
       {...rest}
     >
