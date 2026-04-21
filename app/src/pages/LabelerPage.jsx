@@ -1376,95 +1376,102 @@ export default function LabelerPage() {
     : "-";
 
   return (
-    <div className="grid h-full min-h-0 gap-4 grid-rows-[minmax(280px,42vh)_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] lg:grid-rows-1">
-      <aside className="min-h-0 overflow-y-scroll pr-1">
-        <div className="grid gap-4">
-          <LabelerHeader
-            currentImageItem={currentImageItem}
-            visibleImages={visibleImages}
-            hasFrames={images.length > 0}
-            interactionLocked={isLabelingLocked}
-            currentIndex={currentIndex}
-            currentIsCheckpoint={currentIsCheckpoint}
-            checkpointImageName={checkpointImageName}
-            naturalSize={naturalSize}
-            zoomLabel={zoomLabel}
-            onNavigate={navigate}
-            onOpenCheckpoint={openCheckpoint}
-            onSaveCheckpoint={saveCheckpoint}
-            onOpenAutolabelModal={() => setIsAutolabelModalOpen(true)}
-            onSaveLabel={() => saveCurrentLabel(false)}
-            onSaveLabelAndNext={() => saveCurrentLabel(true)}
-          />
+    <>
+      <div
+        className="grid h-full min-h-0 gap-4 grid-rows-[minmax(280px,42vh)_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] lg:grid-rows-1"
+        style={{
+          height: "calc(100% - var(--yolo-log-dock-height, 0px))",
+        }}
+      >
+        <aside className="min-h-0 h-[550px] overflow-y-scroll pr-1">
+          <div className="grid gap-4">
+            <LabelerHeader
+              currentImageItem={currentImageItem}
+              visibleImages={visibleImages}
+              hasFrames={images.length > 0}
+              interactionLocked={isLabelingLocked}
+              currentIndex={currentIndex}
+              currentIsCheckpoint={currentIsCheckpoint}
+              checkpointImageName={checkpointImageName}
+              naturalSize={naturalSize}
+              zoomLabel={zoomLabel}
+              onNavigate={navigate}
+              onOpenCheckpoint={openCheckpoint}
+              onSaveCheckpoint={saveCheckpoint}
+              onOpenAutolabelModal={() => setIsAutolabelModalOpen(true)}
+              onSaveLabel={() => saveCurrentLabel(false)}
+              onSaveLabelAndNext={() => saveCurrentLabel(true)}
+            />
 
-          <LabelerSidebar
-            images={images}
-            visibleImages={visibleImages}
-            activeFramesDir={activeFramesDir}
-            frameFolders={frameFolders}
-            filterValue={filterValue}
-            searchQuery={searchQuery}
-            isLoading={isLoading}
-            disabled={isLabelingLocked}
-            onFramesDirChange={changeFramesDirectory}
-            onFilterChange={setFilterValue}
-            onSearchChange={setSearchQuery}
-            onRefresh={() => reloadConfig(true)}
-            onImageSelect={selectImage}
+            <LabelerSidebar
+              images={images}
+              visibleImages={visibleImages}
+              activeFramesDir={activeFramesDir}
+              frameFolders={frameFolders}
+              filterValue={filterValue}
+              searchQuery={searchQuery}
+              isLoading={isLoading}
+              disabled={isLabelingLocked}
+              onFramesDirChange={changeFramesDirectory}
+              onFilterChange={setFilterValue}
+              onSearchChange={setSearchQuery}
+              onRefresh={() => reloadConfig(true)}
+              onImageSelect={selectImage}
+              currentImageName={currentImageName}
+            />
+
+            <LabelerToolPanel
+              classNames={classNames}
+              boxes={boxes}
+              selectedBox={selectedBox}
+              selectedBoxId={selectedBoxId}
+              activeClassId={activeClassId}
+              dirty={dirty}
+              hasLabelFile={hasLabelFile}
+              parseError={parseError}
+              undoStack={undoStack}
+              zoomLabel={zoomLabel}
+              currentImageName={currentImageName}
+              currentIsCheckpoint={currentIsCheckpoint}
+              checkpointImageName={checkpointImageName}
+              disabled={isLabelingLocked}
+              onSyncSelectedBoxClass={syncSelectedBoxClass}
+              onUndo={undoLastChange}
+              onRemoveBox={removeBox}
+              onClearAllBoxes={clearAllBoxes}
+              onReloadLabel={() =>
+                selectImage(currentImageNameRef.current || "", {
+                  force: true,
+                })
+              }
+              onBoxSelect={setSelectedBoxId}
+            />
+          </div>
+        </aside>
+
+        <section className="min-h-0">
+          <LabelerCanvas
             currentImageName={currentImageName}
-          />
-
-          <LabelerToolPanel
-            classNames={classNames}
-            boxes={boxes}
-            selectedBox={selectedBox}
-            selectedBoxId={selectedBoxId}
-            activeClassId={activeClassId}
-            dirty={dirty}
-            hasLabelFile={hasLabelFile}
-            parseError={parseError}
-            undoStack={undoStack}
+            imageSrc={imageSrc}
+            stageViewportRef={stageViewportRef}
+            frameShellRef={frameShellRef}
+            overlayRef={overlayRef}
+            displayMetrics={displayMetrics}
+            stageLayout={stageLayout}
             zoomLabel={zoomLabel}
-            currentImageName={currentImageName}
-            currentIsCheckpoint={currentIsCheckpoint}
-            checkpointImageName={checkpointImageName}
-            disabled={isLabelingLocked}
-            onSyncSelectedBoxClass={syncSelectedBoxClass}
-            onUndo={undoLastChange}
-            onRemoveBox={removeBox}
-            onClearAllBoxes={clearAllBoxes}
-            onReloadLabel={() =>
-              selectImage(currentImageNameRef.current || "", {
-                force: true,
-              })
-            }
-            onBoxSelect={setSelectedBoxId}
+            zoomLevel={zoomLevel}
+            minZoomLevel={MIN_ZOOM_LEVEL}
+            maxZoomLevel={MAX_ZOOM_LEVEL}
+            interactionDisabled={isLabelingLocked}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onResetZoom={resetZoom}
+            onCanvasMouseDown={handleCanvasMouseDown}
           />
+        </section>
+      </div>
 
-          <LabelerLogs job={autolabelJob} />
-        </div>
-      </aside>
-
-      <section className="min-h-0">
-        <LabelerCanvas
-          currentImageName={currentImageName}
-          imageSrc={imageSrc}
-          stageViewportRef={stageViewportRef}
-          frameShellRef={frameShellRef}
-          overlayRef={overlayRef}
-          displayMetrics={displayMetrics}
-          stageLayout={stageLayout}
-          zoomLabel={zoomLabel}
-          zoomLevel={zoomLevel}
-          minZoomLevel={MIN_ZOOM_LEVEL}
-          maxZoomLevel={MAX_ZOOM_LEVEL}
-          interactionDisabled={isLabelingLocked}
-          onZoomIn={zoomIn}
-          onZoomOut={zoomOut}
-          onResetZoom={resetZoom}
-          onCanvasMouseDown={handleCanvasMouseDown}
-        />
-      </section>
+      <LabelerLogs job={autolabelJob} />
 
       <LabelerAutolabelModal
         open={isAutolabelModalOpen}
@@ -1480,6 +1487,6 @@ export default function LabelerPage() {
         onAutolabelCurrent={handleAutolabelCurrent}
         onAutolabelAll={handleAutolabelAll}
       />
-    </div>
+    </>
   );
 }

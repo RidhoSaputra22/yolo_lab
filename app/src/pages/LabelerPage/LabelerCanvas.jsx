@@ -27,52 +27,8 @@ export function LabelerCanvas({
 }) {
   return (
     <Card className="h-full rounded-sm border border-base-300 bg-base-100/90 shadow-xl">
-      <div className="flex h-full min-h-0 flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-emerald-700">
-              Canvas
-            </p>
-            <h2 className="mt-2 text-xl font-bold tracking-tight">Stage Labeling</h2>
-            <Paragraph className="mt-2 text-sm leading-6 text-slate-600 opacity-100">
-              {currentImageName
-                ? "Ctrl/Cmd + scroll akan zoom canvas tanpa ikut men-zoom browser."
-                : "Pilih frame dari sidebar untuk mulai anotasi."}
-            </Paragraph>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              isSubmit={false}
-              className="rounded-sm border border-base-300 bg-base-100"
-              disabled={!currentImageName || zoomLevel <= minZoomLevel}
-              onClick={onZoomOut}
-            >
-              -
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              isSubmit={false}
-              className="rounded-sm border border-base-300 bg-base-100 text-xs font-semibold"
-              disabled={!currentImageName}
-              onClick={onResetZoom}
-            >
-              {zoomLabel}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              isSubmit={false}
-              className="rounded-sm border border-base-300 bg-base-100"
-              disabled={!currentImageName || zoomLevel >= maxZoomLevel}
-              onClick={onZoomIn}
-            >
-              +
-            </Button>
-          </div>
-        </div>
+      <div className="flex h-full min-h-0 h-screen flex-col gap-4">
+
 
         {!currentImageName ? (
           <div className="grid min-h-0 flex-1 place-items-center rounded-sm border border-dashed border-base-300 bg-base-200/40 p-8 text-center text-sm text-slate-500">

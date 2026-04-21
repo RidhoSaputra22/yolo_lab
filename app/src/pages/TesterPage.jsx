@@ -162,7 +162,7 @@ export default function TesterPage() {
         : job?.running ? "warning" : "ghost";
 
   return (
-    <div className="grid gap-4 pb-[260px] md:pb-[300px]">
+    <div className="grid gap-4 pb-[160px] md:pb-[100px]">
       {/* Top action bar */}
       <section className="flex flex-col gap-3 rounded-sm border border-base-300 bg-base-100/90 p-4 shadow-lg xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-wrap items-center gap-3">

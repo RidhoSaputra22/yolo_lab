@@ -3,5 +3,17 @@
   "labelsDir": "train/labels/frame_20260421_3199",
   "datasetDir": "train/dataset",
   "runsDir": "train/runs",
-  "classNames": "person"
+  "classNames": "person",
+  "trainModel": "model/yolov5nu.pt",
+  "imgsz": 640,
+  "epochs": 10,
+  "batch": 4,
+  "workers": 0,
+  "patience": 5,
+  "valRatio": 0.2,
+  "seed": 42,
+  "device": "cpu",
+  "runName": "visitor_person_cpu_bootstrap",
+  "allowEmptyLabels": false,
+  "cache": false
 }
