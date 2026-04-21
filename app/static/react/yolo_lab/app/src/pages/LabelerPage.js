@@ -20,6 +20,7 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchJson } from "../shared/api.js";
+import { mergeJobLog, useJobEventStream } from "../shared/jobStream.js";
 import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
 import { clamp, formatCount } from "../shared/utils.js";
 import { LabelerSidebar, LabelerCanvas, LabelerToolPanel, LabelerHeader, LabelerAutolabelModal, LabelerLogs, BOX_COLORS, MAX_UNDO_STEPS, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL, ZOOM_WHEEL_FACTOR, createNotice, filterImages, cloneBoxes, boxesEqual, getDisplayMetricsForZoom, getStageLayoutMetrics, useCanvasGeometry, useZoomInteraction, } from "./LabelerPage/index.js";
@@ -880,6 +881,14 @@ export default function LabelerPage() {
     useEffect(() => {
         void reloadConfig(false);
     }, []);
+    useJobEventStream("/api/autolabel/stream", {
+        onSnapshot: (nextJob) => {
+            setAutolabelJob(nextJob);
+        },
+        onLog: (event) => {
+            setAutolabelJob((current) => mergeJobLog(current, event));
+        },
+    });
     useEffect(() => {
         const delay = autolabelJob?.running ? 1500 : 5000;
         let cancelled = false;

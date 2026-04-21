@@ -8,6 +8,7 @@ import { PROJECT_DIR, REACT_MODULES_DIR, REACT_SHELL_PATH, STATIC_DIR } from "./
 import { HttpError } from "./errors.js";
 import { pathInside, resolveProjectPath, displayPath, projectRootName } from "./paths.js";
 import {
+  eventStreamResponse,
   fileResponse,
   jsonResponse,
   readJsonRequest,
@@ -46,6 +47,23 @@ function labelerPreferencesPayload(appState, storedPreferences, autolabelDefault
       ...(isPlainObject(safePreferences.autolabelConfig) ? safePreferences.autolabelConfig : {}),
     },
   };
+}
+
+function jobStreamResponse(request, manager, snapshotBuilder) {
+  return eventStreamResponse(request, ({ sendEvent }) => {
+    const emitSnapshot = () => {
+      sendEvent("snapshot", snapshotBuilder());
+    };
+
+    emitSnapshot();
+    return manager.subscribe((event) => {
+      if (event?.type === "log") {
+        sendEvent("log", event);
+        return;
+      }
+      emitSnapshot();
+    });
+  });
 }
 
 export function createFetchHandler(appState) {
@@ -159,6 +177,10 @@ export function createFetchHandler(appState) {
           return jsonResponse(appState.autolabelJobSnapshot(), 200);
         }
 
+        if (pathname === "/api/autolabel/stream") {
+          return jobStreamResponse(request, appState.autolabelRunner, () => appState.autolabelJobSnapshot());
+        }
+
         if (pathname === "/api/test/config") {
           const configPayload = appState.testRunner.configPayload(appState.pagePreferences.read("tester"));
           appState.pagePreferences.write("tester", configPayload.defaults || {});
@@ -181,6 +203,10 @@ export function createFetchHandler(appState) {
           return jsonResponse(appState.footageRunner.snapshot());
         }
 
+        if (pathname === "/api/footage/stream") {
+          return jobStreamResponse(request, appState.footageRunner, () => appState.footageRunner.snapshot());
+        }
+
         if (pathname === "/api/footage/artifact") {
           const artifactValue = requireQueryValue(url, "path");
           const artifactPath = resolveProjectPath(artifactValue);
@@ -198,6 +224,10 @@ export function createFetchHandler(appState) {
 
         if (pathname === "/api/test/status") {
           return jsonResponse(appState.testRunner.snapshot());
+        }
+
+        if (pathname === "/api/test/stream") {
+          return jobStreamResponse(request, appState.testRunner, () => appState.testRunner.snapshot());
         }
 
         if (pathname === "/api/test/artifact") {
@@ -248,6 +278,17 @@ export function createFetchHandler(appState) {
         if (pathname === "/api/train/status") {
           return jsonResponse(
             appState.trainingRunner.snapshot({
+              framesDir: displayPath(appState.framesDir),
+              labelsDir: displayPath(appState.labelsDir),
+            }),
+          );
+        }
+
+        if (pathname === "/api/train/stream") {
+          return jobStreamResponse(
+            request,
+            appState.trainingRunner,
+            () => appState.trainingRunner.snapshot({
               framesDir: displayPath(appState.framesDir),
               labelsDir: displayPath(appState.labelsDir),
             }),

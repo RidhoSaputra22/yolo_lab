@@ -28,6 +28,91 @@ export function textResponse(message, status = 200) {
   });
 }
 
+export function eventStreamResponse(request, setup) {
+  const encoder = new TextEncoder();
+  let cleanup = () => {};
+  let closeStream = () => {};
+
+  const stream = new ReadableStream({
+    start(controller) {
+      let closed = false;
+      let heartbeat = null;
+
+      const sendChunk = (chunk) => {
+        if (closed) {
+          return;
+        }
+        controller.enqueue(encoder.encode(chunk));
+      };
+
+      const sendComment = (comment) => {
+        sendChunk(`: ${comment}\n\n`);
+      };
+
+      const sendEvent = (event, payload) => {
+        sendChunk(`event: ${event}\ndata: ${payload == null ? "null" : JSON.stringify(payload)}\n\n`);
+      };
+
+      closeStream = () => {
+        if (closed) {
+          return;
+        }
+        closed = true;
+        if (heartbeat) {
+          clearInterval(heartbeat);
+        }
+        request.signal?.removeEventListener?.("abort", closeStream);
+        try {
+          cleanup();
+        } catch {
+          // Best effort clean-up for disconnected SSE clients.
+        }
+        try {
+          controller.close();
+        } catch {
+          // Stream may already be closed by Bun/client.
+        }
+      };
+
+      try {
+        cleanup = setup({
+          sendEvent,
+          sendComment,
+          close: closeStream,
+        }) || (() => {});
+      } catch (error) {
+        sendEvent("stream-error", { error: error.message });
+        closeStream();
+        return;
+      }
+
+      heartbeat = setInterval(() => {
+        try {
+          sendComment("keepalive");
+        } catch {
+          closeStream();
+        }
+      }, 15000);
+
+      request.signal?.addEventListener?.("abort", closeStream, { once: true });
+      sendComment("connected");
+    },
+    cancel() {
+      closeStream();
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-store, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
 export function contentTypeForPath(filePath) {
   return STATIC_CONTENT_TYPES[path.extname(filePath).toLowerCase()] || Bun.file(filePath).type || "application/octet-stream";
 }

@@ -178,6 +178,7 @@ export class TrainingRunManager extends BaseRunManager {
       ],
       error: null,
     };
+    this.emitSnapshot();
 
     this.consumeStream(jobId, child.stdout);
     this.consumeStream(jobId, child.stderr);
@@ -201,6 +202,7 @@ export class TrainingRunManager extends BaseRunManager {
         this.current.error = `Training berhenti dengan kode ${this.current.returnCode}.`;
         this.appendLog(this.current.error);
       }
+      this.emitSnapshot();
     });
 
     child.on("error", (error) => {
@@ -213,6 +215,7 @@ export class TrainingRunManager extends BaseRunManager {
       this.current.returnCode = 1;
       this.current.error = `Gagal menjalankan training: ${error.message}`;
       this.appendLog(this.current.error);
+      this.emitSnapshot();
     });
 
     return this.snapshot(config);
@@ -226,6 +229,7 @@ export class TrainingRunManager extends BaseRunManager {
     const processRef = this.current.process;
     this.current.stopRequested = true;
     this.appendLog("[app] Mengirim sinyal stop ke proses training...");
+    this.emitSnapshot();
     processRef.kill("SIGTERM");
     setTimeout(() => {
       if (processRef.exitCode === null && !processRef.killed) {
@@ -237,7 +241,11 @@ export class TrainingRunManager extends BaseRunManager {
   }
 
   snapshot(baseConfig = null) {
-    const fallbackConfig = baseConfig || (Object.keys(this.current.config).length ? this.current.config : defaultTrainingFormData());
+    const fallbackConfig = {
+      ...defaultTrainingFormData(),
+      ...(baseConfig || {}),
+      ...(Object.keys(this.current.config).length ? this.current.config : {}),
+    };
     const runsDir = resolveProjectPath(this.current.outputDir ? displayPath(this.current.outputDir) : fallbackConfig.runsDir);
     const runs = this.listRunSummaries(runsDir);
 

@@ -21,6 +21,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchJson } from "../shared/api.js";
+import { mergeJobLog, useJobEventStream } from "../shared/jobStream.js";
 import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
 import { clamp, formatCount } from "../shared/utils.js";
 import {
@@ -1075,6 +1076,15 @@ export default function LabelerPage() {
   useEffect(() => {
     void reloadConfig(false);
   }, []);
+
+  useJobEventStream("/api/autolabel/stream", {
+    onSnapshot: (nextJob) => {
+      setAutolabelJob(nextJob);
+    },
+    onLog: (event) => {
+      setAutolabelJob((current) => mergeJobLog(current, event));
+    },
+  });
 
   useEffect(() => {
     const delay = autolabelJob?.running ? 1500 : 5000;

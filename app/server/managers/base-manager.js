@@ -9,6 +9,7 @@ import { toLocalIso } from "../format.js";
 export class BaseRunManager {
   constructor() {
     this.nextJobId = 1;
+    this.listeners = new Set();
   }
 
   isRunning() {
@@ -17,9 +18,41 @@ export class BaseRunManager {
 
   appendLog(line) {
     this.current.logs.push(line);
+    let trimmedCount = 0;
     if (this.current.logs.length > MAX_LOG_LINES) {
-      this.current.logs.splice(0, this.current.logs.length - MAX_LOG_LINES);
+      trimmedCount = this.current.logs.length - MAX_LOG_LINES;
+      this.current.logs.splice(0, trimmedCount);
     }
+    this.emitUpdate({
+      type: "log",
+      jobId: this.current.jobId,
+      line,
+      trimmedCount,
+    });
+  }
+
+  subscribe(listener) {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  emitUpdate(event) {
+    for (const listener of [...this.listeners]) {
+      try {
+        listener(event);
+      } catch (error) {
+        console.error(`[yolo-lab-app] gagal mengirim update job: ${error.message}`);
+      }
+    }
+  }
+
+  emitSnapshot() {
+    this.emitUpdate({
+      type: "snapshot",
+      jobId: this.current.jobId,
+    });
   }
 
   consumeStream(jobId, stream) {
@@ -35,10 +68,19 @@ export class BaseRunManager {
       }
       buffer += chunk;
 
-      while (buffer.includes("\n")) {
-        const newLineIndex = buffer.indexOf("\n");
-        const line = buffer.slice(0, newLineIndex).replace(/\r$/, "");
-        buffer = buffer.slice(newLineIndex + 1);
+      while (true) {
+        const boundaryIndex = buffer.search(/[\r\n]/);
+        if (boundaryIndex < 0) {
+          break;
+        }
+
+        const boundaryChar = buffer[boundaryIndex];
+        const boundaryLength =
+          boundaryChar === "\r" && buffer[boundaryIndex + 1] === "\n"
+            ? 2
+            : 1;
+        const line = buffer.slice(0, boundaryIndex).trimEnd();
+        buffer = buffer.slice(boundaryIndex + boundaryLength);
         if (line) {
           this.appendLog(line);
         }

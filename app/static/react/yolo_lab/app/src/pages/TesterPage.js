@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Button } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
+import { mergeJobLog, useJobEventStream } from "../shared/jobStream.js";
 import { formatCount, formatTimestamp, groupArtifactsByFolder } from "../shared/utils.js";
 import { noticeTone, PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
 import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
@@ -71,6 +72,14 @@ export default function TesterPage() {
         loadConfig();
         return () => { cancelled = true; };
     }, []);
+    useJobEventStream("/api/test/stream", {
+        onSnapshot: (nextJob) => {
+            setJob(nextJob);
+        },
+        onLog: (event) => {
+            setJob((current) => mergeJobLog(current, event));
+        },
+    });
     useEffect(() => {
         if (!Object.keys(formValues).length)
             return undefined;

@@ -220,6 +220,7 @@ export class AutolabelRunManager extends BaseRunManager {
       ],
       error: null,
     };
+    this.emitSnapshot();
 
     this.consumeStream(jobId, child.stdout);
     this.consumeStream(jobId, child.stderr);
@@ -243,6 +244,7 @@ export class AutolabelRunManager extends BaseRunManager {
         this.current.error = `Auto-label berhenti dengan kode ${this.current.returnCode}.`;
         this.appendLog(this.current.error);
       }
+      this.emitSnapshot();
     });
 
     child.on("error", (error) => {
@@ -255,6 +257,7 @@ export class AutolabelRunManager extends BaseRunManager {
       this.current.returnCode = 1;
       this.current.error = `Gagal menjalankan auto-label: ${error.message}`;
       this.appendLog(this.current.error);
+      this.emitSnapshot();
     });
 
     return this.snapshot(config);
@@ -268,6 +271,7 @@ export class AutolabelRunManager extends BaseRunManager {
     const processRef = this.current.process;
     this.current.stopRequested = true;
     this.appendLog("[app] Mengirim sinyal stop ke proses auto-label...");
+    this.emitSnapshot();
     processRef.kill("SIGTERM");
     setTimeout(() => {
       if (processRef.exitCode === null && !processRef.killed) {
