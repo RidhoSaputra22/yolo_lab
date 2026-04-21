@@ -11,8 +11,9 @@ import { Alert, Badge, Button } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
 import { mergeJobLog, useJobEventStream } from "../shared/jobStream.js";
 import { formatCount, formatTimestamp, joinClasses } from "../shared/utils.js";
-import { noticeTone, PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
+import { PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
 import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
+import { useToast } from "../shared/toast.js";
 import { TrainingSidebar, TrainingCommandPanel, TrainingRunExplorer, TrainingLogs, } from "./TrainingPage/index.js";
 export default function TrainingPage() {
     const [layout, setLayout] = useState([]);
@@ -26,9 +27,9 @@ export default function TrainingPage() {
     const [previewError, setPreviewError] = useState("");
     const [previewState, setPreviewState] = useState("idle");
     const [job, setJob] = useState(null);
-    const [notice, setNotice] = useState(null);
     const [selectedRunKey, setSelectedRunKey] = useState("");
     const [isConfigLoading, setIsConfigLoading] = useState(true);
+    const { setNotice } = useToast();
     const workspace = job?.running || job?.jobId ? job?.workspace || null : preview?.workspace || job?.workspace || null;
     const runs = job?.runs || [];
     useEffect(() => {
@@ -202,7 +203,6 @@ export default function TrainingPage() {
                 React.createElement(Button, { variant: "warning", isSubmit: false, size: "sm", className: "rounded-sm px-5", disabled: Boolean(job?.running) || isConfigLoading, onClick: handleRun }, "\u25B6 Jalankan Training"),
                 React.createElement(Button, { variant: "error", outline: true, isSubmit: false, size: "sm", className: "rounded-sm px-4", disabled: !job?.running, onClick: handleStop }, "\u25A0 Stop"),
                 React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-sm border border-base-300 px-4", onClick: handleRefresh }, "\u21BB Refresh"))),
-        notice?.message && (React.createElement(Alert, { type: noticeTone(notice.type), dismissible: true, className: "rounded-sm shadow-md" }, notice.message)),
         runtimeWarnings.length > 0 && (React.createElement("div", { className: "grid gap-2" }, runtimeWarnings.map((warning) => (React.createElement(Alert, { key: warning, type: "warning", className: "rounded-sm text-sm" }, warning))))),
         React.createElement("div", { className: "grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]" },
             React.createElement(TrainingSidebar, { workspace: workspace, runtimePaths: runtimePaths }),

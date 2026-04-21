@@ -1,11 +1,10 @@
 import React from "react";
-import { Alert, Button, Card, Paragraph } from "../../ui.js";
+import { Button, Card, Paragraph } from "../../ui.js";
 /**
  * Header component for LabelerPage showing current image info and navigation
  */
-export function LabelerHeader({ currentImageItem, visibleImages, hasFrames, interactionLocked, currentIndex, currentIsCheckpoint, checkpointImageName, naturalSize, zoomLabel, notice, onNavigate, onOpenCheckpoint, onSaveCheckpoint, onOpenAutolabelModal, onSaveLabel, onSaveLabelAndNext, }) {
+export function LabelerHeader({ currentImageItem, visibleImages, hasFrames, interactionLocked, currentIndex, currentIsCheckpoint, checkpointImageName, naturalSize, zoomLabel, onNavigate, onOpenCheckpoint, onSaveCheckpoint, onOpenAutolabelModal, onSaveLabel, onSaveLabelAndNext, }) {
     return (React.createElement("section", { className: "grid gap-4" },
-        notice?.message ? (React.createElement(Alert, { type: notice.type === "error" ? "error" : notice.type === "success" ? "success" : "info", className: "rounded-sm shadow-md" }, notice.message)) : null,
         React.createElement(Card, { className: "rounded-sm border border-base-300 bg-base-100/90 shadow-xl" },
             React.createElement("div", { className: "flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between" },
                 React.createElement("div", null,

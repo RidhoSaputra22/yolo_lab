@@ -3,8 +3,9 @@ import { Alert, Badge, Button } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
 import { mergeJobLog, useJobEventStream } from "../shared/jobStream.js";
 import { formatCount, formatTimestamp, groupArtifactsByFolder } from "../shared/utils.js";
-import { noticeTone, PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
+import { PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
 import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
+import { useToast } from "../shared/toast.js";
 import { TesterSidebar, TesterFormSection, TesterCommandPanel, TesterOutputExplorer, TesterLogs, } from "./TesterPage/index.js";
 /**
  * TesterPage - Redesigned with top action bar and simplified layout.
@@ -20,9 +21,9 @@ export default function TesterPage() {
     const [runtimePaths, setRuntimePaths] = useState(null);
     const [runtimeWarnings, setRuntimeWarnings] = useState([]);
     const [job, setJob] = useState(null);
-    const [notice, setNotice] = useState(null);
     const [selectedFolderKey, setSelectedFolderKey] = useState("");
     const [isConfigLoading, setIsConfigLoading] = useState(true);
+    const { setNotice } = useToast();
     const baseOutputDir = job?.outputDir || defaults.outputDir || "";
     const folders = useMemo(() => groupArtifactsByFolder(job?.artifacts || [], baseOutputDir), [job?.artifacts, baseOutputDir]);
     useEffect(() => {
@@ -172,7 +173,6 @@ export default function TesterPage() {
                 React.createElement(Button, { variant: "primary", isSubmit: false, size: "sm", className: "rounded-sm px-5", disabled: Boolean(job?.running) || isConfigLoading, onClick: handleRun }, "\u25B6 Jalankan Test"),
                 React.createElement(Button, { variant: "error", outline: true, isSubmit: false, size: "sm", className: "rounded-sm px-4", disabled: !job?.running, onClick: handleStop }, "\u25A0 Stop"),
                 React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-sm border border-base-300 px-4", onClick: handleRefresh }, "\u21BB Refresh"))),
-        notice?.message && (React.createElement(Alert, { type: noticeTone(notice.type), dismissible: true, className: "rounded-sm shadow-md" }, notice.message)),
         runtimeWarnings.length > 0 && (React.createElement("div", { className: "grid gap-2" }, runtimeWarnings.map((warning) => (React.createElement(Alert, { key: warning, type: "warning", className: "rounded-sm text-sm" }, warning))))),
         React.createElement("div", { className: "grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]" },
             React.createElement(TesterSidebar, { runtimePaths: runtimePaths }),

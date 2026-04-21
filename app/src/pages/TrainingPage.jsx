@@ -12,8 +12,9 @@ import { Alert, Badge, Button } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
 import { mergeJobLog, useJobEventStream } from "../shared/jobStream.js";
 import { formatCount, formatTimestamp, joinClasses } from "../shared/utils.js";
-import { noticeTone, PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
+import { PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
 import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
+import { useToast } from "../shared/toast.js";
 import {
   TrainingSidebar,
   TrainingCommandPanel,
@@ -33,9 +34,9 @@ export default function TrainingPage() {
   const [previewError, setPreviewError] = useState("");
   const [previewState, setPreviewState] = useState("idle");
   const [job, setJob] = useState(null);
-  const [notice, setNotice] = useState(null);
   const [selectedRunKey, setSelectedRunKey] = useState("");
   const [isConfigLoading, setIsConfigLoading] = useState(true);
+  const { setNotice } = useToast();
 
   const workspace = job?.running || job?.jobId ? job?.workspace || null : preview?.workspace || job?.workspace || null;
   const runs = job?.runs || [];
@@ -237,13 +238,6 @@ export default function TrainingPage() {
           </Button>
         </div>
       </section>
-
-      {/* Inline notice */}
-      {notice?.message && (
-        <Alert type={noticeTone(notice.type)} dismissible className="rounded-sm shadow-md">
-          {notice.message}
-        </Alert>
-      )}
 
       {/* Inline runtime warnings (only when warnings exist) */}
       {runtimeWarnings.length > 0 && (

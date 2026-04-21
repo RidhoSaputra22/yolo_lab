@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Badge, Button } from "../ui.js";
 import { formatCount, joinClasses } from "../shared/utils.js";
+const LOG_DOCK_HEIGHT_VAR = "--yolo-log-dock-height";
 function stateBadgeType(state, running) {
     if (state === "failed") {
         return "error";
@@ -16,6 +17,7 @@ function stateBadgeType(state, running) {
 export function LogDock({ eyebrow, title, emptyMessage, logs = [], state = "idle", running = false, accentClass = "text-amber-700", }) {
     const [collapsed, setCollapsed] = useState(true);
     const preRef = useRef(null);
+    const dockRef = useRef(null);
     useEffect(() => {
         if (collapsed || !preRef.current) {
             return;
@@ -27,7 +29,35 @@ export function LogDock({ eyebrow, title, emptyMessage, logs = [], state = "idle
             setCollapsed(false);
         }
     }, [running]);
-    return (React.createElement("div", { className: "fixed inset-x-0 bottom-0 z-30 border-t border-base-300 bg-base-100/88 shadow-2xl bg-white" },
+    useEffect(() => {
+        const dockElement = dockRef.current;
+        const rootStyle = document.documentElement.style;
+        if (!dockElement) {
+            rootStyle.setProperty(LOG_DOCK_HEIGHT_VAR, "0px");
+            return undefined;
+        }
+        const updateDockHeight = () => {
+            const nextHeight = Math.max(0, Math.round(dockElement.getBoundingClientRect().height));
+            rootStyle.setProperty(LOG_DOCK_HEIGHT_VAR, `${nextHeight}px`);
+        };
+        updateDockHeight();
+        if (typeof ResizeObserver !== "undefined") {
+            const observer = new ResizeObserver(() => {
+                updateDockHeight();
+            });
+            observer.observe(dockElement);
+            return () => {
+                observer.disconnect();
+                rootStyle.setProperty(LOG_DOCK_HEIGHT_VAR, "0px");
+            };
+        }
+        window.addEventListener("resize", updateDockHeight);
+        return () => {
+            window.removeEventListener("resize", updateDockHeight);
+            rootStyle.setProperty(LOG_DOCK_HEIGHT_VAR, "0px");
+        };
+    }, []);
+    return (React.createElement("div", { ref: dockRef, className: "fixed inset-x-0 bottom-0 z-30 border-t border-base-300 bg-base-100/88 shadow-2xl bg-white" },
         React.createElement("div", { className: "w-full " },
             React.createElement("div", { className: "overflow-hidden rounded-sm border border-base-300 bg-base-100/92 shadow-lg" },
                 React.createElement("div", { className: "flex flex-wrap items-center justify-between gap-3 px-4 py-3" },

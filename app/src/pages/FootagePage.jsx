@@ -3,8 +3,9 @@ import { Alert, Badge, Button } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
 import { mergeJobLog, useJobEventStream } from "../shared/jobStream.js";
 import { formatCount } from "../shared/utils.js";
-import { noticeTone, PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
+import { PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
 import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
+import { useToast } from "../shared/toast.js";
 import {
   FootageSidebar,
   FootageImportPanel,
@@ -25,12 +26,12 @@ export default function FootagePage({ onNavigate }) {
   const [runtimePaths, setRuntimePaths] = useState(null);
   const [runtimeWarnings, setRuntimeWarnings] = useState([]);
   const [job, setJob] = useState(null);
-  const [notice, setNotice] = useState(null);
   const [isConfigLoading, setIsConfigLoading] = useState(true);
   const [selectedFootagePath, setSelectedFootagePath] = useState("");
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef(null);
+  const { setNotice } = useToast();
 
   const library = preview?.library || job?.library || null;
   const footageItems = library?.footageItems || [];
@@ -365,12 +366,6 @@ export default function FootagePage({ onNavigate }) {
           </Button>
         </div>
       </section>
-
-      {notice?.message && (
-        <Alert type={noticeTone(notice.type)} dismissible className="rounded-sm shadow-md">
-          {notice.message}
-        </Alert>
-      )}
 
       {runtimeWarnings.length > 0 && (
         <div className="grid gap-2">

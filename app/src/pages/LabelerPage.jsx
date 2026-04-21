@@ -23,6 +23,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchJson } from "../shared/api.js";
 import { mergeJobLog, useJobEventStream } from "../shared/jobStream.js";
 import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
+import { useToast } from "../shared/toast.js";
 import { clamp, formatCount } from "../shared/utils.js";
 import {
   LabelerSidebar,
@@ -64,7 +65,6 @@ export default function LabelerPage() {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [filterValue, setFilterValue] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [notice, setNotice] = useState(null);
   const [undoStack, setUndoStack] = useState([]);
   const [interaction, setInteraction] = useState(null);
   const [imageSrc, setImageSrc] = useState("");
@@ -100,6 +100,7 @@ export default function LabelerPage() {
   const imagesRef = useRef(images);
   const preferencesHydratedRef = useRef(false);
   const previousAutolabelRunningRef = useRef(false);
+  const { setNotice } = useToast();
 
   // Sync refs with state
   useEffect(() => {
@@ -1189,7 +1190,6 @@ export default function LabelerPage() {
           checkpointImageName={checkpointImageName}
           naturalSize={naturalSize}
           zoomLabel={zoomLabel}
-          notice={notice}
           onNavigate={navigate}
           onOpenCheckpoint={openCheckpoint}
           onSaveCheckpoint={saveCheckpoint}

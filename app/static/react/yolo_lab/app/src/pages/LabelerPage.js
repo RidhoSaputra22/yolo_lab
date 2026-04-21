@@ -22,6 +22,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchJson } from "../shared/api.js";
 import { mergeJobLog, useJobEventStream } from "../shared/jobStream.js";
 import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
+import { useToast } from "../shared/toast.js";
 import { clamp, formatCount } from "../shared/utils.js";
 import { LabelerSidebar, LabelerCanvas, LabelerToolPanel, LabelerHeader, LabelerAutolabelModal, LabelerLogs, BOX_COLORS, MAX_UNDO_STEPS, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL, ZOOM_WHEEL_FACTOR, createNotice, filterImages, cloneBoxes, boxesEqual, getDisplayMetricsForZoom, getStageLayoutMetrics, useCanvasGeometry, useZoomInteraction, } from "./LabelerPage/index.js";
 export default function LabelerPage() {
@@ -42,7 +43,6 @@ export default function LabelerPage() {
     const [zoomLevel, setZoomLevel] = useState(1);
     const [filterValue, setFilterValue] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
-    const [notice, setNotice] = useState(null);
     const [undoStack, setUndoStack] = useState([]);
     const [interaction, setInteraction] = useState(null);
     const [imageSrc, setImageSrc] = useState("");
@@ -77,6 +77,7 @@ export default function LabelerPage() {
     const imagesRef = useRef(images);
     const preferencesHydratedRef = useRef(false);
     const previousAutolabelRunningRef = useRef(false);
+    const { setNotice } = useToast();
     // Sync refs with state
     useEffect(() => {
         dirtyRef.current = dirty;
@@ -956,7 +957,7 @@ export default function LabelerPage() {
     return (React.createElement("div", { className: "grid gap-4 pb-[260px] md:pb-[300px] xl:grid-cols-[330px_minmax(0,1fr)]" },
         React.createElement(LabelerSidebar, { images: images, visibleImages: visibleImages, activeFramesDir: activeFramesDir, frameFolders: frameFolders, filterValue: filterValue, searchQuery: searchQuery, isLoading: isLoading, disabled: isLabelingLocked, onFramesDirChange: changeFramesDirectory, onFilterChange: setFilterValue, onSearchChange: setSearchQuery, onRefresh: () => reloadConfig(true), onImageSelect: selectImage, currentImageName: currentImageName }),
         React.createElement("section", { className: "grid gap-4" },
-            React.createElement(LabelerHeader, { currentImageItem: currentImageItem, visibleImages: visibleImages, hasFrames: images.length > 0, interactionLocked: isLabelingLocked, currentIndex: currentIndex, currentIsCheckpoint: currentIsCheckpoint, checkpointImageName: checkpointImageName, naturalSize: naturalSize, zoomLabel: zoomLabel, notice: notice, onNavigate: navigate, onOpenCheckpoint: openCheckpoint, onSaveCheckpoint: saveCheckpoint, onOpenAutolabelModal: () => setIsAutolabelModalOpen(true), onSaveLabel: () => saveCurrentLabel(false), onSaveLabelAndNext: () => saveCurrentLabel(true) }),
+            React.createElement(LabelerHeader, { currentImageItem: currentImageItem, visibleImages: visibleImages, hasFrames: images.length > 0, interactionLocked: isLabelingLocked, currentIndex: currentIndex, currentIsCheckpoint: currentIsCheckpoint, checkpointImageName: checkpointImageName, naturalSize: naturalSize, zoomLabel: zoomLabel, onNavigate: navigate, onOpenCheckpoint: openCheckpoint, onSaveCheckpoint: saveCheckpoint, onOpenAutolabelModal: () => setIsAutolabelModalOpen(true), onSaveLabel: () => saveCurrentLabel(false), onSaveLabelAndNext: () => saveCurrentLabel(true) }),
             React.createElement(LabelerAutolabelModal, { open: isAutolabelModalOpen, onClose: () => setIsAutolabelModalOpen(false), activeFramesDir: activeFramesDir, totalImages: images.length, currentImageName: currentImageName, autolabelConfig: autolabelConfig, autolabelSuggestions: autolabelSuggestions, autolabelWarnings: autolabelWarnings, job: autolabelJob, onAutolabelConfigChange: setAutolabelConfig, onAutolabelCurrent: handleAutolabelCurrent, onAutolabelAll: handleAutolabelAll }),
             React.createElement("div", { className: "grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]" },
                 React.createElement(LabelerCanvas, { currentImageName: currentImageName, imageSrc: imageSrc, stageViewportRef: stageViewportRef, frameShellRef: frameShellRef, overlayRef: overlayRef, displayMetrics: displayMetrics, stageLayout: stageLayout, zoomLabel: zoomLabel, zoomLevel: zoomLevel, minZoomLevel: MIN_ZOOM_LEVEL, maxZoomLevel: MAX_ZOOM_LEVEL, interactionDisabled: isLabelingLocked, onZoomIn: zoomIn, onZoomOut: zoomOut, onResetZoom: resetZoom, onCanvasMouseDown: handleCanvasMouseDown }),

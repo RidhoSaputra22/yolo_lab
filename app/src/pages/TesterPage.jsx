@@ -3,8 +3,9 @@ import { Alert, Badge, Button } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
 import { mergeJobLog, useJobEventStream } from "../shared/jobStream.js";
 import { formatCount, formatTimestamp, groupArtifactsByFolder } from "../shared/utils.js";
-import { noticeTone, PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
+import { PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
 import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
+import { useToast } from "../shared/toast.js";
 import {
   TesterSidebar,
   TesterFormSection,
@@ -27,9 +28,9 @@ export default function TesterPage() {
   const [runtimePaths, setRuntimePaths] = useState(null);
   const [runtimeWarnings, setRuntimeWarnings] = useState([]);
   const [job, setJob] = useState(null);
-  const [notice, setNotice] = useState(null);
   const [selectedFolderKey, setSelectedFolderKey] = useState("");
   const [isConfigLoading, setIsConfigLoading] = useState(true);
+  const { setNotice } = useToast();
 
   const baseOutputDir = job?.outputDir || defaults.outputDir || "";
   const folders = useMemo(
@@ -212,13 +213,6 @@ export default function TesterPage() {
           </Button>
         </div>
       </section>
-
-      {/* Inline notice */}
-      {notice?.message && (
-        <Alert type={noticeTone(notice.type)} dismissible className="rounded-sm shadow-md">
-          {notice.message}
-        </Alert>
-      )}
 
       {/* Inline runtime warnings */}
       {runtimeWarnings.length > 0 && (

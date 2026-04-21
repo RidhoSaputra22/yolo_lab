@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Button, Card, Paragraph } from "../../ui.js";
+import { Button, Card, Paragraph } from "../../ui.js";
 
 /**
  * Header component for LabelerPage showing current image info and navigation
@@ -14,7 +14,6 @@ export function LabelerHeader({
   checkpointImageName,
   naturalSize,
   zoomLabel,
-  notice,
   onNavigate,
   onOpenCheckpoint,
   onSaveCheckpoint,
@@ -24,15 +23,6 @@ export function LabelerHeader({
 }) {
   return (
     <section className="grid gap-4">
-      {notice?.message ? (
-        <Alert
-          type={notice.type === "error" ? "error" : notice.type === "success" ? "success" : "info"}
-          className="rounded-sm shadow-md"
-        >
-          {notice.message}
-        </Alert>
-      ) : null}
-
       <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-xl">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
