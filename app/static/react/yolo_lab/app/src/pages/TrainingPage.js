@@ -204,9 +204,9 @@ export default function TrainingPage() {
                 React.createElement(Button, { variant: "error", outline: true, isSubmit: false, size: "sm", className: "rounded-sm px-4", disabled: !job?.running, onClick: handleStop }, "\u25A0 Stop"),
                 React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-sm border border-base-300 px-4", onClick: handleRefresh }, "\u21BB Refresh"))),
         runtimeWarnings.length > 0 && (React.createElement("div", { className: "grid gap-2" }, runtimeWarnings.map((warning) => (React.createElement(Alert, { key: warning, type: "warning", className: "rounded-sm text-sm" }, warning))))),
-        React.createElement("div", { className: "grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]" },
+        React.createElement("div", { className: "grid min-w-0 gap-4 xl:grid-cols-[300px_minmax(0,1fr)]" },
             React.createElement(TrainingSidebar, { workspace: workspace, runtimePaths: runtimePaths }),
-            React.createElement("section", { className: "grid gap-4" },
+            React.createElement("section", { className: "grid min-w-0 gap-4" },
                 React.createElement(TrainingCommandPanel, { layout: layout, formValues: formValues, suggestions: suggestions, frameFolders: frameFolders, defaults: defaults, preview: preview, previewError: previewError, previewState: previewState, presetSummary: presetSummary, onFieldChange: handleFieldChange, onFrameFolderChange: handleFrameFolderChange }),
                 React.createElement(TrainingRunExplorer, { runs: runs, selectedRunKey: selectedRunKey, selectedRun: selectedRun, onSelectRun: setSelectedRunKey }))),
         React.createElement(TrainingLogs, { job: job })));

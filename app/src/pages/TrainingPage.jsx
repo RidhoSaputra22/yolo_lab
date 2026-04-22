@@ -251,13 +251,13 @@ export default function TrainingPage() {
       )}
 
       {/* Main content: sidebar + form/preview/explorer */}
-      <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
         <TrainingSidebar
           workspace={workspace}
           runtimePaths={runtimePaths}
         />
 
-        <section className="grid gap-4">
+        <section className="grid min-w-0 gap-4">
           <TrainingCommandPanel
             layout={layout}
             formValues={formValues}

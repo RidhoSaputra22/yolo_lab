@@ -36,6 +36,13 @@ export default function TesterPage() {
         }
     }, [folders, selectedFolderKey]);
     const selectedFolder = folders.find((f) => f.key === selectedFolderKey) || folders[0] || null;
+    const isFaceBenchmarkMode = formValues.testMode === "face-benchmark";
+    const isVideoMode = formValues.testMode === "video";
+    const usesLocalEmployeeFaces = formValues.testMode === "face-benchmark"
+        || (formValues.testMode === "video"
+            && Boolean(formValues.withFaceRecognition)
+            && formValues.faceRegistrySource === "folder");
+    const wantsEmployeeLabelingInVideo = isVideoMode && Boolean(formValues.withFaceRecognition);
     usePagePreferencesAutosave("tester", formValues, {
         enabled: !isConfigLoading && Object.keys(formValues).length > 0,
     });
@@ -174,6 +181,12 @@ export default function TesterPage() {
                 React.createElement(Button, { variant: "error", outline: true, isSubmit: false, size: "sm", className: "rounded-sm px-4", disabled: !job?.running, onClick: handleStop }, "\u25A0 Stop"),
                 React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-sm border border-base-300 px-4", onClick: handleRefresh }, "\u21BB Refresh"))),
         runtimeWarnings.length > 0 && (React.createElement("div", { className: "grid gap-2" }, runtimeWarnings.map((warning) => (React.createElement(Alert, { key: warning, type: "warning", className: "rounded-sm text-sm" }, warning))))),
+        isFaceBenchmarkMode && (React.createElement(Alert, { type: "warning", className: "rounded-sm text-sm leading-6" }, "Mode ini tidak memakai footage input. Jika yang ingin diuji adalah video `footage` agar sistem mendeteksi visitor lalu melabeli petugas dari folder `petugas`, ubah `Mode test` ke `Video tracking + label petugas`.")),
+        isVideoMode && !formValues.withFaceRecognition && (React.createElement(Alert, { type: "info", className: "rounded-sm text-sm leading-6" }, "Untuk alur `YOLO -> tracking visitor -> label petugas dari folder petugas`, aktifkan section `Tracking Petugas` pada form ini.")),
+        usesLocalEmployeeFaces && (React.createElement(Alert, { type: "info", className: "rounded-sm text-sm leading-6" }, isFaceBenchmarkMode
+            ? "Benchmark face recognition memakai gambar di folder petugas. Nama file dipakai sebagai label identitas; contoh `budi.png` atau `budi_2.png` akan dibaca sebagai `budi`."
+            : "Pipeline video aktif: `YOLO -> tracking visitor -> cek wajah -> cocokkan ke folder petugas -> label petugas pada track yang match`. Pastikan folder berisi foto wajah yang cukup jelas agar face recognition bisa mengenali nama petugas dari nama file.")),
+        wantsEmployeeLabelingInVideo && formValues.faceRegistrySource === "backend" && (React.createElement(Alert, { type: "info", className: "rounded-sm text-sm leading-6" }, "Tracking petugas pada video sedang memakai registry dari backend. Jika ingin memaksa pembanding wajah dari folder lokal `petugas`, ubah `Sumber data petugas` menjadi `Folder lokal petugas`.")),
         React.createElement("div", { className: "grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]" },
             React.createElement(TesterSidebar, { runtimePaths: runtimePaths }),
             React.createElement("section", { className: "grid gap-4" },

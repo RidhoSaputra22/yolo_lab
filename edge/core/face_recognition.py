@@ -1,8 +1,11 @@
 """Employee face recognition utilities for the edge worker."""
 from dataclasses import dataclass
+from pathlib import Path
+import re
 import time
 from typing import Any, Dict, List, Optional
 
+import cv2
 import numpy as np
 
 from .config import (
@@ -19,6 +22,7 @@ from .config import (
 from .logger import get_logger
 
 log = get_logger("face")
+FACE_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 try:
     from insightface.app import FaceAnalysis
@@ -50,6 +54,30 @@ def _normalize_embedding(embedding: np.ndarray) -> np.ndarray:
     if norm <= 0:
         return embedding
     return embedding / norm
+
+
+def _largest_face(faces: List[Any]) -> Optional[Any]:
+    best_face = None
+    best_area = 0.0
+    for face in faces or []:
+        bbox = getattr(face, "bbox", None)
+        if bbox is None or len(bbox) < 4:
+            continue
+        width = max(0.0, float(bbox[2]) - float(bbox[0]))
+        height = max(0.0, float(bbox[3]) - float(bbox[1]))
+        area = width * height
+        if area > best_area:
+            best_area = area
+            best_face = face
+    return best_face
+
+
+def derive_employee_label(image_path: str | Path) -> str:
+    stem = Path(image_path).stem.strip()
+    label = re.sub(r"\s*\(\d+\)$", "", stem)
+    label = re.sub(r"[_-]\d+$", "", label)
+    label = label.strip()
+    return label or stem or "unknown"
 
 
 class EmployeeFaceRecognizer:
@@ -101,31 +129,147 @@ class EmployeeFaceRecognizer:
 
         payload = fetch_fn(token)
         items = payload.get("items", []) if isinstance(payload, dict) else []
+        self.load_registry_items(items, refresh_ts=now)
+        log.info("Loaded %d employee face embeddings", len(self._employee_registry))
+
+    def load_registry_items(self, items: List[Dict[str, Any]], refresh_ts: Optional[float] = None) -> None:
         registry: List[Dict[str, Any]] = []
         for item in items:
-            embedding = item.get("face_embedding")
-            if not embedding:
+            embedding = item.get("face_embedding") or item.get("embedding")
+            if embedding is None:
                 continue
             emb = _normalize_embedding(np.asarray(embedding, dtype=np.float32))
             registry.append(
                 {
                     "employee_id": item.get("employee_id"),
-                    "employee_code": item.get("employee_code"),
-                    "employee_name": item.get("full_name"),
+                    "employee_code": item.get("employee_code") or item.get("employee_name") or item.get("full_name"),
+                    "employee_name": item.get("employee_name") or item.get("full_name") or item.get("employee_code"),
                     "embedding": emb,
+                    "sample_count": item.get("sample_count"),
+                    "source_files": item.get("source_files") or [],
                 }
             )
 
         self._employee_registry = registry
-        # Pre-build matrix for vectorized matching
         if registry:
-            self._employee_matrix = np.stack(
-                [emp["embedding"] for emp in registry], axis=0
-            )
+            self._employee_matrix = np.stack([emp["embedding"] for emp in registry], axis=0)
         else:
             self._employee_matrix = None
-        self._last_registry_refresh = now
-        log.info("Loaded %d employee face embeddings", len(registry))
+        self._last_registry_refresh = refresh_ts or time.time()
+
+    def load_registry_from_dir(self, directory: str | Path) -> Dict[str, Any]:
+        if not self.enabled or not self.available or self._app is None:
+            return {
+                "source": "folder",
+                "directory": str(directory),
+                "loaded_count": 0,
+                "sample_count": 0,
+                "image_count": 0,
+                "skipped_no_face": 0,
+                "skipped_read_error": 0,
+                "reason": self.reason or "face recognition unavailable",
+            }
+
+        root_dir = Path(directory).expanduser().resolve()
+        image_paths = sorted(
+            file_path
+            for file_path in root_dir.rglob("*")
+            if file_path.is_file() and file_path.suffix.lower() in FACE_IMAGE_EXTENSIONS
+        )
+
+        grouped_embeddings: Dict[str, Dict[str, Any]] = {}
+        skipped_no_face = 0
+        skipped_read_error = 0
+        sample_count = 0
+
+        for image_path in image_paths:
+            image = cv2.imread(str(image_path))
+            if image is None:
+                skipped_read_error += 1
+                continue
+
+            embedding = self.extract_image_face_embedding(image)
+            if embedding is None:
+                skipped_no_face += 1
+                continue
+
+            label = derive_employee_label(image_path)
+            bucket = grouped_embeddings.setdefault(label, {"embeddings": [], "source_files": []})
+            bucket["embeddings"].append(embedding)
+            bucket["source_files"].append(str(image_path))
+            sample_count += 1
+
+        registry: List[Dict[str, Any]] = []
+        for index, label in enumerate(sorted(grouped_embeddings.keys()), start=1):
+            payload = grouped_embeddings[label]
+            matrix = np.stack(payload["embeddings"], axis=0)
+            averaged = _normalize_embedding(np.mean(matrix, axis=0))
+            registry.append(
+                {
+                    "employee_id": index,
+                    "employee_code": label,
+                    "employee_name": label,
+                    "embedding": averaged,
+                    "sample_count": len(payload["embeddings"]),
+                    "source_files": payload["source_files"],
+                }
+            )
+
+        self.load_registry_items(registry)
+        log.info(
+            "Loaded %d local employee label(s) from %s (%d sample(s))",
+            len(registry),
+            root_dir,
+            sample_count,
+        )
+        return {
+            "source": "folder",
+            "directory": str(root_dir),
+            "loaded_count": len(registry),
+            "sample_count": sample_count,
+            "image_count": len(image_paths),
+            "skipped_no_face": skipped_no_face,
+            "skipped_read_error": skipped_read_error,
+            "reason": "",
+        }
+
+    def extract_image_face_embedding(self, image: np.ndarray) -> Optional[np.ndarray]:
+        if not self.enabled or not self.available or self._app is None:
+            return None
+        candidates = [image]
+        height, width = image.shape[:2]
+        min_side = min(height, width)
+        pad = max(80, int(min_side * 0.2))
+        candidates.append(
+            cv2.copyMakeBorder(
+                image,
+                pad,
+                pad,
+                pad,
+                pad,
+                cv2.BORDER_CONSTANT,
+                value=(255, 255, 255),
+            )
+        )
+
+        for candidate in candidates:
+            try:
+                faces = self._app.get(candidate)
+            except Exception:
+                continue
+
+            face = _largest_face(list(faces or []))
+            if face is None:
+                continue
+            embedding = getattr(face, "embedding", None)
+            if embedding is None or len(embedding) == 0:
+                continue
+            return _normalize_embedding(np.asarray(embedding, dtype=np.float32))
+        return None
+
+    def match_embedding(self, embedding: np.ndarray) -> Optional[Dict[str, Any]]:
+        normalized = _normalize_embedding(np.asarray(embedding, dtype=np.float32))
+        return self._match_employee(normalized)
 
     def reset_daily(self) -> None:
         """Reset active track classifications on date rollover."""

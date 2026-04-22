@@ -18,7 +18,9 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT_DIR = PROJECT_DIR / "test" / "edge" / "output"
+DEFAULT_EMPLOYEE_FACES_DIR = PROJECT_DIR / "petugas"
 EDGE_REFERENCE_SIZE = (1280, 720)
+DEFAULT_EMPLOYEE_MATCH_THRESHOLD = 0.45
 DEFAULT_FACE_ID_MATCH_THRESHOLD = 0.55
 DEFAULT_FACE_ID_MIN_TRACK_FRAMES = 3
 DEFAULT_FACE_ID_STRONG_MATCH_THRESHOLD = 0.65
@@ -69,6 +71,10 @@ def _bootstrap_runtime(argv: Sequence[str]) -> None:
     parser.add_argument("--weights")
     parser.add_argument("--backend", choices=("yolov5", "ultralytics"))
     parser.add_argument("--device")
+    parser.add_argument("--test-mode", choices=("video", "face-benchmark"), default="video")
+    parser.add_argument("--face-registry-source", choices=("backend", "folder"), default="folder")
+    parser.add_argument("--employee-faces-dir")
+    parser.add_argument("--employee-match-threshold", type=float, default=DEFAULT_EMPLOYEE_MATCH_THRESHOLD)
     parser.add_argument("--identity-mode", choices=("reid", "face"), default="reid")
     parser.add_argument("--reid-match-threshold", type=float)
     parser.add_argument("--reid-min-track-frames", type=int)
@@ -97,6 +103,8 @@ def _bootstrap_runtime(argv: Sequence[str]) -> None:
         os.environ["YOLO_BACKEND"] = args.backend
     if args.device:
         os.environ["YOLOV5_DEVICE"] = args.device
+    if args.employee_match_threshold is not None:
+        os.environ["EMPLOYEE_MATCH_THRESHOLD"] = str(args.employee_match_threshold)
     if args.reid_match_threshold is not None:
         os.environ["REID_MATCH_THRESHOLD"] = str(args.reid_match_threshold)
     if args.reid_min_track_frames is not None:
@@ -107,7 +115,7 @@ def _bootstrap_runtime(argv: Sequence[str]) -> None:
         os.environ["REID_AMBIGUITY_MARGIN"] = str(args.reid_ambiguity_margin)
     if args.reid_prototype_alpha is not None:
         os.environ["REID_PROTOTYPE_ALPHA"] = str(args.reid_prototype_alpha)
-    if args.identity_mode == "face":
+    if args.test_mode == "face-benchmark" or args.identity_mode == "face":
         os.environ["FACE_RECOGNITION_ENABLED"] = "true"
         if args.reid_match_threshold is None:
             os.environ["REID_MATCH_THRESHOLD"] = str(args.face_id_match_threshold)
@@ -140,9 +148,10 @@ if str(PROJECT_DIR) not in sys.path:
 import cv2
 import numpy as np
 
+from edge.core.api_client import get_employee_registry, login_token
 from edge.core.config import CAMERA_ID, IMG_SIZE, TRACK_CONFIRM_FRAMES, TRACK_MAX_DISAPPEARED, TRACK_MAX_DISTANCE
 from edge.core.detection import load_model, parse_roi, point_in_roi, suppress_duplicate_person_detections
-from edge.core.face_recognition import EmployeeFaceRecognizer
+from edge.core.face_recognition import EmployeeFaceRecognizer, FACE_IMAGE_EXTENSIONS, derive_employee_label
 from edge.core.reid import (
     canonicalize_visitor_key,
     cleanup_old_tracks,
@@ -185,6 +194,18 @@ TRACK_CSV_FIELDS = [
     "embedding_available",
 ]
 
+FACE_BENCHMARK_CSV_FIELDS = [
+    "file_name",
+    "image_path",
+    "true_label",
+    "predicted_label",
+    "match_score",
+    "is_correct",
+    "same_label_reference_count",
+    "registry_label_count",
+    "issue",
+]
+
 
 def _identity_embedding_source(identity_mode: str) -> str:
     return "face_embedding" if identity_mode == "face" else "body_track_embedding"
@@ -194,7 +215,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Test YOLO + DeepSORT + reID on a local video and export annotated video + CSV.",
     )
-    parser.add_argument("--input", required=True, help="Path video input.")
+    parser.add_argument(
+        "--test-mode",
+        choices=("video", "face-benchmark"),
+        default="video",
+        help="Mode `video` untuk runner offline biasa, `face-benchmark` untuk evaluasi folder petugas.",
+    )
+    parser.add_argument("--input", default="", help="Path video input.")
     parser.add_argument(
         "--output-dir",
         default=str(DEFAULT_OUTPUT_DIR),
@@ -204,6 +231,28 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-name",
         default="",
         help="Prefix nama file output. Default: nama file video input.",
+    )
+    parser.add_argument(
+        "--face-registry-source",
+        choices=("backend", "folder"),
+        default="folder",
+        help="Sumber registry petugas untuk face recognition.",
+    )
+    parser.add_argument(
+        "--employee-faces-dir",
+        default=str(DEFAULT_EMPLOYEE_FACES_DIR),
+        help="Folder gambar petugas berlabel nama file.",
+    )
+    parser.add_argument(
+        "--employee-match-threshold",
+        type=float,
+        default=float(os.getenv("EMPLOYEE_MATCH_THRESHOLD", str(DEFAULT_EMPLOYEE_MATCH_THRESHOLD))),
+        help="Threshold cosine similarity untuk pengenalan petugas.",
+    )
+    parser.add_argument(
+        "--face-benchmark-allow-self-match",
+        action="store_true",
+        help="Pada mode face-benchmark, izinkan gambar query dicocokkan dengan file yang sama.",
     )
     parser.add_argument(
         "--roi-json",
@@ -652,8 +701,311 @@ def _canonicalize_visitor_profiles(
     return canonical_profiles
 
 
+def _empty_face_registry_stats(source: str, directory: Optional[Path] = None, reason: str = "") -> Dict[str, Any]:
+    return {
+        "source": source,
+        "directory": str(directory) if directory else "",
+        "loaded_count": 0,
+        "sample_count": 0,
+        "image_count": 0,
+        "skipped_no_face": 0,
+        "skipped_read_error": 0,
+        "reason": reason,
+    }
+
+
+def _load_face_registry(face_recognizer: EmployeeFaceRecognizer, args: argparse.Namespace) -> Dict[str, Any]:
+    directory = _resolve_project_path(args.employee_faces_dir)
+    if not face_recognizer.enabled:
+        return _empty_face_registry_stats(args.face_registry_source, directory, face_recognizer.reason or "disabled")
+    if not face_recognizer.available:
+        return _empty_face_registry_stats(args.face_registry_source, directory, face_recognizer.reason or "unavailable")
+
+    if args.face_registry_source == "folder":
+        return face_recognizer.load_registry_from_dir(directory)
+
+    token = login_token()
+    face_recognizer.refresh_registry(get_employee_registry, token, force=True)
+    return {
+        "source": "backend",
+        "directory": "",
+        "loaded_count": face_recognizer.registry_size,
+        "sample_count": face_recognizer.registry_size,
+        "image_count": face_recognizer.registry_size,
+        "skipped_no_face": 0,
+        "skipped_read_error": 0,
+        "reason": (
+            face_recognizer.reason
+            if face_recognizer.registry_size == 0
+            else ""
+        ) or ("registry backend kosong atau backend tidak terjangkau" if face_recognizer.registry_size == 0 else ""),
+    }
+
+
+def _collect_face_benchmark_records(
+    face_recognizer: EmployeeFaceRecognizer,
+    employee_faces_dir: Path,
+) -> List[Dict[str, Any]]:
+    image_paths = sorted(
+        image_path
+        for image_path in employee_faces_dir.rglob("*")
+        if image_path.is_file() and image_path.suffix.lower() in FACE_IMAGE_EXTENSIONS
+    )
+
+    records: List[Dict[str, Any]] = []
+    for image_path in image_paths:
+        label = derive_employee_label(image_path)
+        record = {
+            "file_name": image_path.name,
+            "image_path": str(image_path),
+            "true_label": label,
+            "embedding": None,
+            "issue": "",
+        }
+
+        image = cv2.imread(str(image_path))
+        if image is None:
+            record["issue"] = "read_error"
+            records.append(record)
+            continue
+
+        embedding = face_recognizer.extract_image_face_embedding(image)
+        if embedding is None:
+            record["issue"] = "no_face_detected"
+            records.append(record)
+            continue
+
+        record["embedding"] = embedding
+        records.append(record)
+
+    return records
+
+
+def _build_face_label_registry(
+    records: List[Dict[str, Any]],
+    excluded_image_path: Optional[str] = None,
+) -> Dict[str, Dict[str, Any]]:
+    grouped: Dict[str, List[np.ndarray]] = {}
+    for record in records:
+        embedding = record.get("embedding")
+        if embedding is None:
+            continue
+        if excluded_image_path and record["image_path"] == excluded_image_path:
+            continue
+        grouped.setdefault(record["true_label"], []).append(np.asarray(embedding, dtype=np.float32))
+
+    registry: Dict[str, Dict[str, Any]] = {}
+    for label, embeddings in grouped.items():
+        if not embeddings:
+            continue
+        matrix = np.stack(embeddings, axis=0)
+        prototype = matrix.mean(axis=0)
+        norm = np.linalg.norm(prototype)
+        if norm > 0:
+            prototype = prototype / norm
+        registry[label] = {
+            "embedding": prototype,
+            "sample_count": len(embeddings),
+        }
+    return registry
+
+
+def _predict_face_label(
+    query_embedding: np.ndarray,
+    registry: Dict[str, Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    if not registry:
+        return None
+
+    labels = sorted(registry.keys())
+    matrix = np.stack([registry[label]["embedding"] for label in labels], axis=0)
+    scores = matrix @ np.asarray(query_embedding, dtype=np.float32)
+    best_index = int(np.argmax(scores))
+    best_label = labels[best_index]
+    return {
+        "label": best_label,
+        "score": float(scores[best_index]),
+        "sample_count": int(registry[best_label]["sample_count"]),
+    }
+
+
+def _run_face_benchmark(args: argparse.Namespace) -> int:
+    employee_faces_dir = _resolve_project_path(args.employee_faces_dir)
+    if not employee_faces_dir.exists() or not employee_faces_dir.is_dir():
+        print(f"Folder petugas tidak ditemukan: {employee_faces_dir}", file=sys.stderr)
+        return 1
+
+    output_dir = _resolve_project_path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    benchmark_output_dir = output_dir / "face_benchmark"
+    benchmark_output_dir.mkdir(parents=True, exist_ok=True)
+
+    name_prefix = args.output_name.strip() or f"{employee_faces_dir.name}_face_benchmark"
+    output_stem = _build_output_stem(name_prefix)
+    csv_path = benchmark_output_dir / f"{output_stem}_predictions.csv"
+    summary_path = benchmark_output_dir / f"{output_stem}_summary.json"
+
+    face_recognizer = EmployeeFaceRecognizer()
+    if not (face_recognizer.enabled and face_recognizer.available):
+        print(
+            "Benchmark face recognition membutuhkan InsightFace yang aktif, tetapi runtime tidak tersedia.",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(f"[info] mode    : face-benchmark")
+    print(f"[info] source  : {employee_faces_dir}")
+    print(f"[info] out dir : {benchmark_output_dir}")
+    print(f"[info] csv     : {csv_path}")
+    print(f"[info] summary : {summary_path}")
+    print(f"[info] th      : employee_match_threshold={args.employee_match_threshold}")
+    print(f"[info] self    : {'enabled' if args.face_benchmark_allow_self_match else 'disabled'}")
+
+    records = _collect_face_benchmark_records(face_recognizer, employee_faces_dir)
+    if not records:
+        print(
+            f"Folder petugas belum berisi gambar wajah yang didukung: {employee_faces_dir}",
+            file=sys.stderr,
+        )
+        return 1
+    registry_stats = face_recognizer.load_registry_from_dir(employee_faces_dir)
+
+    usable_records = [record for record in records if record.get("embedding") is not None]
+    label_totals: Dict[str, int] = {}
+    for record in records:
+        label_totals[record["true_label"]] = label_totals.get(record["true_label"], 0) + 1
+
+    per_label_stats: Dict[str, Dict[str, int]] = {
+        label: {"total": total, "correct": 0, "wrong": 0, "unknown": 0}
+        for label, total in sorted(label_totals.items())
+    }
+
+    prediction_rows: List[Dict[str, Any]] = []
+    correct_predictions = 0
+    wrong_predictions = 0
+    unknown_predictions = 0
+
+    for record in records:
+        if record.get("embedding") is None:
+            per_label_stats[record["true_label"]]["unknown"] += 1
+            prediction_rows.append(
+                {
+                    "file_name": record["file_name"],
+                    "image_path": record["image_path"],
+                    "true_label": record["true_label"],
+                    "predicted_label": "UNKNOWN",
+                    "match_score": "",
+                    "is_correct": False,
+                    "same_label_reference_count": 0,
+                    "registry_label_count": 0,
+                    "issue": record["issue"] or "no_embedding",
+                }
+            )
+            continue
+
+        registry = _build_face_label_registry(
+            usable_records,
+            None if args.face_benchmark_allow_self_match else record["image_path"],
+        )
+        same_label_reference_count = int(registry.get(record["true_label"], {}).get("sample_count", 0))
+        match = _predict_face_label(record["embedding"], registry)
+        predicted_label = "UNKNOWN"
+        match_score = ""
+        issue = ""
+        if match is not None:
+            match_score = round(float(match["score"]), 4)
+            if float(match["score"]) >= args.employee_match_threshold:
+                predicted_label = str(match["label"])
+            else:
+                issue = "below_threshold"
+        else:
+            issue = "empty_registry"
+
+        is_correct = predicted_label == record["true_label"]
+        if predicted_label == "UNKNOWN":
+            unknown_predictions += 1
+            per_label_stats[record["true_label"]]["unknown"] += 1
+        elif is_correct:
+            correct_predictions += 1
+            per_label_stats[record["true_label"]]["correct"] += 1
+        else:
+            wrong_predictions += 1
+            per_label_stats[record["true_label"]]["wrong"] += 1
+
+        prediction_rows.append(
+            {
+                "file_name": record["file_name"],
+                "image_path": record["image_path"],
+                "true_label": record["true_label"],
+                "predicted_label": predicted_label,
+                "match_score": match_score,
+                "is_correct": is_correct,
+                "same_label_reference_count": same_label_reference_count,
+                "registry_label_count": len(registry),
+                "issue": issue,
+            }
+        )
+
+    accuracy = correct_predictions / len(usable_records) if usable_records else 0.0
+    known_predictions = correct_predictions + wrong_predictions
+    known_accuracy = correct_predictions / known_predictions if known_predictions else 0.0
+    single_sample_labels = sorted(label for label, total in label_totals.items() if total <= 1)
+    notes: List[str] = []
+    if single_sample_labels and not args.face_benchmark_allow_self_match:
+        notes.append(
+            "Beberapa label hanya punya satu gambar; nonaktif self-match akan membuat label seperti ini "
+            "lebih sulit dikenali pada benchmark."
+        )
+
+    with csv_path.open("w", newline="", encoding="utf-8") as csv_file:
+        writer_csv = csv.DictWriter(csv_file, fieldnames=FACE_BENCHMARK_CSV_FIELDS)
+        writer_csv.writeheader()
+        writer_csv.writerows(prediction_rows)
+
+    summary = {
+        "test_mode": "face-benchmark",
+        "employee_faces_dir": str(employee_faces_dir),
+        "output_csv": str(csv_path),
+        "output_summary": str(summary_path),
+        "output_stem": output_stem,
+        "face_recognition_enabled": bool(face_recognizer.enabled and face_recognizer.available),
+        "face_recognition_reason": getattr(face_recognizer, "reason", ""),
+        "employee_match_threshold": float(args.employee_match_threshold),
+        "face_registry": registry_stats,
+        "face_benchmark": {
+            "total_images": len(records),
+            "usable_images": len(usable_records),
+            "images_without_face": registry_stats.get("skipped_no_face", 0),
+            "read_errors": registry_stats.get("skipped_read_error", 0),
+            "label_count": len(label_totals),
+            "correct_predictions": correct_predictions,
+            "wrong_predictions": wrong_predictions,
+            "unknown_predictions": unknown_predictions,
+            "accuracy": round(accuracy, 6),
+            "known_accuracy": round(known_accuracy, 6),
+            "allow_self_match": bool(args.face_benchmark_allow_self_match),
+            "per_label": per_label_stats,
+            "notes": notes,
+        },
+    }
+
+    summary_path.write_text(f"{json.dumps(summary, indent=2, ensure_ascii=False)}\n", encoding="utf-8")
+    print(
+        f"[done] accuracy={summary['face_benchmark']['accuracy']:.4f} | "
+        f"correct={correct_predictions} | wrong={wrong_predictions} | unknown={unknown_predictions}"
+    )
+    return 0
+
+
 def main() -> int:
     args = build_parser().parse_args()
+
+    if args.test_mode == "face-benchmark":
+        return _run_face_benchmark(args)
+
+    if not str(args.input or "").strip():
+        print("Field --input wajib diisi untuk --test-mode=video.", file=sys.stderr)
+        return 1
 
     input_path = _resolve_project_path(args.input)
     if not input_path.exists():
@@ -714,12 +1066,15 @@ def main() -> int:
         tracker, tracker_backend = _build_tracker(args)
         tracker_uses_frame_detections = isinstance(tracker, DeepSORTTracker)
         face_recognizer = EmployeeFaceRecognizer()
+        face_registry = _empty_face_registry_stats(args.face_registry_source, _resolve_project_path(args.employee_faces_dir))
         if args.identity_mode == "face" and not (face_recognizer.enabled and face_recognizer.available):
             print(
                 "Face identity mode membutuhkan InsightFace yang aktif, tetapi runtime tidak tersedia.",
                 file=sys.stderr,
             )
             return 1
+        if face_recognizer.enabled and face_recognizer.available:
+            face_registry = _load_face_registry(face_recognizer, args)
 
         visitor_states: Dict[int, Dict[str, Any]] = {}
         seen_visitor_keys: set[str] = set()
@@ -790,6 +1145,13 @@ def main() -> int:
             f"[info] face    : "
             f"{'enabled' if face_recognizer.enabled and face_recognizer.available else 'disabled'}"
         )
+        print(
+            f"[info] registry : {face_registry.get('source', '-')} | "
+            f"labels={face_registry.get('loaded_count', 0)} | "
+            f"samples={face_registry.get('sample_count', 0)}"
+        )
+        if face_registry.get("reason"):
+            print(f"[warn] registry : {face_registry['reason']}", file=sys.stderr)
         print(f"[info] limit   : max_frames={args.max_frames} | max_seconds={args.max_seconds}")
 
         with csv_path.open("w", newline="", encoding="utf-8") as csv_file:
@@ -1078,6 +1440,7 @@ def main() -> int:
             print(f"[warn] browser : {browser_video_issue}", file=sys.stderr)
 
         summary = {
+            "test_mode": "video",
             "input_video": str(input_path),
             "model_label": model_label,
             "model_output_dir": str(model_output_dir),
@@ -1092,9 +1455,11 @@ def main() -> int:
             "yolo_backend": active_backend,
             "weights": active_weights,
             "reid_match_threshold": float(os.getenv("REID_MATCH_THRESHOLD", "0.77")),
+            "employee_match_threshold": float(os.getenv("EMPLOYEE_MATCH_THRESHOLD", str(DEFAULT_EMPLOYEE_MATCH_THRESHOLD))),
             "device": os.getenv("YOLOV5_DEVICE", "auto"),
             "face_recognition_enabled": bool(face_recognizer.enabled and face_recognizer.available),
             "face_recognition_reason": getattr(face_recognizer, "reason", ""),
+            "face_registry": face_registry,
             "source_fps": round(source_fps, 3),
             "output_fps": round(writer_fps, 3),
             "source_size": [source_width, source_height],

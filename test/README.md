@@ -53,6 +53,32 @@ python3 test/edge/run_video_tracking.py \
   --with-face-recognition
 ```
 
+Contoh jika ingin mengambil registry petugas dari folder lokal `petugas/`:
+
+```bash
+python3 test/run_video_tracking.py \
+  --input train/footage/VID-20260409-WA0061.mp4 \
+  --with-face-recognition \
+  --face-registry-source folder \
+  --employee-faces-dir petugas
+```
+
+Contoh benchmark khusus face recognition dari folder `petugas/`:
+
+```bash
+python3 test/run_video_tracking.py \
+  --test-mode face-benchmark \
+  --employee-faces-dir petugas \
+  --output-dir test/output \
+  --employee-match-threshold 0.45
+```
+
+Catatan penamaan file folder `petugas/`:
+
+- `budi.png` → label `budi`
+- `budi_2.png` → tetap dibaca sebagai label `budi`
+- `siti-3.png` → tetap dibaca sebagai label `siti`
+
 ## Output
 
 Dengan input `rstp/cctv-footage-1.mp4`, output default akan menjadi:
@@ -94,5 +120,7 @@ CSV track menyimpan informasi inti per frame:
 ## Catatan
 
 - Secara default script ini mematikan face recognition agar test video lokal tetap ringan dan tidak tergantung model InsightFace.
+- Mode `face-benchmark` akan menghasilkan file `*_predictions.csv` dan `*_summary.json` di subfolder `test/output/face_benchmark/`.
+- Jika folder `petugas/` kosong, benchmark akan berhenti dan meminta kamu mengisi gambar wajah terlebih dulu.
 - Jika `YOLOV5_WEIGHTS` di `.env` mengarah ke file yang tidak ada, runner akan fallback ke `edge/yolov5s.pt` bila file itu tersedia.
 - Resolusi default output mengikuti pipeline edge saat ini: `1280x720`. Gunakan `--keep-source-size` kalau ingin mempertahankan ukuran asli video.

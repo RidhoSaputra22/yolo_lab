@@ -6,8 +6,8 @@ import { MetricTile } from "../../components/MetricComponents.js";
  * Actions and warnings have been moved to the top toolbar.
  */
 export function TrainingSidebar({ workspace, runtimePaths }) {
-    return (React.createElement("aside", { className: "grid h-fit gap-4 xl:sticky xl:top-28" },
-        React.createElement(Card, { className: "rounded-sm border border-base-300 bg-slate-900 text-slate-50 shadow-xl" },
+    return (React.createElement("aside", { className: "grid h-fit min-w-0 gap-4 xl:sticky xl:top-28" },
+        React.createElement(Card, { className: "min-w-0 rounded-sm border border-base-300 bg-slate-900 text-slate-50 shadow-xl" },
             React.createElement("div", { className: "space-y-4" },
                 React.createElement("div", null,
                     React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-200" }, "Runtime"),
@@ -19,11 +19,11 @@ export function TrainingSidebar({ workspace, runtimePaths }) {
                     ["Runs Dir", runtimePaths?.defaultRunsDir || "-"],
                 ].map(([label, value]) => (React.createElement("div", { key: label, className: "rounded-sm border border-white/10 bg-white/5 px-3 py-2" },
                     React.createElement("p", { className: "text-[10px] uppercase tracking-[0.18em] text-slate-400" }, label),
-                    React.createElement("p", { className: "mt-1 break-all font-mono text-[11px] text-slate-100" }, value))))),
+                    React.createElement("p", { className: "text-wrap-anywhere mt-1 font-mono text-[11px] text-slate-100" }, value))))),
                 React.createElement("div", { className: "grid grid-cols-2 gap-2" },
                     React.createElement(MetricTile, { label: "Frames", value: String(workspace?.frameCount ?? "-") }),
                     React.createElement(MetricTile, { label: "Labels", value: String(workspace?.labelCount ?? "-") })))),
-        React.createElement(Card, { className: "rounded-sm border border-base-300 bg-base-100/90 shadow-lg" },
+        React.createElement(Card, { className: "min-w-0 rounded-sm border border-base-300 bg-base-100/90 shadow-lg" },
             React.createElement("div", { className: "space-y-3" },
                 React.createElement("div", { className: "flex items-center justify-between gap-2" },
                     React.createElement("h3", { className: "text-sm font-bold" }, "Dataset"),

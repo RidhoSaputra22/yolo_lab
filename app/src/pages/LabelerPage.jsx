@@ -45,6 +45,8 @@ import {
   getStageLayoutMetrics,
 } from "./LabelerPage/index.js";
 
+const AUTO_CHECKPOINT_SAVE_AND_NEXT_INTERVAL = 10;
+
 export default function LabelerPage() {
   // State management
   const [classNames, setClassNames] = useState([]);
@@ -91,11 +93,15 @@ export default function LabelerPage() {
   const activeClassIdRef = useRef(activeClassId);
   const interactionRef = useRef(null);
   const currentImageNameRef = useRef(currentImageName);
+  const navigationImageNameRef = useRef(currentImageName);
+  const checkpointImageNameRef = useRef(checkpointImageName);
+  const selectedBoxArrowControlRef = useRef(false);
   const naturalSizeRef = useRef(naturalSize);
   const stageSizeRef = useRef(stageSize);
   const zoomLevelRef = useRef(zoomLevel);
   const undoStackRef = useRef(undoStack);
   const imagesRef = useRef(images);
+  const saveAndNextSinceCheckpointRef = useRef(0);
   const draftBoxesRef = useRef(null);
   const overlayFrameRef = useRef(0);
   const preferencesHydratedRef = useRef(false);
@@ -121,7 +127,12 @@ export default function LabelerPage() {
 
   useEffect(() => {
     currentImageNameRef.current = currentImageName;
+    navigationImageNameRef.current = currentImageName;
   }, [currentImageName]);
+
+  useEffect(() => {
+    checkpointImageNameRef.current = checkpointImageName;
+  }, [checkpointImageName]);
 
   useEffect(() => {
     naturalSizeRef.current = naturalSize;
@@ -142,6 +153,10 @@ export default function LabelerPage() {
   useEffect(() => {
     imagesRef.current = images;
   }, [images]);
+
+  useEffect(() => {
+    saveAndNextSinceCheckpointRef.current = 0;
+  }, [activeFramesDir]);
 
   useEffect(() => {
     setZoomLevel((current) => {
@@ -216,9 +231,35 @@ export default function LabelerPage() {
     setDirty(nextDirty);
   };
 
-  const syncSelectedBoxId = (nextSelectedBoxId) => {
+  const syncSelectedBoxId = (
+    nextSelectedBoxId,
+    { enableArrowBoxControl = nextSelectedBoxId != null ? selectedBoxArrowControlRef.current : false } = {},
+  ) => {
     selectedBoxIdRef.current = nextSelectedBoxId;
+    selectedBoxArrowControlRef.current = Boolean(
+      nextSelectedBoxId != null && enableArrowBoxControl,
+    );
     setSelectedBoxId(nextSelectedBoxId);
+  };
+
+  const getBoxesWithSelectedOnTop = (
+    sourceBoxes,
+    selectedId = selectedBoxIdRef.current,
+  ) => {
+    if (!Array.isArray(sourceBoxes) || sourceBoxes.length <= 1 || selectedId == null) {
+      return sourceBoxes || [];
+    }
+
+    const selectedIndex = sourceBoxes.findIndex((box) => box.id === selectedId);
+    if (selectedIndex < 0 || selectedIndex === sourceBoxes.length - 1) {
+      return sourceBoxes;
+    }
+
+    return [
+      ...sourceBoxes.slice(0, selectedIndex),
+      ...sourceBoxes.slice(selectedIndex + 1),
+      sourceBoxes[selectedIndex],
+    ];
   };
 
   // Derived state
@@ -325,7 +366,7 @@ export default function LabelerPage() {
 
     pushUndoSnapshot(takeUndoSnapshot());
     setBoxes([...boxesRef.current, duplicatedBox]);
-    syncSelectedBoxId(duplicatedBox.id);
+    syncSelectedBoxId(duplicatedBox.id, { enableArrowBoxControl: true });
     markDirty(true);
   };
 
@@ -355,7 +396,7 @@ export default function LabelerPage() {
         box.id === selected.id ? updated : { ...box },
       ),
     );
-    syncSelectedBoxId(selected.id);
+    syncSelectedBoxId(selected.id, { enableArrowBoxControl: true });
     markDirty(true);
     return true;
   };
@@ -410,20 +451,84 @@ export default function LabelerPage() {
   const getLabelApiUrl = (name) =>
     `/api/labels?image=${encodeURIComponent(name)}`;
 
-  const syncCheckpointState = (nextImages, checkpointName) => {
+  const syncCheckpointState = (checkpointName) => {
     const normalized =
       typeof checkpointName === "string" ? checkpointName.trim() : "";
-    let checkpointExists = false;
-    const updatedImages = nextImages.map((item) => ({
-      ...item,
-      isCheckpoint: item.name === normalized,
-    }));
-    updatedImages.forEach((item) => {
-      if (item.isCheckpoint) checkpointExists = true;
-    });
-    setImages(updatedImages);
-    setCheckpointImageName(checkpointExists ? normalized : null);
-    return updatedImages;
+    const checkpointExists = imagesRef.current.some((item) => item.name === normalized);
+    const nextCheckpointName = checkpointExists ? normalized : null;
+    checkpointImageNameRef.current = nextCheckpointName;
+    setImages((current) =>
+      current.map((item) => ({
+        ...item,
+        isCheckpoint: item.name === nextCheckpointName,
+      })),
+    );
+    setCheckpointImageName(nextCheckpointName);
+    return nextCheckpointName;
+  };
+
+  const persistCheckpoint = async (
+    name = currentImageNameRef.current,
+    { silentSuccess = false, silentError = false } = {},
+  ) => {
+    if (isLabelingLocked) {
+      if (!silentError) {
+        setNotice(createNotice("warning", "Checkpoint dinonaktifkan saat auto-label berjalan."));
+      }
+      return { ok: false };
+    }
+
+    const checkpointTarget = typeof name === "string" ? name.trim() : "";
+    if (!checkpointTarget) {
+      if (!silentError) {
+        setNotice(
+          createNotice(
+            "warning",
+            "Frame harus dipilih untuk membuat checkpoint.",
+          ),
+        );
+      }
+      return { ok: false };
+    }
+
+    if (checkpointImageNameRef.current === checkpointTarget) {
+      saveAndNextSinceCheckpointRef.current = 0;
+      if (!silentSuccess) {
+        setNotice(createNotice("success", "Checkpoint tersimpan."));
+      }
+      return {
+        ok: true,
+        checkpointImage: checkpointTarget,
+        reused: true,
+      };
+    }
+
+    try {
+      const response = await fetchJson("/api/checkpoint", {
+        method: "POST",
+        body: JSON.stringify({ image: checkpointTarget }),
+      });
+      const nextCheckpointImage = syncCheckpointState(
+        response.checkpointImage || checkpointTarget,
+      );
+      saveAndNextSinceCheckpointRef.current = 0;
+      if (!silentSuccess) {
+        setNotice(createNotice("success", "Checkpoint tersimpan."));
+      }
+      return {
+        ok: true,
+        checkpointImage: nextCheckpointImage || checkpointTarget,
+        reused: false,
+      };
+    } catch (error) {
+      if (!silentError) {
+        setNotice(createNotice("error", error.message));
+      }
+      return {
+        ok: false,
+        error,
+      };
+    }
   };
 
   // Frame loading
@@ -465,6 +570,7 @@ export default function LabelerPage() {
 
     const requestToken = loadTokenRef.current + 1;
     loadTokenRef.current = requestToken;
+    navigationImageNameRef.current = name;
     setNotice(createNotice("info", "Memuat frame dan label..."));
 
     try {
@@ -491,7 +597,7 @@ export default function LabelerPage() {
           .filter((box) => box.width > 0 && box.height > 0);
         syncNextBoxId(nextBoxes);
         setBoxes(nextBoxes);
-        syncSelectedBoxId(nextBoxes[0]?.id || null);
+      syncSelectedBoxId(nextBoxes[0]?.id || null, { enableArrowBoxControl: false });
       }
 
       setNotice(null);
@@ -614,9 +720,20 @@ export default function LabelerPage() {
       setNotice(createNotice("warning", "Tidak ada frame yang tersedia."));
       return;
     }
-    const currentIndex = visibleImages.findIndex(
-      (item) => item.name === currentImageNameRef.current,
+    const anchorImageName =
+      navigationImageNameRef.current || currentImageNameRef.current;
+    let currentIndex = visibleImages.findIndex(
+      (item) => item.name === anchorImageName,
     );
+    if (
+      currentIndex < 0 &&
+      currentImageNameRef.current &&
+      anchorImageName !== currentImageNameRef.current
+    ) {
+      currentIndex = visibleImages.findIndex(
+        (item) => item.name === currentImageNameRef.current,
+      );
+    }
     const nextIndex = clamp(
       currentIndex < 0
         ? step > 0
@@ -627,7 +744,7 @@ export default function LabelerPage() {
       visibleImages.length - 1,
     );
     const nextItem = visibleImages[nextIndex];
-    if (nextItem && nextItem.name !== currentImageNameRef.current) {
+    if (nextItem && nextItem.name !== anchorImageName) {
       void selectImage(nextItem.name);
     }
   };
@@ -667,7 +784,40 @@ export default function LabelerPage() {
             : item,
         ),
       );
-      setNotice(createNotice("success", "Label tersimpan."));
+      let checkpointResult = null;
+      if (advance) {
+        saveAndNextSinceCheckpointRef.current += 1;
+        if (
+          saveAndNextSinceCheckpointRef.current
+          >= AUTO_CHECKPOINT_SAVE_AND_NEXT_INTERVAL
+        ) {
+          checkpointResult = await persistCheckpoint(imageName, {
+            silentSuccess: true,
+            silentError: true,
+          });
+        }
+      }
+
+      if (checkpointResult?.ok) {
+        setNotice(
+          createNotice(
+            "success",
+            checkpointResult.reused
+              ? "Label tersimpan. Checkpoint otomatis tetap aktif di frame ini."
+              : "Label tersimpan. Checkpoint otomatis diperbarui.",
+          ),
+        );
+      } else if (checkpointResult && !checkpointResult.ok) {
+        setNotice(
+          createNotice(
+            "warning",
+            "Label tersimpan, tetapi checkpoint otomatis gagal dibuat.",
+          ),
+        );
+      } else {
+        setNotice(createNotice("success", "Label tersimpan."));
+      }
+
       if (advance) navigate(1);
     } catch (error) {
       setNotice(createNotice("error", error.message));
@@ -675,30 +825,7 @@ export default function LabelerPage() {
   };
 
   const saveCheckpoint = async (name = currentImageNameRef.current) => {
-    if (isLabelingLocked) {
-      setNotice(createNotice("warning", "Checkpoint dinonaktifkan saat auto-label berjalan."));
-      return;
-    }
-    if (!name) {
-      setNotice(
-        createNotice(
-          "warning",
-          "Frame harus dipilih untuk membuat checkpoint.",
-        ),
-      );
-      return;
-    }
-
-    try {
-      const response = await fetchJson("/api/checkpoint", {
-        method: "POST",
-        body: JSON.stringify({ image: name }),
-      });
-      syncCheckpointState(imagesRef.current, response.checkpointImage || name);
-      setNotice(createNotice("success", "Checkpoint tersimpan."));
-    } catch (error) {
-      setNotice(createNotice("error", error.message));
-    }
+    await persistCheckpoint(name);
   };
 
   const openCheckpoint = () => {
@@ -1052,8 +1179,11 @@ export default function LabelerPage() {
   };
 
   const findInteractionTarget = (point) => {
-    for (let i = boxesRef.current.length - 1; i >= 0; i--) {
-      const box = boxesRef.current[i];
+    const orderedBoxes = getBoxesWithSelectedOnTop(
+      draftBoxesRef.current || boxesRef.current,
+    );
+    for (let i = orderedBoxes.length - 1; i >= 0; i--) {
+      const box = orderedBoxes[i];
       const handle = getHandleHit(point, box);
       if (handle) {
         return { boxId: box.id, handle };
@@ -1157,7 +1287,9 @@ export default function LabelerPage() {
     }
 
     const currentNaturalSize = naturalSizeRef.current;
-    const renderedBoxes = draftBoxesRef.current || boxesRef.current;
+    const renderedBoxes = getBoxesWithSelectedOnTop(
+      draftBoxesRef.current || boxesRef.current,
+    );
     const interactionState = interactionRef.current;
     const scaleX = displayMetrics.width / currentNaturalSize.width;
     const scaleY = displayMetrics.height / currentNaturalSize.height;
@@ -1284,7 +1416,7 @@ export default function LabelerPage() {
     const target = findInteractionTarget(point);
 
     if (target) {
-      syncSelectedBoxId(target.boxId);
+      syncSelectedBoxId(target.boxId, { enableArrowBoxControl: true });
       overlayRef.current.style.cursor = getCursorForHandle(target.handle);
       interactionRef.current = {
         type: target.handle ? "resize" : "move",
@@ -1297,7 +1429,7 @@ export default function LabelerPage() {
       };
       draftBoxesRef.current = cloneBoxes(boxesRef.current);
     } else {
-      syncSelectedBoxId(null);
+      syncSelectedBoxId(null, { enableArrowBoxControl: false });
       interactionRef.current = {
         type: "draw",
         startPoint: point,
@@ -1379,7 +1511,7 @@ export default function LabelerPage() {
           });
           pushUndoSnapshot(takeUndoSnapshot());
           setBoxes((current) => [...current, newBox]);
-          syncSelectedBoxId(newBox.id);
+          syncSelectedBoxId(newBox.id, { enableArrowBoxControl: true });
           markDirty(true);
         }
       } else if (
@@ -1457,13 +1589,57 @@ export default function LabelerPage() {
         return;
       }
 
+      const hasSelectedBox = selectedBoxIdRef.current != null;
+      const arrowBoxControlActive =
+        hasSelectedBox && selectedBoxArrowControlRef.current;
+      const isArrowKey =
+        event.key === "ArrowLeft" ||
+        event.key === "ArrowRight" ||
+        event.key === "ArrowUp" ||
+        event.key === "ArrowDown";
+      const isHorizontalArrow =
+        event.key === "ArrowLeft" || event.key === "ArrowRight";
+      const isVerticalArrow =
+        event.key === "ArrowUp" || event.key === "ArrowDown";
+      const shouldMoveSelectedBoxWithArrow =
+        hasSelectedBox &&
+        isArrowKey &&
+        !event.altKey &&
+        (event.shiftKey || isVerticalArrow || arrowBoxControlActive);
+
+      if (shouldMoveSelectedBoxWithArrow) {
+        event.preventDefault();
+        const nudgeStep =
+          event.shiftKey || event.ctrlKey || event.metaKey ? 10 : 1;
+        const deltaByKey = {
+          ArrowLeft: { x: -nudgeStep, y: 0 },
+          ArrowRight: { x: nudgeStep, y: 0 },
+          ArrowUp: { x: 0, y: -nudgeStep },
+          ArrowDown: { x: 0, y: nudgeStep },
+        };
+        const delta = deltaByKey[event.key];
+        const moved = delta
+          ? moveSelectedBoxBy(delta.x, delta.y, {
+              captureUndo: !keyboardNudgeActive,
+            })
+          : false;
+        keyboardNudgeActive = keyboardNudgeActive || moved;
+        return;
+      }
+
       if (event.ctrlKey || event.metaKey) {
         if (event.key === "z" || event.key === "Z") {
           event.preventDefault();
           undoLastChange();
         } else if (event.key === "s" || event.key === "S") {
           event.preventDefault();
-          void saveCurrentLabel(false);
+          void saveCurrentLabel(event.shiftKey);
+        } else if ((event.key === "x" || event.key === "X") && selectedBoxIdRef.current != null) {
+          if (event.repeat) {
+            return;
+          }
+          event.preventDefault();
+          removeBox(selectedBoxIdRef.current);
         } else if (event.key === "0") {
           event.preventDefault();
           resetZoom();
@@ -1471,39 +1647,21 @@ export default function LabelerPage() {
         return;
       }
 
-      const nudgeStep = event.shiftKey ? 10 : 1;
-      const hasSelectedBox = selectedBoxIdRef.current != null;
-      if (event.key === "ArrowLeft" && hasSelectedBox) {
-        event.preventDefault();
-        const moved = moveSelectedBoxBy(-nudgeStep, 0, {
-          captureUndo: !keyboardNudgeActive,
-        });
-        keyboardNudgeActive = keyboardNudgeActive || moved;
-        return;
-      }
-      if (event.key === "ArrowRight" && hasSelectedBox) {
-        event.preventDefault();
-        const moved = moveSelectedBoxBy(nudgeStep, 0, {
-          captureUndo: !keyboardNudgeActive,
-        });
-        keyboardNudgeActive = keyboardNudgeActive || moved;
-        return;
-      }
-      if (event.key === "ArrowUp" && hasSelectedBox) {
-        event.preventDefault();
-        const moved = moveSelectedBoxBy(0, -nudgeStep, {
-          captureUndo: !keyboardNudgeActive,
-        });
-        keyboardNudgeActive = keyboardNudgeActive || moved;
-        return;
-      }
-      if (event.key === "ArrowDown" && hasSelectedBox) {
-        event.preventDefault();
-        const moved = moveSelectedBoxBy(0, nudgeStep, {
-          captureUndo: !keyboardNudgeActive,
-        });
-        keyboardNudgeActive = keyboardNudgeActive || moved;
-        return;
+      if (
+        !event.ctrlKey &&
+        !event.metaKey &&
+        (event.altKey || (!event.shiftKey && isHorizontalArrow))
+      ) {
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          navigate(-1);
+          return;
+        }
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          navigate(1);
+          return;
+        }
       }
 
       if (
@@ -1689,7 +1847,9 @@ export default function LabelerPage() {
                   force: true,
                 })
               }
-              onBoxSelect={syncSelectedBoxId}
+              onBoxSelect={(boxId) =>
+                syncSelectedBoxId(boxId, { enableArrowBoxControl: true })
+              }
             />
           </div>
         </aside>

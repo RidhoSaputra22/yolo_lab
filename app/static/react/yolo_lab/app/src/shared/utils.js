@@ -67,6 +67,7 @@ export function inferArtifactDescriptor(name) {
     const patterns = [
         { suffix: "_tracking.mp4", kind: "video" },
         { suffix: "_tracks.csv", kind: "tracks" },
+        { suffix: "_predictions.csv", kind: "tracks" },
         { suffix: "_summary.json", kind: "summary" },
     ];
     for (const pattern of patterns) {

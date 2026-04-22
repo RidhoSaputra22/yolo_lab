@@ -314,6 +314,10 @@ export class TrainingRunManager extends BaseRunManager {
     const argsYamlPath = path.join(runDir, "args.yaml");
     const resultsCsvPath = path.join(runDir, "results.csv");
     const args = parseSimpleYamlObject(argsYamlPath) || {};
+    const imageArtifacts = stats.files
+      .filter((artifactPath) => IMAGE_EXTENSIONS.has(path.extname(artifactPath).toLowerCase()))
+      .sort((leftPath, rightPath) => path.basename(leftPath).localeCompare(path.basename(rightPath)))
+      .map((artifactPath) => this.artifactPayload(artifactPath));
 
     return {
       key: path.basename(runDir),
@@ -344,6 +348,7 @@ export class TrainingRunManager extends BaseRunManager {
         resultsCsv: existsSync(resultsCsvPath) ? this.artifactPayload(resultsCsvPath) : null,
         argsYaml: existsSync(argsYamlPath) ? this.artifactPayload(argsYamlPath) : null,
       },
+      imageArtifacts,
       previewArtifacts: [
         path.join(runDir, "results.png"),
         path.join(runDir, "confusion_matrix.png"),

@@ -26,6 +26,7 @@ export const DEFAULT_TRAIN_RUNNER = path.join(LAB_DIR, "train", "yolo_train.py")
 export const DEFAULT_TEST_OUTPUT_DIR = path.join(LAB_DIR, "test", "output");
 export const DEFAULT_TRAIN_OUTPUT_DIR = path.join(LAB_DIR, "train", "runs");
 export const DEFAULT_TEST_INPUT_DIR = path.join(LAB_DIR, "train", "footage");
+export const DEFAULT_TEST_EMPLOYEE_FACES_DIR = path.join(LAB_DIR, "petugas");
 export const DEFAULT_FRAMES_DIR = path.join(LAB_DIR, "train", "frames");
 export const DEFAULT_LABELS_DIR = path.join(LAB_DIR, "train", "labels");
 export const DEFAULT_DATASET_DIR = path.join(LAB_DIR, "train", "dataset");

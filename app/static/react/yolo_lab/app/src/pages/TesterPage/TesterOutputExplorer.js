@@ -1,7 +1,60 @@
 import React, { useEffect, useState } from "react";
 import { Alert, Badge, Card, Button, Paragraph } from "../../ui.js";
 import { formatCount, joinClasses } from "../../shared/utils.js";
+function formatMetric(value, { percent = false, digits = 1 } = {}) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+        return "-";
+    }
+    if (percent) {
+        return `${(parsed * 100).toFixed(digits)}%`;
+    }
+    return parsed.toFixed(digits);
+}
+function SummaryMetrics({ summaryData }) {
+    const benchmark = summaryData?.face_benchmark;
+    const faceRegistry = summaryData?.face_registry;
+    if (!benchmark && !faceRegistry) {
+        return null;
+    }
+    return (React.createElement("div", { className: "grid gap-3" },
+        benchmark ? (React.createElement("div", { className: "rounded-sm border border-emerald-200 bg-emerald-50/70 p-4" },
+            React.createElement("div", { className: "flex flex-wrap items-start justify-between gap-3" },
+                React.createElement("div", null,
+                    React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700" }, "Face Benchmark"),
+                    React.createElement("p", { className: "mt-2 text-sm text-slate-700" }, "Evaluasi pengenalan petugas dari folder wajah berlabel nama file.")),
+                React.createElement(Badge, { type: "success", className: "px-3 py-3" }, formatMetric(benchmark.accuracy, { percent: true }))),
+            React.createElement("div", { className: "mt-4 grid gap-3 md:grid-cols-5" }, [
+                ["Akurasi", formatMetric(benchmark.accuracy, { percent: true })],
+                ["Benar", benchmark.correct_predictions ?? 0],
+                ["Salah", benchmark.wrong_predictions ?? 0],
+                ["Unknown", benchmark.unknown_predictions ?? 0],
+                ["Label", benchmark.label_count ?? 0],
+            ].map(([label, value]) => (React.createElement("div", { key: label, className: "rounded-sm border border-emerald-200 bg-white/80 p-3" },
+                React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, label),
+                React.createElement("p", { className: "mt-2 text-sm font-semibold text-slate-900" }, value))))),
+            React.createElement("div", { className: "mt-3 grid gap-3 md:grid-cols-3" }, [
+                ["Gambar diproses", benchmark.usable_images ?? 0],
+                ["Tanpa wajah", benchmark.images_without_face ?? 0],
+                ["Self-match", benchmark.allow_self_match ? "aktif" : "nonaktif"],
+            ].map(([label, value]) => (React.createElement("div", { key: label, className: "rounded-sm border border-emerald-200 bg-white/80 p-3" },
+                React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, label),
+                React.createElement("p", { className: "mt-2 text-sm font-semibold text-slate-900" }, value))))))) : null,
+        faceRegistry ? (React.createElement("div", { className: "rounded-sm border border-base-300 bg-base-200/40 p-4" },
+            React.createElement("div", { className: "flex flex-wrap items-center justify-between gap-3" },
+                React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-700" }, "Registry Wajah"),
+                React.createElement(Badge, { type: "warning", className: "px-3 py-3" }, faceRegistry.source || "-")),
+            React.createElement("div", { className: "mt-4 grid gap-3 md:grid-cols-4" }, [
+                ["Identitas", faceRegistry.loaded_count ?? faceRegistry.registry_size ?? 0],
+                ["Sampel", faceRegistry.sample_count ?? faceRegistry.image_count ?? 0],
+                ["Skip no face", faceRegistry.skipped_no_face ?? 0],
+                ["Skip error", faceRegistry.skipped_read_error ?? 0],
+            ].map(([label, value]) => (React.createElement("div", { key: label, className: "rounded-sm border border-base-300 bg-base-100/80 p-3" },
+                React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, label),
+                React.createElement("p", { className: "mt-2 text-sm font-semibold text-slate-900" }, value))))))) : null));
+}
 function RunVideoPreview({ run }) {
+    const benchmark = run.summary?.summaryData?.face_benchmark;
     const initialPlaybackError = run.video?.videoPlayback && run.video.videoPlayback.playable === false
         ? run.video.videoPlayback.issue
         : "";
@@ -11,6 +64,17 @@ function RunVideoPreview({ run }) {
             ? run.video.videoPlayback.issue
             : "");
     }, [run.video?.path, run.video?.videoPlayback?.playable, run.video?.videoPlayback?.issue]);
+    if (benchmark) {
+        return (React.createElement("div", { className: "grid aspect-video place-items-center border-b border-base-300 bg-emerald-950 px-6 text-center" },
+            React.createElement("div", { className: "max-w-xl space-y-3" },
+                React.createElement("p", { className: "text-base font-semibold text-emerald-100" }, "Benchmark face recognition"),
+                React.createElement("p", { className: "text-sm leading-6 text-emerald-50/80" },
+                    "Akurasi ",
+                    formatMetric(benchmark.accuracy, { percent: true }),
+                    " dari ",
+                    benchmark.usable_images || 0,
+                    " gambar yang berhasil diproses."))));
+    }
     if (!run.video?.downloadUrl) {
         return (React.createElement("div", { className: "grid aspect-video place-items-center border-b border-base-300 bg-slate-950 px-4 text-center text-sm text-slate-400" }, "File video belum tersedia untuk run ini."));
     }
@@ -66,38 +130,43 @@ export function TesterOutputExplorer({ folders, selectedFolderKey, selectedFolde
                     ].map(([label, value]) => (React.createElement("div", { key: label, className: "rounded-sm border border-base-300 bg-base-200/50 p-3" },
                         React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, label),
                         React.createElement("p", { className: "mt-2 text-sm font-semibold text-slate-900" }, value))))),
-                    React.createElement("div", { className: "grid gap-4" }, selectedFolder.runs.length ? (selectedFolder.runs.map((run) => (React.createElement("article", { key: run.key, className: "overflow-hidden rounded-sm border border-base-300 bg-base-100 shadow-md" },
-                        React.createElement(RunVideoPreview, { run: run }),
-                        React.createElement("div", { className: "grid gap-4 p-5" },
-                            React.createElement("div", { className: "flex flex-wrap items-start justify-between gap-3" },
-                                React.createElement("div", null,
-                                    React.createElement("h3", { className: "text-sm font-semibold text-slate-900" }, run.key),
-                                    React.createElement(Paragraph, { className: "mt-1 text-xs opacity-100" },
-                                        selectedFolder.label,
-                                        " \u2022 ",
-                                        run.updatedAt)),
-                                React.createElement(Badge, { type: "ghost", className: "px-3 py-3" }, run.totalSizeLabel)),
-                            React.createElement("div", { className: "flex flex-wrap gap-2" },
-                                React.createElement(Badge, { type: run.video?.videoPlayback?.playable === false
-                                        ? "warning"
+                    React.createElement("div", { className: "grid gap-4" }, selectedFolder.runs.length ? (selectedFolder.runs.map((run) => {
+                        const isBenchmarkRun = run.summary?.summaryData?.test_mode === "face-benchmark";
+                        const csvLabel = isBenchmarkRun ? "Predictions CSV" : "Tracks CSV";
+                        return (React.createElement("article", { key: run.key, className: "overflow-hidden rounded-sm border border-base-300 bg-base-100 shadow-md" },
+                            React.createElement(RunVideoPreview, { run: run }),
+                            React.createElement("div", { className: "grid gap-4 p-5" },
+                                React.createElement("div", { className: "flex flex-wrap items-start justify-between gap-3" },
+                                    React.createElement("div", null,
+                                        React.createElement("h3", { className: "text-sm font-semibold text-slate-900" }, run.key),
+                                        React.createElement(Paragraph, { className: "mt-1 text-xs opacity-100" },
+                                            selectedFolder.label,
+                                            " \u2022 ",
+                                            run.updatedAt)),
+                                    React.createElement(Badge, { type: "ghost", className: "px-3 py-3" }, run.totalSizeLabel)),
+                                React.createElement("div", { className: "flex flex-wrap gap-2" },
+                                    React.createElement(Badge, { type: run.video?.videoPlayback?.playable === false
+                                            ? "warning"
+                                            : run.video
+                                                ? "success"
+                                                : "ghost", className: "px-3 py-3" }, run.video?.videoPlayback?.playable === false
+                                        ? "Video belum final"
                                         : run.video
-                                            ? "success"
-                                            : "ghost", className: "px-3 py-3" }, run.video?.videoPlayback?.playable === false
-                                    ? "Video belum final"
-                                    : run.video
-                                        ? "Video"
-                                        : "Tanpa video"),
-                                run.summary ? (React.createElement(Badge, { type: "warning", className: "px-3 py-3" }, "Summary JSON")) : null,
-                                run.tracks ? (React.createElement(Badge, { type: "info", className: "px-3 py-3" }, "Tracks CSV")) : null,
-                                run.others.length ? (React.createElement(Badge, { type: "ghost", className: "px-3 py-3" },
-                                    "+",
-                                    run.others.length,
-                                    " file")) : null),
-                            React.createElement("div", { className: "flex flex-wrap gap-2" },
-                                run.video?.downloadUrl ? (React.createElement(Button, { href: run.video.downloadUrl, variant: "primary", isSubmit: false, className: "rounded-sm", target: "_blank", rel: "noreferrer" }, "Buka video")) : null,
-                                run.summary?.downloadUrl ? (React.createElement(Button, { href: run.summary.downloadUrl, variant: "warning", isSubmit: false, className: "rounded-sm", target: "_blank", rel: "noreferrer" }, "Summary JSON")) : null,
-                                run.tracks?.downloadUrl ? (React.createElement(Button, { href: run.tracks.downloadUrl, variant: "info", isSubmit: false, className: "rounded-sm", target: "_blank", rel: "noreferrer" }, "Tracks CSV")) : null,
-                                run.others.map((artifact, index) => (React.createElement(Button, { key: artifact.path, href: artifact.downloadUrl, variant: "ghost", isSubmit: false, className: "rounded-sm border border-base-300 bg-base-100", target: "_blank", rel: "noreferrer" },
-                                    "File ",
-                                    index + 1))))))))) : (React.createElement(Alert, { type: "info", className: "rounded-sm text-sm" }, "Folder ini belum memiliki run yang bisa dirangkum."))))) : (React.createElement(Alert, { type: "info", className: "rounded-sm text-sm" }, "Belum ada hasil test yang bisa ditampilkan."))))));
+                                            ? "Video"
+                                            : "Tanpa video"),
+                                    run.summary ? (React.createElement(Badge, { type: "warning", className: "px-3 py-3" }, "Summary JSON")) : null,
+                                    run.tracks ? (React.createElement(Badge, { type: "info", className: "px-3 py-3" }, csvLabel)) : null,
+                                    run.others.length ? (React.createElement(Badge, { type: "ghost", className: "px-3 py-3" },
+                                        "+",
+                                        run.others.length,
+                                        " file")) : null),
+                                React.createElement("div", { className: "flex flex-wrap gap-2" },
+                                    run.video?.downloadUrl ? (React.createElement(Button, { href: run.video.downloadUrl, variant: "primary", isSubmit: false, className: "rounded-sm", target: "_blank", rel: "noreferrer" }, "Buka video")) : null,
+                                    run.summary?.downloadUrl ? (React.createElement(Button, { href: run.summary.downloadUrl, variant: "warning", isSubmit: false, className: "rounded-sm", target: "_blank", rel: "noreferrer" }, "Summary JSON")) : null,
+                                    run.tracks?.downloadUrl ? (React.createElement(Button, { href: run.tracks.downloadUrl, variant: "info", isSubmit: false, className: "rounded-sm", target: "_blank", rel: "noreferrer" }, csvLabel)) : null,
+                                    run.others.map((artifact, index) => (React.createElement(Button, { key: artifact.path, href: artifact.downloadUrl, variant: "ghost", isSubmit: false, className: "rounded-sm border border-base-300 bg-base-100", target: "_blank", rel: "noreferrer" },
+                                        "File ",
+                                        index + 1)))),
+                                React.createElement(SummaryMetrics, { summaryData: run.summary?.summaryData }))));
+                    })) : (React.createElement(Alert, { type: "info", className: "rounded-sm text-sm" }, "Folder ini belum memiliki run yang bisa dirangkum."))))) : (React.createElement(Alert, { type: "info", className: "rounded-sm text-sm" }, "Belum ada hasil test yang bisa ditampilkan."))))));
 }

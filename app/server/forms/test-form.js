@@ -3,6 +3,7 @@
  */
 
 import {
+  DEFAULT_TEST_EMPLOYEE_FACES_DIR,
   DEFAULT_FACE_ID_AMBIGUITY_MARGIN,
   DEFAULT_FACE_ID_MATCH_THRESHOLD,
   DEFAULT_FACE_ID_MIN_TRACK_FRAMES,
@@ -21,6 +22,7 @@ export function defaultTestFormData() {
   const defaultWeights = displayPath(resolveProjectPath(envValue("YOLOV5_WEIGHTS", ""), { allowEmpty: true }));
   const defaultInputCandidates = discoverFiles([DEFAULT_TEST_INPUT_DIR], VIDEO_EXTENSIONS, 1);
   return {
+    testMode: "video",
     input: defaultInputCandidates[0] || "",
     outputDir: displayPath(DEFAULT_TEST_OUTPUT_DIR),
     outputName: "",
@@ -42,6 +44,10 @@ export function defaultTestFormData() {
     backend: envValue("YOLO_BACKEND", "yolov5") || "yolov5",
     weights: defaultWeights,
     device: envValue("YOLOV5_DEVICE", "auto") || "auto",
+    faceRegistrySource: "folder",
+    employeeFacesDir: displayPath(DEFAULT_TEST_EMPLOYEE_FACES_DIR),
+    employeeMatchThreshold: Number.parseFloat(envValue("EMPLOYEE_MATCH_THRESHOLD", "0.45")) || 0.45,
+    faceBenchmarkAllowSelfMatch: false,
     reidMatchThreshold: Number.parseFloat(envValue("REID_MATCH_THRESHOLD", "0.77")) || 0.77,
     reidMinTrackFrames: Number.parseInt(envValue("REID_MIN_TRACK_FRAMES", "3"), 10) || 3,
     reidStrongMatchThreshold:
@@ -60,15 +66,34 @@ export function defaultTestFormData() {
 export function testFormLayout() {
   return [
     {
+      id: "mode",
+      title: "Mode Pengujian",
+      description: "Pilih test footage video atau benchmark gambar petugas dari folder lokal.",
+      fields: [
+        {
+          name: "testMode",
+          label: "Mode test",
+          type: "select",
+          choices: [
+            { value: "video", label: "Video tracking + label petugas" },
+            { value: "face-benchmark", label: "Benchmark folder petugas" },
+          ],
+          helpText:
+            "Untuk alur `YOLO -> tracking visitor -> cek wajah -> label petugas dari folder petugas`, pilih `Video tracking + label petugas`. Mode benchmark hanya menguji gambar folder petugas dan tidak memakai footage video.",
+        },
+      ],
+    },
+    {
       id: "source",
       title: "Sumber & Output",
-      description: "Video input, folder hasil, dan ROI runner offline.",
+      description: "Video footage input, folder hasil, dan ROI runner offline.",
       fields: [
         {
           name: "input",
           label: "Input video",
           type: "path",
           required: true,
+          visibleWhen: { testMode: "video" },
           helpText:
             "File video yang akan dianalisis oleh runner offline. Pilih sumber uji yang ingin diproses tanpa mengubah file asli.",
         },
@@ -91,6 +116,7 @@ export function testFormLayout() {
           name: "roiJson",
           label: "ROI JSON",
           type: "textarea",
+          visibleWhen: { testMode: "video" },
           helpText:
             "Polygon area yang membatasi wilayah analisis. Kosong berarti seluruh frame diproses; ROI yang terlalu sempit bisa membuat objek di luar area diabaikan.",
         },
@@ -100,6 +126,7 @@ export function testFormLayout() {
       id: "frames",
       title: "Frame & Inferensi",
       description: "Ukuran output, sampling frame, dan ukuran inferensi YOLO.",
+      visibleWhen: { testMode: "video" },
       fields: [
         {
           name: "frameWidth",
@@ -163,6 +190,7 @@ export function testFormLayout() {
       id: "tracker",
       title: "Tracker",
       description: "Parameter DeepSORT atau fallback CentroidTracker.",
+      visibleWhen: { testMode: "video" },
       fields: [
         {
           name: "forceCentroid",
@@ -204,13 +232,14 @@ export function testFormLayout() {
     {
       id: "model",
       title: "Model & Identitas",
-      description: "Backend YOLO, bobot, device, dan mode identitas visitor.",
+      description: "Backend YOLO, bobot model, device, dan mode identitas visitor pada footage.",
       fields: [
         {
           name: "backend",
           label: "Backend",
           type: "select",
           choices: ["yolov5", "ultralytics"],
+          visibleWhen: { testMode: "video" },
           helpText:
             "Engine YOLO yang dipakai untuk inferensi. Pilih sesuai format bobot dan pipeline yang sudah kamu siapkan.",
         },
@@ -218,12 +247,14 @@ export function testFormLayout() {
           name: "weights",
           label: "Weights",
           type: "path",
+          visibleWhen: { testMode: "video" },
           helpText: "Path bobot model deteksi yang akan dipakai saat testing.",
         },
         {
           name: "device",
           label: "Device",
           type: "text",
+          visibleWhen: { testMode: "video" },
           helpText:
             "Perangkat inferensi seperti `cpu`, `auto`, atau `cuda:0`. GPU memberi proses lebih cepat bila tersedia.",
         },
@@ -232,15 +263,81 @@ export function testFormLayout() {
           label: "Identity mode",
           type: "select",
           choices: ["reid", "face"],
+          visibleWhen: { testMode: "video" },
           helpText:
             "Strategi pelacakan identitas visitor. `reid` mengandalkan fitur penampilan, sedangkan `face` menekankan verifikasi berbasis wajah.",
         },
+      ],
+    },
+    {
+      id: "employee-tracking",
+      title: "Tracking Petugas",
+      description: "Aktifkan pencocokan wajah petugas pada footage sehingga track visitor yang match akan diberi label petugas.",
+      visibleWhen: { testMode: "video" },
+      fields: [
         {
           name: "withFaceRecognition",
-          label: "Aktifkan face recognition",
+          label: "Aktifkan label petugas via wajah",
           type: "bool",
           helpText:
-            "Mengaktifkan pembanding identitas berbasis wajah jika pipeline face tersedia. Berguna untuk memperkuat identitas, tetapi menambah beban proses.",
+            "Pipeline video akan menjadi `YOLO -> tracking visitor -> deteksi wajah -> cocokkan ke folder petugas`. Jika cocok, track akan diberi label petugas pada output video dan CSV.",
+        },
+        {
+          name: "faceRegistrySource",
+          label: "Sumber data petugas",
+          type: "select",
+          visibleWhen: { withFaceRecognition: true },
+          choices: [
+            { value: "folder", label: "Folder lokal petugas" },
+            { value: "backend", label: "Backend registry" },
+          ],
+          helpText:
+            "Untuk test lokal, pilih `Folder lokal petugas` agar identitas petugas dibaca dari folder seperti `petugas/`.",
+        },
+        {
+          name: "employeeFacesDir",
+          label: "Folder petugas",
+          type: "path",
+          visibleWhen: { withFaceRecognition: true, faceRegistrySource: "folder" },
+          helpText:
+            "Folder berisi file wajah `.png/.jpg/.jpeg` petugas. Nama file dipakai sebagai label; contoh `budi.png` atau `budi_2.png` dibaca sebagai identitas `budi`.",
+        },
+        {
+          name: "employeeMatchThreshold",
+          label: "Employee match threshold",
+          type: "float",
+          visibleWhen: { withFaceRecognition: true },
+          helpText:
+            "Ambang kemiripan minimum agar wajah pada footage dianggap cocok dengan petugas. Naikkan untuk hasil lebih ketat, turunkan bila terlalu banyak miss.",
+        },
+      ],
+    },
+    {
+      id: "face-benchmark",
+      title: "Benchmark Wajah Petugas",
+      description: "Khusus untuk menguji folder petugas tanpa memakai video footage.",
+      visibleWhen: { testMode: "face-benchmark" },
+      fields: [
+        {
+          name: "employeeFacesDir",
+          label: "Folder petugas",
+          type: "path",
+          helpText:
+            "Folder berisi file wajah `.png/.jpg/.jpeg` petugas. Benchmark akan membaca nama file sebagai label identitas petugas.",
+        },
+        {
+          name: "employeeMatchThreshold",
+          label: "Employee match threshold",
+          type: "float",
+          helpText:
+            "Ambang kemiripan minimum untuk benchmark pengenalan petugas dari folder wajah.",
+        },
+        {
+          name: "faceBenchmarkAllowSelfMatch",
+          label: "Benchmark izinkan self-match",
+          type: "bool",
+          helpText:
+            "Jika aktif, gambar boleh dicocokkan dengan dirinya sendiri. Cocok untuk sanity check saat tiap petugas hanya punya satu file; nonaktifkan untuk evaluasi yang lebih ketat.",
         },
       ],
     },
@@ -248,6 +345,7 @@ export function testFormLayout() {
       id: "reid",
       title: "Tuning reID",
       description: "Selalu tersedia untuk mode reID dan tetap dipakai sebagai fallback env override.",
+      visibleWhen: { testMode: "video" },
       fields: [
         {
           name: "reidMatchThreshold",
@@ -289,12 +387,13 @@ export function testFormLayout() {
     {
       id: "face",
       title: "Tuning face identity",
-      description: "Dipakai saat identity mode = face.",
+      description: "Dipakai saat identity mode = face, dan threshold employee juga berguna untuk benchmark petugas.",
       fields: [
         {
           name: "faceIdMatchThreshold",
           label: "Face match threshold",
           type: "float",
+          visibleWhen: { testMode: "video" },
           helpText:
             "Ambang minimum kemiripan wajah agar track dianggap identik. Nilai lebih tinggi lebih ketat, nilai lebih rendah lebih permisif.",
         },
@@ -302,6 +401,7 @@ export function testFormLayout() {
           name: "faceIdMinTrackFrames",
           label: "Face min track frames",
           type: "int",
+          visibleWhen: { testMode: "video" },
           helpText:
             "Jumlah frame minimum sebelum identitas wajah dianggap cukup meyakinkan untuk dipakai sebagai keputusan.",
         },
@@ -309,6 +409,7 @@ export function testFormLayout() {
           name: "faceIdStrongMatchThreshold",
           label: "Face strong match threshold",
           type: "float",
+          visibleWhen: { testMode: "video" },
           helpText:
             "Ambang kemiripan wajah yang sangat yakin. Cocok untuk kasus saat kamu ingin lock identitas hanya ketika confidence benar-benar tinggi.",
         },
@@ -316,6 +417,7 @@ export function testFormLayout() {
           name: "faceIdAmbiguityMargin",
           label: "Face ambiguity margin",
           type: "float",
+          visibleWhen: { testMode: "video" },
           helpText:
             "Selisih minimum antara kandidat wajah terbaik dan berikutnya. Margin besar menekan keputusan ambigu, tetapi bisa membuat hasil lebih konservatif.",
         },
@@ -323,6 +425,7 @@ export function testFormLayout() {
           name: "faceIdPrototypeAlpha",
           label: "Face prototype alpha",
           type: "float",
+          visibleWhen: { testMode: "video" },
           helpText:
             "Kecepatan pembaruan representasi wajah per identitas. Nilai kecil lebih stabil, nilai besar lebih cepat mengikuti perubahan pose atau pencahayaan.",
         },

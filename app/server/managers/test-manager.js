@@ -2,11 +2,12 @@
  * TestRunManager — mengelola proses test runner offline.
  */
 
-import { closeSync, existsSync, mkdirSync, openSync, readSync, readdirSync, statSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import {
   ARTIFACT_EXTENSIONS,
+  DEFAULT_TEST_EMPLOYEE_FACES_DIR,
   DEFAULT_TEST_INPUT_DIR,
   LAB_DIR,
   MAX_DISCOVERY_ITEMS,
@@ -111,6 +112,16 @@ function inspectMp4Playback(filePath) {
   }
 }
 
+function safeSummaryData(filePath) {
+  try {
+    const raw = readFileSync(filePath, "utf8");
+    const parsed = JSON.parse(raw || "{}");
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 export class TestRunManager extends BaseRunManager {
   constructor({ projectDir, runnerScript, pythonBin, defaultOutputDir }) {
     super();
@@ -138,6 +149,12 @@ export class TestRunManager extends BaseRunManager {
   configPayload(defaultOverrides = {}) {
     const defaults = { ...defaultTestFormData(), ...(defaultOverrides || {}) };
     const outputSuggestions = [displayPath(this.defaultOutputDir)];
+    const employeeFacesDir = displayPath(path.resolve(DEFAULT_TEST_EMPLOYEE_FACES_DIR));
+    const employeeFaceSuggestions = [
+      employeeFacesDir,
+      displayPath(path.resolve(this.projectDir, "petugas")),
+    ].filter((value, index, items) => value && items.indexOf(value) === index);
+
     if (existsSync(this.defaultOutputDir)) {
       const directDirs = readdirSync(this.defaultOutputDir, { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
@@ -156,6 +173,7 @@ export class TestRunManager extends BaseRunManager {
         WEIGHTS_EXTENSIONS,
       ),
       outputDir: outputSuggestions,
+      employeeFacesDir: employeeFaceSuggestions,
     };
 
     let preview = { config: defaults, command: [], commandDisplay: "" };
@@ -171,6 +189,8 @@ export class TestRunManager extends BaseRunManager {
       choices: {
         backend: ["yolov5", "ultralytics"],
         identityMode: ["reid", "face"],
+        testMode: ["video", "face-benchmark"],
+        faceRegistrySource: ["folder", "backend"],
       },
       paths: {
         projectDir: this.projectDir,
@@ -195,6 +215,9 @@ export class TestRunManager extends BaseRunManager {
     }
     if (!existsSync(DEFAULT_TEST_INPUT_DIR)) {
       warnings.push(`Folder footage tidak ditemukan: ${DEFAULT_TEST_INPUT_DIR}`);
+    }
+    if (!existsSync(DEFAULT_TEST_EMPLOYEE_FACES_DIR)) {
+      warnings.push(`Folder petugas default belum ada: ${DEFAULT_TEST_EMPLOYEE_FACES_DIR}`);
     }
     return warnings;
   }
@@ -367,47 +390,45 @@ export class TestRunManager extends BaseRunManager {
     return files.slice(0, MAX_DISCOVERY_ITEMS).map((artifactPath) => this.artifactPayload(artifactPath));
   }
 
-  artifactPayload(targetPath) {
-    const stats = statSync(targetPath);
-    const resolvedPath = path.resolve(targetPath);
-    const relativePath = displayPath(resolvedPath);
-    const isVideo = path.extname(targetPath).toLowerCase() === ".mp4";
-    const downloadUrl = pathInside(resolvedPath, PROJECT_DIR)
-      ? `/api/test/artifact?path=${encodePathQuery(relativePath)}`
-      : null;
-
-    return {
-      name: path.basename(targetPath),
-      path: relativePath,
-      parent: displayPath(path.dirname(resolvedPath)),
-      sizeBytes: stats.size,
-      sizeLabel: fileSizeLabel(stats.size),
-      modifiedAt: toLocalIso(stats.mtimeMs),
-      downloadUrl,
-      isVideo,
-      videoPlayback: isVideo ? inspectMp4Playback(resolvedPath) : null,
-    };
-  }
-
   normalizePayload(payload) {
     const raw = { ...defaultTestFormData(), ...(payload || {}) };
+    const testMode = this.choiceValue(raw.testMode, new Set(["video", "face-benchmark"]), "testMode");
+    const requestedFaceRegistrySource = this.choiceValue(
+      raw.faceRegistrySource,
+      new Set(["folder", "backend"]),
+      "faceRegistrySource",
+    );
+    const faceRegistrySource = testMode === "face-benchmark" ? "folder" : requestedFaceRegistrySource;
 
-    const inputPath = resolveProjectPath(raw.input);
-    if (!existsSync(inputPath) || !statSync(inputPath).isFile()) {
-      throw new HttpError(404, `Input video tidak ditemukan: ${raw.input || ""}`);
+    let inputPath = null;
+    if (testMode === "video") {
+      inputPath = resolveProjectPath(raw.input);
+      if (!existsSync(inputPath) || !statSync(inputPath).isFile()) {
+        throw new HttpError(404, `Input video tidak ditemukan: ${raw.input || ""}`);
+      }
     }
 
     const outputDir = resolveProjectPath(raw.outputDir);
     const weightsPath = resolveProjectPath(raw.weights, { allowEmpty: true });
-    if (weightsPath && !existsSync(weightsPath)) {
+    if (testMode === "video" && weightsPath && !existsSync(weightsPath)) {
       throw new HttpError(404, `File weights tidak ditemukan: ${raw.weights || ""}`);
+    }
+    const employeeFacesDir = resolveProjectPath(raw.employeeFacesDir || DEFAULT_TEST_EMPLOYEE_FACES_DIR);
+    const requiresEmployeeFacesDir =
+      testMode === "face-benchmark"
+      || (this.boolValue(raw.withFaceRecognition) && faceRegistrySource === "folder");
+    if (requiresEmployeeFacesDir) {
+      if (!existsSync(employeeFacesDir) || !statSync(employeeFacesDir).isDirectory()) {
+        throw new HttpError(404, `Folder petugas tidak ditemukan: ${raw.employeeFacesDir || ""}`);
+      }
     }
 
     const backend = this.choiceValue(raw.backend, new Set(["yolov5", "ultralytics"]), "backend");
     const identityMode = this.choiceValue(raw.identityMode, new Set(["reid", "face"]), "identityMode");
 
     return {
-      input: displayPath(inputPath),
+      testMode,
+      input: inputPath ? displayPath(inputPath) : "",
       outputDir: displayPath(outputDir),
       outputName: String(raw.outputName ?? "").trim(),
       roiJson: String(raw.roiJson ?? "").trim(),
@@ -429,8 +450,16 @@ export class TestRunManager extends BaseRunManager {
       }),
       identityMode,
       backend,
-      weights: displayPath(weightsPath),
+      weights: testMode === "video" ? displayPath(weightsPath) : "",
       device: String(raw.device ?? "auto").trim() || "auto",
+      faceRegistrySource,
+      employeeFacesDir: displayPath(employeeFacesDir),
+      employeeMatchThreshold: this.floatValue(raw.employeeMatchThreshold, {
+        minimum: 0.0,
+        maximum: 1.0,
+        fieldName: "employeeMatchThreshold",
+      }),
+      faceBenchmarkAllowSelfMatch: this.boolValue(raw.faceBenchmarkAllowSelfMatch),
       reidMatchThreshold: this.floatValue(raw.reidMatchThreshold, {
         minimum: 0.0,
         fieldName: "reidMatchThreshold",
@@ -479,78 +508,120 @@ export class TestRunManager extends BaseRunManager {
     const command = [
       this.pythonBin,
       this.runnerScript,
-      "--input",
-      config.input,
+      "--test-mode",
+      config.testMode,
       "--output-dir",
       config.outputDir,
-      "--frame-width",
-      String(config.frameWidth),
-      "--frame-height",
-      String(config.frameHeight),
-      "--max-frames",
-      String(config.maxFrames),
-      "--max-seconds",
-      String(config.maxSeconds),
-      "--frame-step",
-      String(config.frameStep),
-      "--output-fps",
-      String(config.outputFps),
-      "--img-size",
-      String(config.imgSize),
-      "--max-age",
-      String(config.maxAge),
-      "--n-init",
-      String(config.nInit),
-      "--max-distance",
-      String(config.maxDistance),
-      "--max-cosine-distance",
-      String(config.maxCosineDistance),
-      "--identity-mode",
-      config.identityMode,
-      "--backend",
-      config.backend,
-      "--device",
-      config.device,
-      "--reid-match-threshold",
-      String(config.reidMatchThreshold),
-      "--reid-min-track-frames",
-      String(config.reidMinTrackFrames),
-      "--reid-strong-match-threshold",
-      String(config.reidStrongMatchThreshold),
-      "--reid-ambiguity-margin",
-      String(config.reidAmbiguityMargin),
-      "--reid-prototype-alpha",
-      String(config.reidPrototypeAlpha),
-      "--face-id-match-threshold",
-      String(config.faceIdMatchThreshold),
-      "--face-id-min-track-frames",
-      String(config.faceIdMinTrackFrames),
-      "--face-id-strong-match-threshold",
-      String(config.faceIdStrongMatchThreshold),
-      "--face-id-ambiguity-margin",
-      String(config.faceIdAmbiguityMargin),
-      "--face-id-prototype-alpha",
-      String(config.faceIdPrototypeAlpha),
+      "--face-registry-source",
+      config.faceRegistrySource,
+      "--employee-faces-dir",
+      config.employeeFacesDir,
+      "--employee-match-threshold",
+      String(config.employeeMatchThreshold),
     ];
 
+    if (config.input) {
+      command.push("--input", config.input);
+    }
+    if (config.testMode === "video") {
+      command.push(
+        "--frame-width",
+        String(config.frameWidth),
+        "--frame-height",
+        String(config.frameHeight),
+        "--max-frames",
+        String(config.maxFrames),
+        "--max-seconds",
+        String(config.maxSeconds),
+        "--frame-step",
+        String(config.frameStep),
+        "--output-fps",
+        String(config.outputFps),
+        "--img-size",
+        String(config.imgSize),
+        "--max-age",
+        String(config.maxAge),
+        "--n-init",
+        String(config.nInit),
+        "--max-distance",
+        String(config.maxDistance),
+        "--max-cosine-distance",
+        String(config.maxCosineDistance),
+        "--identity-mode",
+        config.identityMode,
+        "--backend",
+        config.backend,
+        "--device",
+        config.device,
+        "--reid-match-threshold",
+        String(config.reidMatchThreshold),
+        "--reid-min-track-frames",
+        String(config.reidMinTrackFrames),
+        "--reid-strong-match-threshold",
+        String(config.reidStrongMatchThreshold),
+        "--reid-ambiguity-margin",
+        String(config.reidAmbiguityMargin),
+        "--reid-prototype-alpha",
+        String(config.reidPrototypeAlpha),
+        "--face-id-match-threshold",
+        String(config.faceIdMatchThreshold),
+        "--face-id-min-track-frames",
+        String(config.faceIdMinTrackFrames),
+        "--face-id-strong-match-threshold",
+        String(config.faceIdStrongMatchThreshold),
+        "--face-id-ambiguity-margin",
+        String(config.faceIdAmbiguityMargin),
+        "--face-id-prototype-alpha",
+        String(config.faceIdPrototypeAlpha),
+      );
+    }
     if (config.outputName) {
       command.push("--output-name", config.outputName);
     }
-    if (config.roiJson) {
+    if (config.testMode === "video" && config.roiJson) {
       command.push("--roi-json", config.roiJson);
     }
-    if (config.keepSourceSize) {
+    if (config.testMode === "video" && config.keepSourceSize) {
       command.push("--keep-source-size");
     }
-    if (config.forceCentroid) {
+    if (config.testMode === "video" && config.forceCentroid) {
       command.push("--force-centroid");
     }
-    if (config.weights) {
+    if (config.testMode === "video" && config.weights) {
       command.push("--weights", config.weights);
     }
-    if (config.withFaceRecognition) {
+    if (config.testMode === "video" && config.withFaceRecognition) {
       command.push("--with-face-recognition");
     }
+    if (config.testMode === "face-benchmark" && config.faceBenchmarkAllowSelfMatch) {
+      command.push("--face-benchmark-allow-self-match");
+    }
     return command.map((part) => String(part));
+  }
+
+  artifactPayload(targetPath) {
+    const stats = statSync(targetPath);
+    const resolvedPath = path.resolve(targetPath);
+    const relativePath = displayPath(resolvedPath);
+    const isVideo = path.extname(targetPath).toLowerCase() === ".mp4";
+    const downloadUrl = pathInside(resolvedPath, PROJECT_DIR)
+      ? `/api/test/artifact?path=${encodePathQuery(relativePath)}`
+      : null;
+    const summaryData = path.extname(targetPath).toLowerCase() === ".json"
+      ? safeSummaryData(resolvedPath)
+      : null;
+
+    return {
+      name: path.basename(targetPath),
+      path: relativePath,
+      parent: displayPath(path.dirname(resolvedPath)),
+      sizeBytes: stats.size,
+      sizeLabel: fileSizeLabel(stats.size),
+      modifiedAt: toLocalIso(stats.mtimeMs),
+      downloadUrl,
+      isVideo,
+      videoPlayback: isVideo ? inspectMp4Playback(resolvedPath) : null,
+      summaryData,
+    };
   }
 }

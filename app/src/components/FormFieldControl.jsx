@@ -8,6 +8,12 @@ import { fieldValueToString } from "../shared/formHelpers.js";
  * Renders different input types based on field configuration
  */
 export function FormFieldControl({ field, value, suggestions, onChange }) {
+  const selectOptions = (field.choices || []).map((choice) =>
+    typeof choice === "string"
+      ? { value: choice, label: choice }
+      : { value: choice.value, label: choice.label || choice.value },
+  );
+
   if (field.type === "bool") {
     return (
       <div className="form-control w-full">
@@ -53,7 +59,7 @@ export function FormFieldControl({ field, value, suggestions, onChange }) {
         label={field.label}
         value={fieldValueToString(value)}
         onChange={(event) => onChange(field.name, event.target.value)}
-        options={(field.choices || []).map((choice) => ({ value: choice, label: choice }))}
+        options={selectOptions}
         placeholder="Pilih..."
         helpText={field.helpText || null}
       />

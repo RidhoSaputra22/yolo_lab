@@ -206,15 +206,34 @@ export function LabelerToolPanel({
           <li>
             <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+Z</code> untuk undo,{" "}
             <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+S</code> untuk simpan,{" "}
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Delete</code> untuk hapus box aktif.
+            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+Shift+S</code> untuk simpan + next.
           </li>
           <li>
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Arrow</code> untuk geser box 1 px,{" "}
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Shift+Arrow</code> untuk 10 px.
+            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Delete</code> atau{" "}
+            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+X</code> untuk hapus box aktif.
+          </li>
+          <li>
+            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">ArrowLeft</code> dan{" "}
+            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">ArrowRight</code> untuk pindah frame prev/next
+            selama box belum dipilih manual.
+          </li>
+          <li>
+            Setelah box dipilih manual, <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Arrow</code> akan
+            menggeser box aktif terus saat ditahan. <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Shift+Arrow</code>{" "}
+            atau <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+Arrow</code> menggeser 10 px.
+          </li>
+          <li>
+            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Alt+ArrowLeft</code> atau{" "}
+            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Alt+ArrowRight</code> memaksa navigasi frame
+            walau box sedang dipilih.
           </li>
           <li>
             <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl + scroll</code> untuk zoom,{" "}
             <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+0</code> untuk kembali fit.
+          </li>
+          <li>
+            Setelah 10 kali <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Simpan + Next</code> berhasil,
+            frame terakhir otomatis dijadikan checkpoint.
           </li>
           <li>Tombol duplikat membantu membuat box baru dari objek serupa dengan posisi awal yang sedikit digeser.</li>
           <li>Frame tanpa objek bisa disimpan sebagai label kosong.</li>

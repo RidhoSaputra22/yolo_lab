@@ -46,6 +46,14 @@ export default function TesterPage() {
   }, [folders, selectedFolderKey]);
 
   const selectedFolder = folders.find((f) => f.key === selectedFolderKey) || folders[0] || null;
+  const isFaceBenchmarkMode = formValues.testMode === "face-benchmark";
+  const isVideoMode = formValues.testMode === "video";
+  const usesLocalEmployeeFaces =
+    formValues.testMode === "face-benchmark"
+    || (formValues.testMode === "video"
+      && Boolean(formValues.withFaceRecognition)
+      && formValues.faceRegistrySource === "folder");
+  const wantsEmployeeLabelingInVideo = isVideoMode && Boolean(formValues.withFaceRecognition);
 
   usePagePreferencesAutosave("tester", formValues, {
     enabled: !isConfigLoading && Object.keys(formValues).length > 0,
@@ -223,6 +231,32 @@ export default function TesterPage() {
             </Alert>
           ))}
         </div>
+      )}
+
+      {isFaceBenchmarkMode && (
+        <Alert type="warning" className="rounded-sm text-sm leading-6">
+          Mode ini tidak memakai footage input. Jika yang ingin diuji adalah video `footage` agar sistem mendeteksi visitor lalu melabeli petugas dari folder `petugas`, ubah `Mode test` ke `Video tracking + label petugas`.
+        </Alert>
+      )}
+
+      {isVideoMode && !formValues.withFaceRecognition && (
+        <Alert type="info" className="rounded-sm text-sm leading-6">
+          {"Untuk alur `YOLO -> tracking visitor -> label petugas dari folder petugas`, aktifkan section `Tracking Petugas` pada form ini."}
+        </Alert>
+      )}
+
+      {usesLocalEmployeeFaces && (
+        <Alert type="info" className="rounded-sm text-sm leading-6">
+          {isFaceBenchmarkMode
+            ? "Benchmark face recognition memakai gambar di folder petugas. Nama file dipakai sebagai label identitas; contoh `budi.png` atau `budi_2.png` akan dibaca sebagai `budi`."
+            : "Pipeline video aktif: `YOLO -> tracking visitor -> cek wajah -> cocokkan ke folder petugas -> label petugas pada track yang match`. Pastikan folder berisi foto wajah yang cukup jelas agar face recognition bisa mengenali nama petugas dari nama file."}
+        </Alert>
+      )}
+
+      {wantsEmployeeLabelingInVideo && formValues.faceRegistrySource === "backend" && (
+        <Alert type="info" className="rounded-sm text-sm leading-6">
+          Tracking petugas pada video sedang memakai registry dari backend. Jika ingin memaksa pembanding wajah dari folder lokal `petugas`, ubah `Sumber data petugas` menjadi `Folder lokal petugas`.
+        </Alert>
       )}
 
       {/* Main content */}

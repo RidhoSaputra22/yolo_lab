@@ -27,7 +27,7 @@ export function TrainingCommandPanel({
   }[previewState];
 
   return (
-    <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-xl">
+    <Card className="min-w-0 rounded-sm border border-base-300 bg-base-100/90 shadow-xl">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-700">
@@ -46,10 +46,10 @@ export function TrainingCommandPanel({
         </Badge>
       </div>
 
-      <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="mt-5 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         {/* Form sections */}
         <div className="grid gap-3">
-          <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+          <Card className="min-w-0 rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -123,7 +123,7 @@ export function TrainingCommandPanel({
         {/* Command preview + preset summary */}
         <div className="grid gap-4">
           {/* Command display */}
-          <Card className="rounded-sm border border-base-300 bg-slate-950 text-slate-100 shadow-lg">
+          <Card className="min-w-0 rounded-sm border border-base-300 bg-slate-950 text-slate-100 shadow-lg">
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-lg font-bold">Command</h3>
@@ -140,7 +140,7 @@ export function TrainingCommandPanel({
           </Card>
 
           {/* Preset summary */}
-          <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+          <Card className="min-w-0 rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-lg font-bold">Preset Penting</h3>
@@ -154,7 +154,7 @@ export function TrainingCommandPanel({
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       {label}
                     </p>
-                    <p className="mt-2 break-all font-mono text-[12px] text-slate-900">{value}</p>
+                    <p className="text-wrap-anywhere mt-2 font-mono text-[12px] text-slate-900">{value}</p>
                   </div>
                 ))}
               </div>

@@ -61,6 +61,7 @@ pre,
 
 .card {
   @apply overflow-hidden;
+  min-width: 0;
 }
 
 .input,
@@ -90,4 +91,10 @@ details > summary::-webkit-details-marker {
 /* Card body spacing fix for compact variant */
 .card-body {
   @apply gap-2;
+  min-width: 0;
+}
+
+.text-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
