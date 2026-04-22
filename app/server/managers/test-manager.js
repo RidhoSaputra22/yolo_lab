@@ -148,6 +148,11 @@ export class TestRunManager extends BaseRunManager {
 
   configPayload(defaultOverrides = {}) {
     const defaults = { ...defaultTestFormData(), ...(defaultOverrides || {}) };
+    defaults.testMode = "video";
+    if (!new Set(["folder", "backend"]).has(String(defaults.faceRegistrySource || "").trim())) {
+      defaults.faceRegistrySource = "folder";
+    }
+    delete defaults.faceBenchmarkAllowSelfMatch;
     const outputSuggestions = [displayPath(this.defaultOutputDir)];
     const employeeFacesDir = displayPath(path.resolve(DEFAULT_TEST_EMPLOYEE_FACES_DIR));
     const employeeFaceSuggestions = [
@@ -189,7 +194,6 @@ export class TestRunManager extends BaseRunManager {
       choices: {
         backend: ["yolov5", "ultralytics"],
         identityMode: ["reid", "face"],
-        testMode: ["video", "face-benchmark"],
         faceRegistrySource: ["folder", "backend"],
       },
       paths: {
@@ -391,32 +395,27 @@ export class TestRunManager extends BaseRunManager {
   }
 
   normalizePayload(payload) {
-    const raw = { ...defaultTestFormData(), ...(payload || {}) };
-    const testMode = this.choiceValue(raw.testMode, new Set(["video", "face-benchmark"]), "testMode");
-    const requestedFaceRegistrySource = this.choiceValue(
+    const raw = { ...defaultTestFormData(), ...(payload || {}), testMode: "video" };
+    const testMode = "video";
+    const faceRegistrySource = this.choiceValue(
       raw.faceRegistrySource,
       new Set(["folder", "backend"]),
       "faceRegistrySource",
     );
-    const faceRegistrySource = testMode === "face-benchmark" ? "folder" : requestedFaceRegistrySource;
 
-    let inputPath = null;
-    if (testMode === "video") {
-      inputPath = resolveProjectPath(raw.input);
-      if (!existsSync(inputPath) || !statSync(inputPath).isFile()) {
-        throw new HttpError(404, `Input video tidak ditemukan: ${raw.input || ""}`);
-      }
+    const inputPath = resolveProjectPath(raw.input);
+    if (!existsSync(inputPath) || !statSync(inputPath).isFile()) {
+      throw new HttpError(404, `Input video tidak ditemukan: ${raw.input || ""}`);
     }
 
     const outputDir = resolveProjectPath(raw.outputDir);
     const weightsPath = resolveProjectPath(raw.weights, { allowEmpty: true });
-    if (testMode === "video" && weightsPath && !existsSync(weightsPath)) {
+    if (weightsPath && !existsSync(weightsPath)) {
       throw new HttpError(404, `File weights tidak ditemukan: ${raw.weights || ""}`);
     }
     const employeeFacesDir = resolveProjectPath(raw.employeeFacesDir || DEFAULT_TEST_EMPLOYEE_FACES_DIR);
     const requiresEmployeeFacesDir =
-      testMode === "face-benchmark"
-      || (this.boolValue(raw.withFaceRecognition) && faceRegistrySource === "folder");
+      this.boolValue(raw.withFaceRecognition) && faceRegistrySource === "folder";
     if (requiresEmployeeFacesDir) {
       if (!existsSync(employeeFacesDir) || !statSync(employeeFacesDir).isDirectory()) {
         throw new HttpError(404, `Folder petugas tidak ditemukan: ${raw.employeeFacesDir || ""}`);
@@ -440,6 +439,22 @@ export class TestRunManager extends BaseRunManager {
       frameStep: this.intValue(raw.frameStep, { minimum: 1, fieldName: "frameStep" }),
       outputFps: this.floatValue(raw.outputFps, { minimum: 0.0, fieldName: "outputFps" }),
       imgSize: this.intValue(raw.imgSize, { minimum: 32, fieldName: "imgSize" }),
+      yoloConf: this.floatValue(raw.yoloConf, {
+        minimum: 0.0,
+        maximum: 1.0,
+        fieldName: "yoloConf",
+      }),
+      yoloIou: this.floatValue(raw.yoloIou, {
+        minimum: 0.0,
+        maximum: 1.0,
+        fieldName: "yoloIou",
+      }),
+      suppressNestedDuplicates: this.boolValue(raw.suppressNestedDuplicates),
+      duplicateContainmentThreshold: this.floatValue(raw.duplicateContainmentThreshold, {
+        minimum: 0.0,
+        maximum: 1.0,
+        fieldName: "duplicateContainmentThreshold",
+      }),
       forceCentroid: this.boolValue(raw.forceCentroid),
       maxAge: this.intValue(raw.maxAge, { minimum: 1, fieldName: "maxAge" }),
       nInit: this.intValue(raw.nInit, { minimum: 1, fieldName: "nInit" }),
@@ -450,7 +465,7 @@ export class TestRunManager extends BaseRunManager {
       }),
       identityMode,
       backend,
-      weights: testMode === "video" ? displayPath(weightsPath) : "",
+      weights: displayPath(weightsPath),
       device: String(raw.device ?? "auto").trim() || "auto",
       faceRegistrySource,
       employeeFacesDir: displayPath(employeeFacesDir),
@@ -459,7 +474,6 @@ export class TestRunManager extends BaseRunManager {
         maximum: 1.0,
         fieldName: "employeeMatchThreshold",
       }),
-      faceBenchmarkAllowSelfMatch: this.boolValue(raw.faceBenchmarkAllowSelfMatch),
       reidMatchThreshold: this.floatValue(raw.reidMatchThreshold, {
         minimum: 0.0,
         fieldName: "reidMatchThreshold",
@@ -520,81 +534,86 @@ export class TestRunManager extends BaseRunManager {
       String(config.employeeMatchThreshold),
     ];
 
-    if (config.input) {
-      command.push("--input", config.input);
-    }
-    if (config.testMode === "video") {
-      command.push(
-        "--frame-width",
-        String(config.frameWidth),
-        "--frame-height",
-        String(config.frameHeight),
-        "--max-frames",
-        String(config.maxFrames),
-        "--max-seconds",
-        String(config.maxSeconds),
-        "--frame-step",
-        String(config.frameStep),
-        "--output-fps",
-        String(config.outputFps),
-        "--img-size",
-        String(config.imgSize),
-        "--max-age",
-        String(config.maxAge),
-        "--n-init",
-        String(config.nInit),
-        "--max-distance",
-        String(config.maxDistance),
-        "--max-cosine-distance",
-        String(config.maxCosineDistance),
-        "--identity-mode",
-        config.identityMode,
-        "--backend",
-        config.backend,
-        "--device",
-        config.device,
-        "--reid-match-threshold",
-        String(config.reidMatchThreshold),
-        "--reid-min-track-frames",
-        String(config.reidMinTrackFrames),
-        "--reid-strong-match-threshold",
-        String(config.reidStrongMatchThreshold),
-        "--reid-ambiguity-margin",
-        String(config.reidAmbiguityMargin),
-        "--reid-prototype-alpha",
-        String(config.reidPrototypeAlpha),
-        "--face-id-match-threshold",
-        String(config.faceIdMatchThreshold),
-        "--face-id-min-track-frames",
-        String(config.faceIdMinTrackFrames),
-        "--face-id-strong-match-threshold",
-        String(config.faceIdStrongMatchThreshold),
-        "--face-id-ambiguity-margin",
-        String(config.faceIdAmbiguityMargin),
-        "--face-id-prototype-alpha",
-        String(config.faceIdPrototypeAlpha),
-      );
-    }
+    command.push(
+      "--input",
+      config.input,
+      "--frame-width",
+      String(config.frameWidth),
+      "--frame-height",
+      String(config.frameHeight),
+      "--max-frames",
+      String(config.maxFrames),
+      "--max-seconds",
+      String(config.maxSeconds),
+      "--frame-step",
+      String(config.frameStep),
+      "--output-fps",
+      String(config.outputFps),
+      "--img-size",
+      String(config.imgSize),
+      "--yolo-conf",
+      String(config.yoloConf),
+      "--yolo-iou",
+      String(config.yoloIou),
+      "--max-age",
+      String(config.maxAge),
+      "--n-init",
+      String(config.nInit),
+      "--max-distance",
+      String(config.maxDistance),
+      "--max-cosine-distance",
+      String(config.maxCosineDistance),
+      "--identity-mode",
+      config.identityMode,
+      "--backend",
+      config.backend,
+      "--device",
+      config.device,
+      "--reid-match-threshold",
+      String(config.reidMatchThreshold),
+      "--reid-min-track-frames",
+      String(config.reidMinTrackFrames),
+      "--reid-strong-match-threshold",
+      String(config.reidStrongMatchThreshold),
+      "--reid-ambiguity-margin",
+      String(config.reidAmbiguityMargin),
+      "--reid-prototype-alpha",
+      String(config.reidPrototypeAlpha),
+      "--face-id-match-threshold",
+      String(config.faceIdMatchThreshold),
+      "--face-id-min-track-frames",
+      String(config.faceIdMinTrackFrames),
+      "--face-id-strong-match-threshold",
+      String(config.faceIdStrongMatchThreshold),
+      "--face-id-ambiguity-margin",
+      String(config.faceIdAmbiguityMargin),
+      "--face-id-prototype-alpha",
+      String(config.faceIdPrototypeAlpha),
+      "--duplicate-containment-threshold",
+      String(config.duplicateContainmentThreshold),
+    );
+    command.push(
+      config.suppressNestedDuplicates
+        ? "--suppress-nested-duplicates"
+        : "--no-suppress-nested-duplicates",
+    );
     if (config.outputName) {
       command.push("--output-name", config.outputName);
     }
-    if (config.testMode === "video" && config.roiJson) {
+    if (config.roiJson) {
       command.push("--roi-json", config.roiJson);
     }
-    if (config.testMode === "video" && config.keepSourceSize) {
+    if (config.keepSourceSize) {
       command.push("--keep-source-size");
     }
-    if (config.testMode === "video" && config.forceCentroid) {
+    if (config.forceCentroid) {
       command.push("--force-centroid");
     }
-    if (config.testMode === "video" && config.weights) {
+    if (config.weights) {
       command.push("--weights", config.weights);
     }
-    if (config.testMode === "video" && config.withFaceRecognition) {
+    if (config.withFaceRecognition) {
       command.push("--with-face-recognition");
-    }
-    if (config.testMode === "face-benchmark" && config.faceBenchmarkAllowSelfMatch) {
-      command.push("--face-benchmark-allow-self-match");
     }
     return command.map((part) => String(part));
   }

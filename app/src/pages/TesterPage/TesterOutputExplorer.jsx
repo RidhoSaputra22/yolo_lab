@@ -2,77 +2,15 @@ import React, { useEffect, useState } from "react";
 import { Alert, Badge, Card, Button, Paragraph } from "../../ui.js";
 import { formatCount, joinClasses } from "../../shared/utils.js";
 
-function formatMetric(value, { percent = false, digits = 1 } = {}) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    return "-";
-  }
-  if (percent) {
-    return `${(parsed * 100).toFixed(digits)}%`;
-  }
-  return parsed.toFixed(digits);
-}
-
 function SummaryMetrics({ summaryData }) {
-  const benchmark = summaryData?.face_benchmark;
   const faceRegistry = summaryData?.face_registry;
 
-  if (!benchmark && !faceRegistry) {
+  if (!faceRegistry) {
     return null;
   }
 
   return (
     <div className="grid gap-3">
-      {benchmark ? (
-        <div className="rounded-sm border border-emerald-200 bg-emerald-50/70 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700">
-                Face Benchmark
-              </p>
-              <p className="mt-2 text-sm text-slate-700">
-                Evaluasi pengenalan petugas dari folder wajah berlabel nama file.
-              </p>
-            </div>
-            <Badge type="success" className="px-3 py-3">
-              {formatMetric(benchmark.accuracy, { percent: true })}
-            </Badge>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-5">
-            {[
-              ["Akurasi", formatMetric(benchmark.accuracy, { percent: true })],
-              ["Benar", benchmark.correct_predictions ?? 0],
-              ["Salah", benchmark.wrong_predictions ?? 0],
-              ["Unknown", benchmark.unknown_predictions ?? 0],
-              ["Label", benchmark.label_count ?? 0],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-sm border border-emerald-200 bg-white/80 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {label}
-                </p>
-                <p className="mt-2 text-sm font-semibold text-slate-900">{value}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
-            {[
-              ["Gambar diproses", benchmark.usable_images ?? 0],
-              ["Tanpa wajah", benchmark.images_without_face ?? 0],
-              ["Self-match", benchmark.allow_self_match ? "aktif" : "nonaktif"],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-sm border border-emerald-200 bg-white/80 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {label}
-                </p>
-                <p className="mt-2 text-sm font-semibold text-slate-900">{value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       {faceRegistry ? (
         <div className="rounded-sm border border-base-300 bg-base-200/40 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -106,7 +44,6 @@ function SummaryMetrics({ summaryData }) {
 }
 
 function RunVideoPreview({ run }) {
-  const benchmark = run.summary?.summaryData?.face_benchmark;
   const initialPlaybackError =
     run.video?.videoPlayback && run.video.videoPlayback.playable === false
       ? run.video.videoPlayback.issue
@@ -120,19 +57,6 @@ function RunVideoPreview({ run }) {
         : "",
     );
   }, [run.video?.path, run.video?.videoPlayback?.playable, run.video?.videoPlayback?.issue]);
-
-  if (benchmark) {
-    return (
-      <div className="grid aspect-video place-items-center border-b border-base-300 bg-emerald-950 px-6 text-center">
-        <div className="max-w-xl space-y-3">
-          <p className="text-base font-semibold text-emerald-100">Benchmark face recognition</p>
-          <p className="text-sm leading-6 text-emerald-50/80">
-            Akurasi {formatMetric(benchmark.accuracy, { percent: true })} dari {benchmark.usable_images || 0} gambar yang berhasil diproses.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   if (!run.video?.downloadUrl) {
     return (
@@ -281,15 +205,11 @@ export function TesterOutputExplorer({
 
               <div className="grid gap-4">
                 {selectedFolder.runs.length ? (
-                  selectedFolder.runs.map((run) => {
-                    const isBenchmarkRun = run.summary?.summaryData?.test_mode === "face-benchmark";
-                    const csvLabel = isBenchmarkRun ? "Predictions CSV" : "Tracks CSV";
-
-                    return (
-                      <article
-                        key={run.key}
-                        className="overflow-hidden rounded-sm border border-base-300 bg-base-100 shadow-md"
-                      >
+                  selectedFolder.runs.map((run) => (
+                    <article
+                      key={run.key}
+                      className="overflow-hidden rounded-sm border border-base-300 bg-base-100 shadow-md"
+                    >
                       <RunVideoPreview run={run} />
 
                       <div className="grid gap-4 p-5">
@@ -329,7 +249,7 @@ export function TesterOutputExplorer({
                           ) : null}
                           {run.tracks ? (
                             <Badge type="info" className="px-3 py-3">
-                              {csvLabel}
+                              Tracks CSV
                             </Badge>
                           ) : null}
                           {run.others.length ? (
@@ -373,7 +293,7 @@ export function TesterOutputExplorer({
                               target="_blank"
                               rel="noreferrer"
                             >
-                              {csvLabel}
+                              Tracks CSV
                             </Button>
                           ) : null}
                           {run.others.map((artifact, index) => (
@@ -394,8 +314,7 @@ export function TesterOutputExplorer({
                         <SummaryMetrics summaryData={run.summary?.summaryData} />
                       </div>
                     </article>
-                    );
-                  })
+                  ))
                 ) : (
                   <Alert type="info" className="rounded-sm text-sm">
                     Folder ini belum memiliki run yang bisa dirangkum.

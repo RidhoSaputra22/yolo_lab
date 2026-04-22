@@ -51,8 +51,11 @@ export default function LabelerPage() {
     const [autolabelConfig, setAutolabelConfig] = useState({
         model: "",
         conf: 0.35,
+        iou: 0.45,
         imgsz: 960,
         device: "auto",
+        suppressNestedDuplicates: true,
+        duplicateContainmentThreshold: 0.9,
     });
     const [autolabelSuggestions, setAutolabelSuggestions] = useState([]);
     const [autolabelWarnings, setAutolabelWarnings] = useState([]);

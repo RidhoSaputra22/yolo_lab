@@ -71,6 +71,8 @@ def _bootstrap_runtime(argv: Sequence[str]) -> None:
     parser.add_argument("--weights")
     parser.add_argument("--backend", choices=("yolov5", "ultralytics"))
     parser.add_argument("--device")
+    parser.add_argument("--yolo-conf", type=float)
+    parser.add_argument("--yolo-iou", type=float)
     parser.add_argument("--test-mode", choices=("video", "face-benchmark"), default="video")
     parser.add_argument("--face-registry-source", choices=("backend", "folder"), default="folder")
     parser.add_argument("--employee-faces-dir")
@@ -103,6 +105,10 @@ def _bootstrap_runtime(argv: Sequence[str]) -> None:
         os.environ["YOLO_BACKEND"] = args.backend
     if args.device:
         os.environ["YOLOV5_DEVICE"] = args.device
+    if args.yolo_conf is not None:
+        os.environ["YOLOV5_CONF"] = str(args.yolo_conf)
+    if args.yolo_iou is not None:
+        os.environ["YOLOV5_IOU"] = str(args.yolo_iou)
     if args.employee_match_threshold is not None:
         os.environ["EMPLOYEE_MATCH_THRESHOLD"] = str(args.employee_match_threshold)
     if args.reid_match_threshold is not None:
@@ -305,6 +311,30 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=IMG_SIZE,
         help="Ukuran inferensi YOLO.",
+    )
+    parser.add_argument(
+        "--yolo-conf",
+        type=float,
+        default=float(os.getenv("YOLOV5_CONF", "0.25")),
+        help="Confidence minimum deteksi YOLO.",
+    )
+    parser.add_argument(
+        "--yolo-iou",
+        type=float,
+        default=float(os.getenv("YOLOV5_IOU", "0.45")),
+        help="IoU / NMS threshold YOLO untuk menekan box overlap.",
+    )
+    parser.add_argument(
+        "--suppress-nested-duplicates",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Buang deteksi person nested seperti upper-body di dalam full-body sebelum tracking.",
+    )
+    parser.add_argument(
+        "--duplicate-containment-threshold",
+        type=float,
+        default=0.9,
+        help="Seberapa besar dua box harus saling menutupi agar dianggap duplikat nested.",
     )
     parser.add_argument(
         "--force-centroid",
@@ -1132,6 +1162,16 @@ def main() -> int:
         print(f"[info] summary : {summary_path}")
         print(f"[info] tracker : {tracker_backend_runtime}")
         print(f"[info] yolo    : {active_backend} | weights={active_weights}")
+        print(
+            "[info] yolo cfg: "
+            f"imgsz={args.img_size} | conf={os.getenv('YOLOV5_CONF', '0.25')} | "
+            f"iou={os.getenv('YOLOV5_IOU', '0.45')}"
+        )
+        print(
+            "[info] dedupe  : "
+            f"{'enabled' if args.suppress_nested_duplicates else 'disabled'} | "
+            f"containment={args.duplicate_containment_threshold}"
+        )
         print(f"[info] id mode : {args.identity_mode} | source={_identity_embedding_source(args.identity_mode)}")
         print(f"[info] id th   : threshold={os.getenv('REID_MATCH_THRESHOLD', '0.77')}")
         print(
@@ -1184,7 +1224,11 @@ def main() -> int:
                 detections: List[Tuple[float, float, float, float, float]] = []
                 for x1, y1, x2, y2, conf, _ in raw_detections:
                     detections.append((float(x1), float(y1), float(x2), float(y2), float(conf)))
-                detections = suppress_duplicate_person_detections(detections)
+                detections = suppress_duplicate_person_detections(
+                    detections,
+                    suppress=args.suppress_nested_duplicates,
+                    containment_threshold=args.duplicate_containment_threshold,
+                )
                 if detections:
                     frames_with_detections += 1
 
@@ -1454,6 +1498,11 @@ def main() -> int:
             "identity_match_threshold": float(os.getenv("REID_MATCH_THRESHOLD", "0.77")),
             "yolo_backend": active_backend,
             "weights": active_weights,
+            "yolo_img_size": int(args.img_size),
+            "yolo_conf_threshold": float(os.getenv("YOLOV5_CONF", "0.25")),
+            "yolo_iou_threshold": float(os.getenv("YOLOV5_IOU", "0.45")),
+            "suppress_nested_duplicates": bool(args.suppress_nested_duplicates),
+            "duplicate_containment_threshold": float(args.duplicate_containment_threshold),
             "reid_match_threshold": float(os.getenv("REID_MATCH_THRESHOLD", "0.77")),
             "employee_match_threshold": float(os.getenv("EMPLOYEE_MATCH_THRESHOLD", str(DEFAULT_EMPLOYEE_MATCH_THRESHOLD))),
             "device": os.getenv("YOLOV5_DEVICE", "auto"),

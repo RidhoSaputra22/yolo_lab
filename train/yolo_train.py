@@ -10,7 +10,7 @@ import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterable, Sequence
+from typing import Callable, Iterable, Sequence, Tuple
 
 
 TRAIN_DIR = Path(__file__).resolve().parent
@@ -119,6 +119,127 @@ def _list_files(directory: Path, extensions: set[str]) -> list[Path]:
         for path in directory.iterdir()
         if path.is_file() and path.suffix.lower() in extensions
     )
+
+
+def _bbox_area(box: Tuple[float, float, float, float]) -> float:
+    return max(0.0, float(box[2]) - float(box[0])) * max(0.0, float(box[3]) - float(box[1]))
+
+
+def _bbox_intersection(
+    box_a: Tuple[float, float, float, float],
+    box_b: Tuple[float, float, float, float],
+) -> float:
+    inter_x1 = max(float(box_a[0]), float(box_b[0]))
+    inter_y1 = max(float(box_a[1]), float(box_b[1]))
+    inter_x2 = min(float(box_a[2]), float(box_b[2]))
+    inter_y2 = min(float(box_a[3]), float(box_b[3]))
+    inter_w = max(0.0, inter_x2 - inter_x1)
+    inter_h = max(0.0, inter_y2 - inter_y1)
+    return inter_w * inter_h
+
+
+def _coverage_ratio(
+    box_a: Tuple[float, float, float, float],
+    box_b: Tuple[float, float, float, float],
+) -> Tuple[float, float]:
+    inter_area = _bbox_intersection(box_a, box_b)
+    area_a = _bbox_area(box_a)
+    area_b = _bbox_area(box_b)
+    cov_a = inter_area / area_a if area_a > 0 else 0.0
+    cov_b = inter_area / area_b if area_b > 0 else 0.0
+    return cov_a, cov_b
+
+
+def _is_nested_duplicate(
+    candidate: Tuple[float, float, float, float, float],
+    existing: Tuple[float, float, float, float, float],
+    containment_threshold: float = 0.9,
+    x_alignment_ratio: float = 0.25,
+    height_ratio_threshold: float = 1.2,
+) -> bool:
+    cand_box = candidate[:4]
+    exist_box = existing[:4]
+    cand_area = _bbox_area(cand_box)
+    exist_area = _bbox_area(exist_box)
+    if cand_area <= 0 or exist_area <= 0:
+        return False
+
+    cov_candidate, cov_existing = _coverage_ratio(cand_box, exist_box)
+
+    if cov_candidate >= containment_threshold and cov_existing >= containment_threshold:
+        return True
+
+    if cov_candidate >= containment_threshold or cov_existing >= containment_threshold:
+        smaller_box, larger_box = (cand_box, exist_box) if cand_area <= exist_area else (exist_box, cand_box)
+        smaller_width = max(1.0, float(smaller_box[2]) - float(smaller_box[0]))
+        smaller_height = max(1.0, float(smaller_box[3]) - float(smaller_box[1]))
+        larger_height = max(1.0, float(larger_box[3]) - float(larger_box[1]))
+
+        smaller_center_x = (float(smaller_box[0]) + float(smaller_box[2])) / 2.0
+        larger_center_x = (float(larger_box[0]) + float(larger_box[2])) / 2.0
+        x_center_gap = abs(smaller_center_x - larger_center_x)
+
+        if (
+            x_center_gap <= x_alignment_ratio * smaller_width
+            and larger_height >= height_ratio_threshold * smaller_height
+        ):
+            return True
+
+    return False
+
+
+def _suppress_duplicate_person_detections(
+    detections: Sequence[Tuple[float, float, float, float, float]],
+    containment_threshold: float = 0.9,
+) -> Tuple[list[Tuple[float, float, float, float, float]], int]:
+    if len(detections) < 2:
+        return list(detections), 0
+
+    ordered = sorted(
+        detections,
+        key=lambda det: (float(det[4]), _bbox_area(det[:4])),
+        reverse=True,
+    )
+
+    filtered: list[Tuple[float, float, float, float, float]] = []
+    suppressed = 0
+    for detection in ordered:
+        if any(
+            _is_nested_duplicate(
+                detection,
+                kept,
+                containment_threshold=containment_threshold,
+            )
+            for kept in filtered
+        ):
+            suppressed += 1
+            continue
+        filtered.append(detection)
+    return filtered, suppressed
+
+
+def _xyxy_to_yolo_line(
+    box: Tuple[float, float, float, float],
+    image_width: float,
+    image_height: float,
+) -> str | None:
+    if image_width <= 0 or image_height <= 0:
+        return None
+
+    x1 = max(0.0, min(float(box[0]), image_width))
+    y1 = max(0.0, min(float(box[1]), image_height))
+    x2 = max(0.0, min(float(box[2]), image_width))
+    y2 = max(0.0, min(float(box[3]), image_height))
+    width = max(0.0, x2 - x1)
+    height = max(0.0, y2 - y1)
+    if width <= 0 or height <= 0:
+        return None
+
+    cx = ((x1 + x2) / 2.0) / image_width
+    cy = ((y1 + y2) / 2.0) / image_height
+    w = width / image_width
+    h = height / image_height
+    return f"0 {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}"
 
 
 def _ensure_dir(path: Path) -> None:
@@ -394,15 +515,22 @@ def autolabel_frames(
     labels_dir: Path,
     model_source: str,
     conf: float,
+    iou: float,
     imgsz: int,
     device: str | None,
+    suppress_nested_duplicates: bool,
+    duplicate_containment_threshold: float,
     overwrite: bool,
     image_names: Sequence[str] | None = None,
 ) -> int:
     if conf <= 0 or conf >= 1:
         raise CliError("`--conf` harus berada di rentang 0..1.")
+    if iou <= 0 or iou >= 1:
+        raise CliError("`--iou` harus berada di rentang 0..1.")
     if imgsz < 32:
         raise CliError("`--imgsz` minimal 32.")
+    if duplicate_containment_threshold <= 0 or duplicate_containment_threshold > 1:
+        raise CliError("`--duplicate-containment-threshold` harus berada di rentang > 0 sampai 1.")
 
     images = _resolve_target_images(frames_dir, image_names)
     if not images:
@@ -417,8 +545,10 @@ def autolabel_frames(
     generated_count = 0
     skipped_count = 0
     total_boxes = 0
+    total_suppressed_duplicates = 0
     predict_kwargs = {
         "conf": conf,
+        "iou": iou,
         "imgsz": imgsz,
         "classes": [0],  # person pada model COCO
         "verbose": False,
@@ -437,8 +567,31 @@ def autolabel_frames(
         boxes = getattr(result, "boxes", None)
         lines: list[str] = []
         if boxes is not None and len(boxes) > 0:
-            for cx, cy, width, height in boxes.xywhn.cpu().tolist():
-                lines.append(f"0 {cx:.6f} {cy:.6f} {width:.6f} {height:.6f}")
+            raw_xyxy = boxes.xyxy.cpu().tolist()
+            raw_conf = boxes.conf.cpu().tolist() if getattr(boxes, "conf", None) is not None else [0.0] * len(raw_xyxy)
+            detections = [
+                (
+                    float(xyxy[0]),
+                    float(xyxy[1]),
+                    float(xyxy[2]),
+                    float(xyxy[3]),
+                    float(score),
+                )
+                for xyxy, score in zip(raw_xyxy, raw_conf)
+            ]
+            suppressed_count = 0
+            if suppress_nested_duplicates:
+                detections, suppressed_count = _suppress_duplicate_person_detections(
+                    detections,
+                    containment_threshold=duplicate_containment_threshold,
+                )
+                total_suppressed_duplicates += suppressed_count
+
+            image_height, image_width = result.orig_shape[:2]
+            for x1, y1, x2, y2, _score in detections:
+                line = _xyxy_to_yolo_line((x1, y1, x2, y2), image_width, image_height)
+                if line:
+                    lines.append(line)
 
         _write_text(label_path, "\n".join(lines) + ("\n" if lines else ""))
         generated_count += 1
@@ -452,7 +605,8 @@ def autolabel_frames(
 
     print(
         f"[autolabel] selesai, label baru/refresh: {generated_count}, "
-        f"skip existing: {skipped_count}, total box: {total_boxes}"
+        f"skip existing: {skipped_count}, total box: {total_boxes}, "
+        f"duplicate box disaring: {total_suppressed_duplicates}"
     )
     return generated_count
 
@@ -717,11 +871,24 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     autolabel_parser.add_argument("--conf", type=float, default=0.35, help="Confidence threshold pseudo-label.")
+    autolabel_parser.add_argument("--iou", type=float, default=0.45, help="IoU/NMS threshold pseudo-label.")
     autolabel_parser.add_argument("--imgsz", type=int, default=960, help="Ukuran inferensi saat auto-label.")
     autolabel_parser.add_argument(
         "--device",
         default="auto",
         help="Device Ultralytics, mis. cpu, cuda:0, atau auto.",
+    )
+    autolabel_parser.add_argument(
+        "--suppress-nested-duplicates",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Buang nested duplicate person box seperti torso box di dalam full-body box.",
+    )
+    autolabel_parser.add_argument(
+        "--duplicate-containment-threshold",
+        type=float,
+        default=0.9,
+        help="Threshold containment untuk filter nested duplicate.",
     )
     autolabel_parser.add_argument(
         "--overwrite-labels",
@@ -906,12 +1073,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path file bobot lokal atau nama model Ultralytics untuk tahap training.",
     )
     pipeline_parser.add_argument("--conf", type=float, default=0.35, help="Confidence threshold pseudo-label.")
+    pipeline_parser.add_argument("--iou", type=float, default=0.45, help="IoU/NMS threshold pseudo-label.")
     pipeline_parser.add_argument(
         "--device",
         default="auto",
         help="Device inferensi dan training, mis. cpu, cuda:0, atau auto.",
     )
     pipeline_parser.add_argument("--imgsz", type=int, default=960, help="Ukuran inferensi dan training.")
+    pipeline_parser.add_argument(
+        "--suppress-nested-duplicates",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Buang nested duplicate person box pada tahap auto-label pipeline.",
+    )
+    pipeline_parser.add_argument(
+        "--duplicate-containment-threshold",
+        type=float,
+        default=0.9,
+        help="Threshold containment untuk filter nested duplicate di pipeline.",
+    )
     pipeline_parser.add_argument("--epochs", type=int, default=50, help="Jumlah epoch training.")
     pipeline_parser.add_argument("--batch", type=int, default=8, help="Batch size training.")
     pipeline_parser.add_argument("--workers", type=int, default=2, help="Jumlah worker dataloader.")
@@ -953,8 +1133,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                     default_factory=_default_autolabel_model_source,
                 ),
                 conf=args.conf,
+                iou=args.iou,
                 imgsz=args.imgsz,
                 device=args.device,
+                suppress_nested_duplicates=args.suppress_nested_duplicates,
+                duplicate_containment_threshold=args.duplicate_containment_threshold,
                 overwrite=args.overwrite_labels,
                 image_names=args.image_name,
             )
@@ -1058,8 +1241,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 labels_dir=labels_dir,
                 model_source=autolabel_model_source,
                 conf=args.conf,
+                iou=args.iou,
                 imgsz=args.imgsz,
                 device=args.device,
+                suppress_nested_duplicates=args.suppress_nested_duplicates,
+                duplicate_containment_threshold=args.duplicate_containment_threshold,
                 overwrite=args.overwrite_labels,
             )
             data_yaml = prepare_dataset(

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Button } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
 import { mergeJobLog, useJobEventStream } from "../shared/jobStream.js";
-import { formatCount, formatTimestamp, groupArtifactsByFolder } from "../shared/utils.js";
+import { formatCount, groupArtifactsByFolder } from "../shared/utils.js";
 import { PREVIEW_DEBOUNCE_MS } from "../shared/formHelpers.js";
 import { usePagePreferencesAutosave } from "../shared/pagePreferences.js";
 import { useToast } from "../shared/toast.js";
@@ -46,13 +46,12 @@ export default function TesterPage() {
   }, [folders, selectedFolderKey]);
 
   const selectedFolder = folders.find((f) => f.key === selectedFolderKey) || folders[0] || null;
-  const isFaceBenchmarkMode = formValues.testMode === "face-benchmark";
   const isVideoMode = formValues.testMode === "video";
+  const nestedDuplicateLabel = formValues.suppressNestedDuplicates ? "aktif" : "nonaktif";
   const usesLocalEmployeeFaces =
-    formValues.testMode === "face-benchmark"
-    || (formValues.testMode === "video"
-      && Boolean(formValues.withFaceRecognition)
-      && formValues.faceRegistrySource === "folder");
+    isVideoMode
+    && Boolean(formValues.withFaceRecognition)
+    && formValues.faceRegistrySource === "folder";
   const wantsEmployeeLabelingInVideo = isVideoMode && Boolean(formValues.withFaceRecognition);
 
   usePagePreferencesAutosave("tester", formValues, {
@@ -233,25 +232,9 @@ export default function TesterPage() {
         </div>
       )}
 
-      {isFaceBenchmarkMode && (
-        <Alert type="warning" className="rounded-sm text-sm leading-6">
-          Mode ini tidak memakai footage input. Jika yang ingin diuji adalah video `footage` agar sistem mendeteksi visitor lalu melabeli petugas dari folder `petugas`, ubah `Mode test` ke `Video tracking + label petugas`.
-        </Alert>
-      )}
-
-      {isVideoMode && !formValues.withFaceRecognition && (
-        <Alert type="info" className="rounded-sm text-sm leading-6">
-          {"Untuk alur `YOLO -> tracking visitor -> label petugas dari folder petugas`, aktifkan section `Tracking Petugas` pada form ini."}
-        </Alert>
-      )}
-
-      {usesLocalEmployeeFaces && (
-        <Alert type="info" className="rounded-sm text-sm leading-6">
-          {isFaceBenchmarkMode
-            ? "Benchmark face recognition memakai gambar di folder petugas. Nama file dipakai sebagai label identitas; contoh `budi.png` atau `budi_2.png` akan dibaca sebagai `budi`."
-            : "Pipeline video aktif: `YOLO -> tracking visitor -> cek wajah -> cocokkan ke folder petugas -> label petugas pada track yang match`. Pastikan folder berisi foto wajah yang cukup jelas agar face recognition bisa mengenali nama petugas dari nama file."}
-        </Alert>
-      )}
+     
+  
+      
 
       {wantsEmployeeLabelingInVideo && formValues.faceRegistrySource === "backend" && (
         <Alert type="info" className="rounded-sm text-sm leading-6">

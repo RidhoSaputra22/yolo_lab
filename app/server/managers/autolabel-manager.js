@@ -99,17 +99,37 @@ export class AutolabelRunManager extends BaseRunManager {
       throw new HttpError(400, "`conf` auto-label harus berada di rentang 0..1.");
     }
 
+    const iou = Number.parseFloat(String(raw.iou ?? defaults.iou));
+    if (!Number.isFinite(iou) || iou <= 0 || iou >= 1) {
+      throw new HttpError(400, "`iou` auto-label harus berada di rentang 0..1.");
+    }
+
     const imgsz = Number.parseInt(String(raw.imgsz ?? defaults.imgsz), 10);
     if (!Number.isFinite(imgsz) || imgsz < 32) {
       throw new HttpError(400, "`imgsz` auto-label minimal 32.");
+    }
+
+    const suppressNestedDuplicates = this.boolValue(raw.suppressNestedDuplicates);
+    const duplicateContainmentThreshold = Number.parseFloat(
+      String(raw.duplicateContainmentThreshold ?? defaults.duplicateContainmentThreshold),
+    );
+    if (
+      !Number.isFinite(duplicateContainmentThreshold)
+      || duplicateContainmentThreshold <= 0
+      || duplicateContainmentThreshold > 1
+    ) {
+      throw new HttpError(400, "`duplicateContainmentThreshold` harus berada di rentang > 0 sampai 1.");
     }
 
     const device = String(raw.device ?? defaults.device ?? "auto").trim() || "auto";
     return {
       model,
       conf,
+      iou,
       imgsz,
       device,
+      suppressNestedDuplicates,
+      duplicateContainmentThreshold,
     };
   }
 
@@ -126,11 +146,21 @@ export class AutolabelRunManager extends BaseRunManager {
       config.model,
       "--conf",
       String(config.conf),
+      "--iou",
+      String(config.iou),
       "--imgsz",
       String(config.imgsz),
       "--device",
       config.device,
+      "--duplicate-containment-threshold",
+      String(config.duplicateContainmentThreshold),
     ];
+
+    command.push(
+      config.suppressNestedDuplicates
+        ? "--suppress-nested-duplicates"
+        : "--no-suppress-nested-duplicates",
+    );
 
     if (imageName) {
       command.push("--image-name", path.basename(imageName));

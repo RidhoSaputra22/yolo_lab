@@ -72,8 +72,11 @@ export function defaultLabelerAutolabelConfig() {
   return {
     model: defaultAutolabelModelPath(),
     conf: 0.35,
+    iou: 0.45,
     imgsz: 960,
     device: "auto",
+    suppressNestedDuplicates: true,
+    duplicateContainmentThreshold: 0.9,
   };
 }
 

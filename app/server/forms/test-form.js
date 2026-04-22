@@ -35,6 +35,10 @@ export function defaultTestFormData() {
     frameStep: 1,
     outputFps: 0.0,
     imgSize: Number.parseInt(envValue("YOLOV5_IMG_SIZE", "512"), 10) || 512,
+    yoloConf: Number.parseFloat(envValue("YOLOV5_CONF", "0.25")) || 0.25,
+    yoloIou: Number.parseFloat(envValue("YOLOV5_IOU", "0.45")) || 0.45,
+    suppressNestedDuplicates: true,
+    duplicateContainmentThreshold: 0.9,
     forceCentroid: false,
     maxAge: Number.parseInt(envValue("TRACK_MAX_DISAPPEARED", "20"), 10) || 20,
     nInit: Number.parseInt(envValue("TRACK_CONFIRM_FRAMES", "1"), 10) || 1,
@@ -47,7 +51,6 @@ export function defaultTestFormData() {
     faceRegistrySource: "folder",
     employeeFacesDir: displayPath(DEFAULT_TEST_EMPLOYEE_FACES_DIR),
     employeeMatchThreshold: Number.parseFloat(envValue("EMPLOYEE_MATCH_THRESHOLD", "0.45")) || 0.45,
-    faceBenchmarkAllowSelfMatch: false,
     reidMatchThreshold: Number.parseFloat(envValue("REID_MATCH_THRESHOLD", "0.77")) || 0.77,
     reidMinTrackFrames: Number.parseInt(envValue("REID_MIN_TRACK_FRAMES", "3"), 10) || 3,
     reidStrongMatchThreshold:
@@ -65,24 +68,6 @@ export function defaultTestFormData() {
 
 export function testFormLayout() {
   return [
-    {
-      id: "mode",
-      title: "Mode Pengujian",
-      description: "Pilih test footage video atau benchmark gambar petugas dari folder lokal.",
-      fields: [
-        {
-          name: "testMode",
-          label: "Mode test",
-          type: "select",
-          choices: [
-            { value: "video", label: "Video tracking + label petugas" },
-            { value: "face-benchmark", label: "Benchmark folder petugas" },
-          ],
-          helpText:
-            "Untuk alur `YOLO -> tracking visitor -> cek wajah -> label petugas dari folder petugas`, pilih `Video tracking + label petugas`. Mode benchmark hanya menguji gambar folder petugas dan tidak memakai footage video.",
-        },
-      ],
-    },
     {
       id: "source",
       title: "Sumber & Output",
@@ -183,6 +168,43 @@ export function testFormLayout() {
           type: "int",
           helpText:
             "Ukuran input inferensi YOLO. Nilai lebih besar membantu objek kecil lebih terlihat, tetapi waktu inferensi dan kebutuhan memori ikut naik.",
+        },
+      ],
+    },
+    {
+      id: "yolo-tuning",
+      title: "Tuning YOLO",
+      description: "Threshold inferensi dan filter nested box untuk menekan double detect sebelum tracker jalan.",
+      visibleWhen: { testMode: "video" },
+      fields: [
+        {
+          name: "yoloConf",
+          label: "YOLO confidence threshold",
+          type: "float",
+          helpText:
+            "Confidence minimum agar box person lolos dari model. Naikkan jika terlalu banyak box lemah atau dobel, turunkan jika terlalu banyak miss.",
+        },
+        {
+          name: "yoloIou",
+          label: "YOLO IoU / NMS threshold",
+          type: "float",
+          helpText:
+            "Ambang NMS untuk box yang saling overlap. Nilai lebih rendah biasanya lebih agresif membuang box mirip, cocok saat satu orang sering terdeteksi ganda.",
+        },
+        {
+          name: "suppressNestedDuplicates",
+          label: "Suppress nested duplicate person boxes",
+          type: "bool",
+          helpText:
+            "Buang box person kecil yang tertanam di dalam box person yang lebih besar sebelum tracking. Ini membantu kasus full-body + upper-body terdeteksi pada orang yang sama.",
+        },
+        {
+          name: "duplicateContainmentThreshold",
+          label: "Duplicate containment threshold",
+          type: "float",
+          visibleWhen: { suppressNestedDuplicates: true },
+          helpText:
+            "Seberapa besar box harus saling menutupi agar dianggap duplikat nested. Turunkan sedikit jika box ganda masih lolos; naikkan bila orang berdekatan malah ikut terhapus.",
         },
       ],
     },
@@ -313,35 +335,6 @@ export function testFormLayout() {
       ],
     },
     {
-      id: "face-benchmark",
-      title: "Benchmark Wajah Petugas",
-      description: "Khusus untuk menguji folder petugas tanpa memakai video footage.",
-      visibleWhen: { testMode: "face-benchmark" },
-      fields: [
-        {
-          name: "employeeFacesDir",
-          label: "Folder petugas",
-          type: "path",
-          helpText:
-            "Folder berisi file wajah `.png/.jpg/.jpeg` petugas. Benchmark akan membaca nama file sebagai label identitas petugas.",
-        },
-        {
-          name: "employeeMatchThreshold",
-          label: "Employee match threshold",
-          type: "float",
-          helpText:
-            "Ambang kemiripan minimum untuk benchmark pengenalan petugas dari folder wajah.",
-        },
-        {
-          name: "faceBenchmarkAllowSelfMatch",
-          label: "Benchmark izinkan self-match",
-          type: "bool",
-          helpText:
-            "Jika aktif, gambar boleh dicocokkan dengan dirinya sendiri. Cocok untuk sanity check saat tiap petugas hanya punya satu file; nonaktifkan untuk evaluasi yang lebih ketat.",
-        },
-      ],
-    },
-    {
       id: "reid",
       title: "Tuning reID",
       description: "Selalu tersedia untuk mode reID dan tetap dipakai sebagai fallback env override.",
@@ -387,7 +380,7 @@ export function testFormLayout() {
     {
       id: "face",
       title: "Tuning face identity",
-      description: "Dipakai saat identity mode = face, dan threshold employee juga berguna untuk benchmark petugas.",
+      description: "Dipakai saat identity mode = face untuk membantu keputusan identitas berbasis wajah pada footage video.",
       fields: [
         {
           name: "faceIdMatchThreshold",
