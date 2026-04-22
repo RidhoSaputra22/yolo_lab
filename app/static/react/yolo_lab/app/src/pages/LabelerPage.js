@@ -61,6 +61,7 @@ export default function LabelerPage() {
     const [autolabelWarnings, setAutolabelWarnings] = useState([]);
     const [autolabelJob, setAutolabelJob] = useState(null);
     const [isAutolabelModalOpen, setIsAutolabelModalOpen] = useState(false);
+    const [autolabelSelectedImages, setAutolabelSelectedImages] = useState([]);
     const [isPreferenceReady, setIsPreferenceReady] = useState(false);
     // Refs for imperative updates and event handling
     const nextBoxIdRef = useRef(1);
@@ -123,6 +124,16 @@ export default function LabelerPage() {
     useEffect(() => {
         imagesRef.current = images;
     }, [images]);
+    useEffect(() => {
+        const availableImageNames = new Set(images.map((item) => item.name));
+        setAutolabelSelectedImages((current) => {
+            const nextSelection = current.filter((imageName) => availableImageNames.has(imageName));
+            return nextSelection.length === current.length ? current : nextSelection;
+        });
+    }, [images]);
+    useEffect(() => {
+        setAutolabelSelectedImages([]);
+    }, [activeFramesDir]);
     useEffect(() => {
         saveAndNextSinceCheckpointRef.current = 0;
     }, [activeFramesDir]);
@@ -645,6 +656,77 @@ export default function LabelerPage() {
         }
         void selectImage(checkpointImageName);
     };
+    const replaceAutolabelSelection = (imageNames) => {
+        const availableImageNames = new Set(imagesRef.current.map((item) => item.name));
+        const nextSelection = Array.from(new Set((Array.isArray(imageNames) ? imageNames : [])
+            .map((imageName) => String(imageName || "").trim())
+            .filter((imageName) => imageName && availableImageNames.has(imageName))));
+        setAutolabelSelectedImages(nextSelection);
+    };
+    const toggleAutolabelSelection = (imageName) => {
+        const normalizedImageName = String(imageName || "").trim();
+        if (!normalizedImageName) {
+            return;
+        }
+        setAutolabelSelectedImages((current) => current.includes(normalizedImageName)
+            ? current.filter((item) => item !== normalizedImageName)
+            : [...current, normalizedImageName]);
+    };
+    const selectCurrentAutolabelImage = () => {
+        const imageName = currentImageNameRef.current;
+        if (!imageName) {
+            setNotice(createNotice("warning", "Tidak ada frame aktif untuk dipilih."));
+            return;
+        }
+        replaceAutolabelSelection([imageName]);
+    };
+    const selectVisibleAutolabelImages = () => {
+        if (!visibleImages.length) {
+            setNotice(createNotice("warning", "Tidak ada frame yang terlihat untuk dipilih."));
+            return;
+        }
+        replaceAutolabelSelection(visibleImages.map((item) => item.name));
+    };
+    const selectPendingAutolabelImages = () => {
+        const pendingImageNames = visibleImages
+            .filter((item) => !item.hasLabelFile)
+            .map((item) => item.name);
+        if (!pendingImageNames.length) {
+            setNotice(createNotice("info", "Semua frame yang terlihat sudah punya label."));
+            return;
+        }
+        replaceAutolabelSelection(pendingImageNames);
+    };
+    const openAutolabelWorkspace = () => {
+        setAutolabelSelectedImages((current) => {
+            const availableImageNames = new Set(imagesRef.current.map((item) => item.name));
+            const existingSelection = current.filter((imageName) => availableImageNames.has(imageName));
+            if (existingSelection.length) {
+                return existingSelection;
+            }
+            const imageName = currentImageNameRef.current;
+            if (imageName && availableImageNames.has(imageName)) {
+                return [imageName];
+            }
+            return existingSelection;
+        });
+        setIsAutolabelModalOpen(true);
+    };
+    const ensureAutolabelReady = () => {
+        if (isLabelingLocked) {
+            setNotice(createNotice("warning", "Masih ada proses auto-label yang berjalan."));
+            return false;
+        }
+        if (!String(autolabelConfig.model || "").trim()) {
+            setNotice(createNotice("warning", "Model auto-label wajib diisi."));
+            return false;
+        }
+        if (dirtyRef.current) {
+            setNotice(createNotice("warning", "Simpan perubahan frame aktif terlebih dahulu sebelum menjalankan auto-label."));
+            return false;
+        }
+        return true;
+    };
     const removeBox = (boxId) => {
         if (isLabelingLocked) {
             setNotice(createNotice("warning", "Edit bounding box dikunci saat auto-label berjalan."));
@@ -769,20 +851,11 @@ export default function LabelerPage() {
         zoomFromViewportCenter(-1);
     };
     const handleAutolabelCurrent = async () => {
-        if (isLabelingLocked) {
-            setNotice(createNotice("warning", "Masih ada proses auto-label yang berjalan."));
-            return;
-        }
         if (!currentImageNameRef.current) {
             setNotice(createNotice("warning", "Tidak ada frame aktif untuk auto-label."));
             return;
         }
-        if (!String(autolabelConfig.model || "").trim()) {
-            setNotice(createNotice("warning", "Model auto-label wajib diisi."));
-            return;
-        }
-        if (dirtyRef.current) {
-            setNotice(createNotice("warning", "Simpan perubahan frame aktif terlebih dahulu sebelum menjalankan auto-label."));
+        if (!ensureAutolabelReady()) {
             return;
         }
         const imageName = currentImageNameRef.current;
@@ -802,21 +875,37 @@ export default function LabelerPage() {
             setNotice(createNotice("error", error.message));
         }
     };
-    const handleAutolabelAll = async () => {
-        if (isLabelingLocked) {
-            setNotice(createNotice("warning", "Masih ada proses auto-label yang berjalan."));
+    const handleAutolabelSelection = async () => {
+        if (!autolabelSelectedImages.length) {
+            setNotice(createNotice("warning", "Pilih minimal satu frame sebelum menjalankan selection auto-label."));
             return;
         }
+        if (!ensureAutolabelReady()) {
+            return;
+        }
+        const targetImages = [...autolabelSelectedImages];
+        try {
+            const nextJob = await fetchJson("/api/autolabel/selection", {
+                method: "POST",
+                body: JSON.stringify({
+                    images: targetImages,
+                    ...autolabelConfig,
+                }),
+            });
+            setAutolabelJob(nextJob);
+            setIsAutolabelModalOpen(false);
+            setNotice(createNotice("info", `Auto-label ${targetImages.length} frame terpilih dimulai. Panel labeling dikunci sampai selesai.`));
+        }
+        catch (error) {
+            setNotice(createNotice("error", error.message));
+        }
+    };
+    const handleAutolabelAll = async () => {
         if (!imagesRef.current.length) {
             setNotice(createNotice("warning", "Folder frame aktif belum memiliki frame."));
             return;
         }
-        if (!String(autolabelConfig.model || "").trim()) {
-            setNotice(createNotice("warning", "Model auto-label wajib diisi."));
-            return;
-        }
-        if (dirtyRef.current) {
-            setNotice(createNotice("warning", "Simpan perubahan frame aktif terlebih dahulu sebelum auto-label semua frame."));
+        if (!ensureAutolabelReady()) {
             return;
         }
         const confirmed = window.confirm("Jalankan auto-label untuk semua frame pada folder aktif? Label yang sudah ada akan dipertahankan.");
@@ -1354,7 +1443,9 @@ export default function LabelerPage() {
             if (autolabelJob.state === "finished") {
                 const successMessage = autolabelJob.targetMode === "current"
                     ? `Auto-label frame ${autolabelJob.targetImage || ""} selesai.`
-                    : "Auto-label semua frame selesai. Cek log runner untuk detail output.";
+                    : autolabelJob.targetMode === "selection"
+                        ? `Auto-label ${autolabelJob.targetCount || 0} frame terpilih selesai.`
+                        : "Auto-label semua frame selesai. Cek log runner untuk detail output.";
                 setNotice(createNotice("success", successMessage.trim()));
             }
             else if (autolabelJob.state === "failed") {
@@ -1386,7 +1477,7 @@ export default function LabelerPage() {
             } },
             React.createElement("aside", { className: "min-h-0 h-[550px] overflow-y-scroll pr-1" },
                 React.createElement("div", { className: "grid gap-4" },
-                    React.createElement(LabelerHeader, { currentImageItem: currentImageItem, visibleImages: visibleImages, hasFrames: images.length > 0, interactionLocked: isLabelingLocked, currentIndex: currentIndex, currentIsCheckpoint: currentIsCheckpoint, checkpointImageName: checkpointImageName, naturalSize: naturalSize, zoomLabel: zoomLabel, onNavigate: navigate, onOpenCheckpoint: openCheckpoint, onSaveCheckpoint: saveCheckpoint, onOpenAutolabelModal: () => setIsAutolabelModalOpen(true), onSaveLabel: () => saveCurrentLabel(false), onSaveLabelAndNext: () => saveCurrentLabel(true) }),
+                    React.createElement(LabelerHeader, { currentImageItem: currentImageItem, visibleImages: visibleImages, hasFrames: images.length > 0, interactionLocked: isLabelingLocked, currentIndex: currentIndex, currentIsCheckpoint: currentIsCheckpoint, checkpointImageName: checkpointImageName, naturalSize: naturalSize, zoomLabel: zoomLabel, onNavigate: navigate, onOpenCheckpoint: openCheckpoint, onSaveCheckpoint: saveCheckpoint, onOpenAutolabelModal: openAutolabelWorkspace, onSaveLabel: () => saveCurrentLabel(false), onSaveLabelAndNext: () => saveCurrentLabel(true) }),
                     React.createElement(LabelerSidebar, { images: images, visibleImages: visibleImages, activeFramesDir: activeFramesDir, frameFolders: frameFolders, filterValue: filterValue, searchQuery: searchQuery, isLoading: isLoading, disabled: isLabelingLocked, onFramesDirChange: changeFramesDirectory, onFilterChange: setFilterValue, onSearchChange: setSearchQuery, onRefresh: () => reloadConfig(true), onImageSelect: selectImage, currentImageName: currentImageName }),
                     React.createElement(LabelerToolPanel, { classNames: classNames, boxes: boxes, selectedBox: selectedBox, selectedBoxId: selectedBoxId, activeClassId: activeClassId, dirty: dirty, hasLabelFile: hasLabelFile, parseError: parseError, undoStack: undoStack, zoomLabel: zoomLabel, currentImageName: currentImageName, currentIsCheckpoint: currentIsCheckpoint, checkpointImageName: checkpointImageName, disabled: isLabelingLocked, onSyncSelectedBoxClass: syncSelectedBoxClass, onUndo: undoLastChange, onRemoveBox: removeBox, onDuplicateBox: duplicateSelectedBox, onClearAllBoxes: clearAllBoxes, onReloadLabel: () => selectImage(currentImageNameRef.current || "", {
                             force: true,
@@ -1394,5 +1485,5 @@ export default function LabelerPage() {
             React.createElement("section", { className: "min-h-0" },
                 React.createElement(LabelerCanvas, { currentImageName: currentImageName, imageSrc: imageSrc, stageViewportRef: stageViewportRef, frameShellRef: frameShellRef, overlayRef: overlayRef, displayMetrics: displayMetrics, stageLayout: stageLayout, zoomLabel: zoomLabel, zoomLevel: zoomLevel, minZoomLevel: MIN_ZOOM_LEVEL, maxZoomLevel: MAX_ZOOM_LEVEL, interactionDisabled: isLabelingLocked, onZoomIn: zoomIn, onZoomOut: zoomOut, onResetZoom: resetZoom, onCanvasMouseDown: handleCanvasMouseDown }))),
         React.createElement(LabelerLogs, { job: autolabelJob }),
-        React.createElement(LabelerAutolabelModal, { open: isAutolabelModalOpen, onClose: () => setIsAutolabelModalOpen(false), activeFramesDir: activeFramesDir, totalImages: images.length, currentImageName: currentImageName, autolabelConfig: autolabelConfig, autolabelSuggestions: autolabelSuggestions, autolabelWarnings: autolabelWarnings, job: autolabelJob, onAutolabelConfigChange: setAutolabelConfig, onAutolabelCurrent: handleAutolabelCurrent, onAutolabelAll: handleAutolabelAll })));
+        React.createElement(LabelerAutolabelModal, { open: isAutolabelModalOpen, onClose: () => setIsAutolabelModalOpen(false), activeFramesDir: activeFramesDir, images: images, visibleImages: visibleImages, totalImages: images.length, currentImageName: currentImageName, selectedImageNames: autolabelSelectedImages, autolabelConfig: autolabelConfig, autolabelSuggestions: autolabelSuggestions, autolabelWarnings: autolabelWarnings, job: autolabelJob, onAutolabelConfigChange: setAutolabelConfig, onSelectCurrentImage: selectCurrentAutolabelImage, onSelectVisibleImages: selectVisibleAutolabelImages, onSelectPendingImages: selectPendingAutolabelImages, onClearSelection: () => setAutolabelSelectedImages([]), onToggleImageSelection: toggleAutolabelSelection, onAutolabelCurrent: handleAutolabelCurrent, onAutolabelSelection: handleAutolabelSelection, onAutolabelAll: handleAutolabelAll })));
 }

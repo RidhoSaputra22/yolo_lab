@@ -411,6 +411,11 @@ export function createFetchHandler(appState) {
         return jsonResponse(appState.startAutolabelImage(imageName, payload), 200);
       }
 
+      if (pathname === "/api/autolabel/selection") {
+        const imageNames = Array.isArray(payload.images) ? payload.images : [];
+        return jsonResponse(appState.startAutolabelSelection(imageNames, payload), 200);
+      }
+
       if (pathname === "/api/autolabel/all") {
         return jsonResponse(appState.startAutolabelAll(payload), 200);
       }

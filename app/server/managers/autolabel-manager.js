@@ -34,6 +34,8 @@ export class AutolabelRunManager extends BaseRunManager {
       labelsDir: null,
       targetMode: "",
       targetImage: "",
+      targetImages: [],
+      targetCount: 0,
       startedAt: null,
       finishedAt: null,
       returnCode: null,
@@ -133,7 +135,16 @@ export class AutolabelRunManager extends BaseRunManager {
     };
   }
 
-  buildCommand(config, { framesDir, labelsDir, imageName = "", overwriteLabels = false } = {}) {
+  buildCommand(config, { framesDir, labelsDir, imageNames = [], overwriteLabels = false } = {}) {
+    const normalizedImageNames = Array.isArray(imageNames)
+      ? Array.from(
+          new Set(
+            imageNames
+              .map((imageName) => path.basename(String(imageName || "").trim()))
+              .filter(Boolean),
+          ),
+        )
+      : [];
     const command = [
       this.pythonBin,
       this.trainScript,
@@ -162,8 +173,8 @@ export class AutolabelRunManager extends BaseRunManager {
         : "--no-suppress-nested-duplicates",
     );
 
-    if (imageName) {
-      command.push("--image-name", path.basename(imageName));
+    for (const imageName of normalizedImageNames) {
+      command.push("--image-name", imageName);
     }
 
     if (overwriteLabels) {
@@ -177,10 +188,26 @@ export class AutolabelRunManager extends BaseRunManager {
     return this.start(payload, {
       framesDir,
       labelsDir,
-      imageName,
+      imageNames: [imageName],
       targetMode: "current",
       overwriteLabels: true,
       initialMessage: `[app] Menjalankan auto-label untuk frame ${path.basename(imageName)}.`,
+    });
+  }
+
+  startSelection(payload, { framesDir, labelsDir, imageNames }) {
+    const normalizedImageNames = Array.isArray(imageNames)
+      ? imageNames.filter(Boolean)
+      : [];
+    return this.start(payload, {
+      framesDir,
+      labelsDir,
+      imageNames: normalizedImageNames,
+      targetMode: "selection",
+      overwriteLabels: true,
+      initialMessage:
+        `[app] Menjalankan auto-label untuk ${normalizedImageNames.length} frame terpilih. `
+        + "Label yang sudah ada pada frame terpilih akan diperbarui.",
     });
   }
 
@@ -188,7 +215,7 @@ export class AutolabelRunManager extends BaseRunManager {
     return this.start(payload, {
       framesDir,
       labelsDir,
-      imageName: "",
+      imageNames: [],
       targetMode: "all",
       overwriteLabels: false,
       initialMessage:
@@ -196,12 +223,28 @@ export class AutolabelRunManager extends BaseRunManager {
     });
   }
 
-  start(payload, { framesDir, labelsDir, imageName = "", targetMode, overwriteLabels, initialMessage }) {
+  start(payload, {
+    framesDir,
+    labelsDir,
+    imageNames = [],
+    targetMode,
+    overwriteLabels,
+    initialMessage,
+  }) {
     const config = this.normalizePayload(payload);
+    const normalizedImageNames = Array.isArray(imageNames)
+      ? Array.from(
+          new Set(
+            imageNames
+              .map((imageName) => path.basename(String(imageName || "").trim()))
+              .filter(Boolean),
+          ),
+        )
+      : [];
     const command = this.buildCommand(config, {
       framesDir,
       labelsDir,
-      imageName,
+      imageNames: normalizedImageNames,
       overwriteLabels,
     });
 
@@ -239,7 +282,9 @@ export class AutolabelRunManager extends BaseRunManager {
       framesDir: path.resolve(framesDir),
       labelsDir: path.resolve(labelsDir),
       targetMode,
-      targetImage: imageName ? path.basename(imageName) : "",
+      targetImage: normalizedImageNames[0] || "",
+      targetImages: [...normalizedImageNames],
+      targetCount: normalizedImageNames.length,
       startedAt: Date.now(),
       finishedAt: null,
       returnCode: null,
@@ -327,6 +372,8 @@ export class AutolabelRunManager extends BaseRunManager {
       labelsDir: displayPath(this.current.labelsDir),
       targetMode: this.current.targetMode,
       targetImage: this.current.targetImage,
+      targetImages: [...(this.current.targetImages || [])],
+      targetCount: Number(this.current.targetCount || 0),
       startedAt: toLocalIso(this.current.startedAt),
       finishedAt: toLocalIso(this.current.finishedAt),
       durationSeconds: this.durationSeconds(),

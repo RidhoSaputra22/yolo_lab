@@ -48,11 +48,7 @@ export function TesterFormSection({
         return (
           <details
             key={section.id}
-            className={
-              isYoloTuningSection
-                ? "rounded-sm border border-amber-300 bg-amber-50/40"
-                : "rounded-sm border border-base-300 bg-base-100/85"
-            }
+            className="rounded-sm border border-base-300 bg-base-100/85"
             open={
               section.id === "source"
               || section.id === "yolo-tuning"

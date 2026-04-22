@@ -235,6 +235,27 @@ export class AppState {
     });
   }
 
+  startAutolabelSelection(imageNames, payload) {
+    const safeImageNames = Array.from(
+      new Set(
+        (Array.isArray(imageNames) ? imageNames : [])
+          .map((imageName) => String(imageName || "").trim())
+          .filter(Boolean)
+          .map((imageName) => path.basename(this.imagePath(imageName))),
+      ),
+    );
+
+    if (!safeImageNames.length) {
+      throw new HttpError(400, "Minimal pilih satu frame untuk auto-label.");
+    }
+
+    return this.autolabelRunner.startSelection(payload, {
+      framesDir: this.framesDir,
+      labelsDir: this.labelsDir,
+      imageNames: safeImageNames,
+    });
+  }
+
   startAutolabelAll(payload) {
     return this.autolabelRunner.startAll(payload, {
       framesDir: this.framesDir,
