@@ -24,6 +24,7 @@ export function LabelerToolPanel({
   onSyncSelectedBoxClass,
   onUndo,
   onRemoveBox,
+  onDuplicateBox,
   onClearAllBoxes,
   onReloadLabel,
   onBoxSelect,
@@ -74,6 +75,16 @@ export function LabelerToolPanel({
               onClick={() => selectedBox && onRemoveBox(selectedBox.id)}
             >
               Hapus box (Del)
+            </Button>
+            <Button
+              variant="ghost"
+              isSubmit={false}
+              size="sm"
+              className="rounded-sm border border-base-300 bg-base-100"
+              disabled={!selectedBox || disabled}
+              onClick={onDuplicateBox}
+            >
+              Duplikat box
             </Button>
             <Button
               variant="ghost"
@@ -190,16 +201,21 @@ export function LabelerToolPanel({
         <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-slate-600">
           <li>Drag area kosong untuk membuat box baru.</li>
           <li>Klik box untuk pilih, lalu drag isi box untuk geser.</li>
-          <li>Drag sudut box untuk resize.</li>
+          <li>Drag sudut atau sisi box untuk resize dari semua arah.</li>
           <li>
             <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+Z</code> untuk undo,{" "}
             <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+S</code> untuk simpan,{" "}
             <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Delete</code> untuk hapus box aktif.
           </li>
           <li>
+            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Arrow</code> untuk geser box 1 px,{" "}
+            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Shift+Arrow</code> untuk 10 px.
+          </li>
+          <li>
             <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl + scroll</code> untuk zoom,{" "}
             <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+0</code> untuk kembali fit.
           </li>
+          <li>Tombol duplikat membantu membuat box baru dari objek serupa dengan posisi awal yang sedikit digeser.</li>
           <li>Frame tanpa objek bisa disimpan sebagai label kosong.</li>
         </ul>
       </LabelerSidebarSection>

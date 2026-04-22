@@ -1,10 +1,10 @@
 {
-  "framesDir": "train/frames/frame_20260421_190",
+  "framesDir": "train/frames/frame_20260421_3199",
   "filterValue": "all",
   "searchQuery": "",
   "activeClassId": 0,
   "autolabelConfig": {
-    "model": "model/yolo26x.pt",
+    "model": "",
     "conf": 0.35,
     "imgsz": 960,
     "device": "auto"

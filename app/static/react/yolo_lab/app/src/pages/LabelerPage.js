@@ -198,6 +198,67 @@ export default function LabelerPage() {
         width: Number(data.width) || 0,
         height: Number(data.height) || 0,
     });
+    const duplicateSelectedBox = () => {
+        if (isLabelingLocked) {
+            setNotice(createNotice("warning", "Edit bounding box dikunci saat auto-label berjalan."));
+            return;
+        }
+        const selected = boxesRef.current.find((box) => box.id === selectedBoxIdRef.current);
+        if (!selected) {
+            setNotice(createNotice("warning", "Pilih box yang ingin diduplikat."));
+            return;
+        }
+        const currentNaturalSize = naturalSizeRef.current;
+        const maxX = Math.max(0, currentNaturalSize.width - selected.width);
+        const maxY = Math.max(0, currentNaturalSize.height - selected.height);
+        const candidateOffsets = [
+            { x: 12, y: 12 },
+            { x: -12, y: 12 },
+            { x: 12, y: -12 },
+            { x: -12, y: -12 },
+            { x: 0, y: 0 },
+        ];
+        const nextPosition = candidateOffsets
+            .map((offset) => ({
+            x: clamp(selected.x + offset.x, 0, maxX),
+            y: clamp(selected.y + offset.y, 0, maxY),
+        }))
+            .find((candidate) => candidate.x !== selected.x || candidate.y !== selected.y) || {
+            x: selected.x,
+            y: selected.y,
+        };
+        const duplicatedBox = createBox({
+            classId: selected.classId,
+            width: selected.width,
+            height: selected.height,
+            x: nextPosition.x,
+            y: nextPosition.y,
+        });
+        pushUndoSnapshot(takeUndoSnapshot());
+        setBoxes([...boxesRef.current, duplicatedBox]);
+        syncSelectedBoxId(duplicatedBox.id);
+        markDirty(true);
+    };
+    const moveSelectedBoxBy = (deltaX, deltaY, { captureUndo = true } = {}) => {
+        if (isLabelingLocked) {
+            return false;
+        }
+        const selected = boxesRef.current.find((box) => box.id === selectedBoxIdRef.current);
+        if (!selected) {
+            return false;
+        }
+        const updated = getMovedBox(selected, { x: deltaX, y: deltaY });
+        if (updated.x === selected.x && updated.y === selected.y) {
+            return false;
+        }
+        if (captureUndo) {
+            pushUndoSnapshot(takeUndoSnapshot());
+        }
+        setBoxes(boxesRef.current.map((box) => box.id === selected.id ? updated : { ...box }));
+        syncSelectedBoxId(selected.id);
+        markDirty(true);
+        return true;
+    };
     // Undo management
     const takeUndoSnapshot = () => ({
         boxes: cloneBoxes(boxesRef.current),
@@ -711,37 +772,64 @@ export default function LabelerPage() {
         point.y >= box.y &&
         point.y <= box.y + box.height;
     const getHandleHit = (point, box) => {
-        const threshold = 8;
-        const hitH = (v) => Math.abs(point.y - v) < threshold;
-        const hitV = (v) => Math.abs(point.x - v) < threshold;
-        if (hitV(box.x) && hitH(box.y))
+        const threshold = 10;
+        const left = box.x;
+        const right = box.x + box.width;
+        const top = box.y;
+        const bottom = box.y + box.height;
+        const withinHorizontalSpan = point.x >= left - threshold && point.x <= right + threshold;
+        const withinVerticalSpan = point.y >= top - threshold && point.y <= bottom + threshold;
+        const nearLeft = withinVerticalSpan && Math.abs(point.x - left) <= threshold;
+        const nearRight = withinVerticalSpan && Math.abs(point.x - right) <= threshold;
+        const nearTop = withinHorizontalSpan && Math.abs(point.y - top) <= threshold;
+        const nearBottom = withinHorizontalSpan && Math.abs(point.y - bottom) <= threshold;
+        if (nearLeft && nearTop)
             return "nw";
-        if (hitV(box.x + box.width) && hitH(box.y))
+        if (nearRight && nearTop)
             return "ne";
-        if (hitV(box.x) && hitH(box.y + box.height))
+        if (nearLeft && nearBottom)
             return "sw";
-        if (hitV(box.x + box.width) && hitH(box.y + box.height))
+        if (nearRight && nearBottom)
             return "se";
+        if (nearTop)
+            return "n";
+        if (nearBottom)
+            return "s";
+        if (nearLeft)
+            return "w";
+        if (nearRight)
+            return "e";
         return null;
     };
     const findInteractionTarget = (point) => {
         for (let i = boxesRef.current.length - 1; i >= 0; i--) {
             const box = boxesRef.current[i];
+            const handle = getHandleHit(point, box);
+            if (handle) {
+                return { boxId: box.id, handle };
+            }
             if (isPointInsideBox(point, box)) {
-                return { boxId: box.id, handle: getHandleHit(point, box) };
+                return { boxId: box.id, handle: null };
             }
         }
         return null;
+    };
+    const getCursorForHandle = (handle) => {
+        if (handle === "nw" || handle === "se")
+            return "nwse-resize";
+        if (handle === "ne" || handle === "sw")
+            return "nesw-resize";
+        if (handle === "n" || handle === "s")
+            return "ns-resize";
+        if (handle === "e" || handle === "w")
+            return "ew-resize";
+        return "move";
     };
     const getCursorForPoint = (point) => {
         const target = findInteractionTarget(point);
         if (!target)
             return "crosshair";
-        if (target.handle === "nw" || target.handle === "se")
-            return "nwse-resize";
-        if (target.handle === "ne" || target.handle === "sw")
-            return "nesw-resize";
-        return "move";
+        return getCursorForHandle(target.handle);
     };
     const normalizeRect = (start, end) => ({
         x: Math.min(start.x, end.x),
@@ -757,21 +845,22 @@ export default function LabelerPage() {
     const getResizedBox = (interactionState, delta) => {
         const currentNaturalSize = naturalSizeRef.current;
         const startBox = interactionState.startBox;
+        const minBoxSize = 6;
         let left = startBox.x;
         let top = startBox.y;
         let right = startBox.x + startBox.width;
         let bottom = startBox.y + startBox.height;
         if (interactionState.handle?.includes("w")) {
-            left = clamp(left + delta.x, 0, currentNaturalSize.width);
+            left = clamp(left + delta.x, 0, Math.max(0, right - minBoxSize));
         }
         if (interactionState.handle?.includes("e")) {
-            right = clamp(right + delta.x, 0, currentNaturalSize.width);
+            right = clamp(right + delta.x, Math.min(currentNaturalSize.width, left + minBoxSize), currentNaturalSize.width);
         }
         if (interactionState.handle?.includes("n")) {
-            top = clamp(top + delta.y, 0, currentNaturalSize.height);
+            top = clamp(top + delta.y, 0, Math.max(0, bottom - minBoxSize));
         }
         if (interactionState.handle?.includes("s")) {
-            bottom = clamp(bottom + delta.y, 0, currentNaturalSize.height);
+            bottom = clamp(bottom + delta.y, Math.min(currentNaturalSize.height, top + minBoxSize), currentNaturalSize.height);
         }
         return {
             ...startBox,
@@ -794,7 +883,9 @@ export default function LabelerPage() {
         const interactionState = interactionRef.current;
         const scaleX = displayMetrics.width / currentNaturalSize.width;
         const scaleY = displayMetrics.height / currentNaturalSize.height;
-        const handleSize = 8;
+        const cornerHandleSize = 8;
+        const edgeHandleLength = 14;
+        const edgeHandleThickness = 6;
         const shapes = [];
         const drawBoxMarkup = (box, isSelected) => {
             const color = BOX_COLORS[box.classId % BOX_COLORS.length];
@@ -809,12 +900,56 @@ export default function LabelerPage() {
             shapes.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="${color}" stroke-width="${lineWidth}" />`);
             if (isSelected) {
                 [
-                    [x, y],
-                    [x + w, y],
-                    [x, y + h],
-                    [x + w, y + h],
-                ].forEach(([hx, hy]) => {
-                    shapes.push(`<rect x="${hx - handleSize / 2}" y="${hy - handleSize / 2}" width="${handleSize}" height="${handleSize}" fill="${color}" stroke="none" />`);
+                    {
+                        x: x - cornerHandleSize / 2,
+                        y: y - cornerHandleSize / 2,
+                        width: cornerHandleSize,
+                        height: cornerHandleSize,
+                    },
+                    {
+                        x: x + w - cornerHandleSize / 2,
+                        y: y - cornerHandleSize / 2,
+                        width: cornerHandleSize,
+                        height: cornerHandleSize,
+                    },
+                    {
+                        x: x - cornerHandleSize / 2,
+                        y: y + h - cornerHandleSize / 2,
+                        width: cornerHandleSize,
+                        height: cornerHandleSize,
+                    },
+                    {
+                        x: x + w - cornerHandleSize / 2,
+                        y: y + h - cornerHandleSize / 2,
+                        width: cornerHandleSize,
+                        height: cornerHandleSize,
+                    },
+                    {
+                        x: x + w / 2 - edgeHandleLength / 2,
+                        y: y - edgeHandleThickness / 2,
+                        width: edgeHandleLength,
+                        height: edgeHandleThickness,
+                    },
+                    {
+                        x: x + w / 2 - edgeHandleLength / 2,
+                        y: y + h - edgeHandleThickness / 2,
+                        width: edgeHandleLength,
+                        height: edgeHandleThickness,
+                    },
+                    {
+                        x: x - edgeHandleThickness / 2,
+                        y: y + h / 2 - edgeHandleLength / 2,
+                        width: edgeHandleThickness,
+                        height: edgeHandleLength,
+                    },
+                    {
+                        x: x + w - edgeHandleThickness / 2,
+                        y: y + h / 2 - edgeHandleLength / 2,
+                        width: edgeHandleThickness,
+                        height: edgeHandleLength,
+                    },
+                ].forEach((handleRect) => {
+                    shapes.push(`<rect x="${handleRect.x}" y="${handleRect.y}" width="${handleRect.width}" height="${handleRect.height}" fill="${color}" stroke="none" />`);
                 });
             }
         };
@@ -850,6 +985,7 @@ export default function LabelerPage() {
         const target = findInteractionTarget(point);
         if (target) {
             syncSelectedBoxId(target.boxId);
+            overlayRef.current.style.cursor = getCursorForHandle(target.handle);
             interactionRef.current = {
                 type: target.handle ? "resize" : "move",
                 boxId: target.boxId,
@@ -981,6 +1117,7 @@ export default function LabelerPage() {
             return;
         if (isLabelingLocked)
             return;
+        let keyboardNudgeActive = false;
         const handleKeyDown = (event) => {
             const target = event.target;
             const isTypingField = target instanceof HTMLElement &&
@@ -1006,6 +1143,40 @@ export default function LabelerPage() {
                 }
                 return;
             }
+            const nudgeStep = event.shiftKey ? 10 : 1;
+            const hasSelectedBox = selectedBoxIdRef.current != null;
+            if (event.key === "ArrowLeft" && hasSelectedBox) {
+                event.preventDefault();
+                const moved = moveSelectedBoxBy(-nudgeStep, 0, {
+                    captureUndo: !keyboardNudgeActive,
+                });
+                keyboardNudgeActive = keyboardNudgeActive || moved;
+                return;
+            }
+            if (event.key === "ArrowRight" && hasSelectedBox) {
+                event.preventDefault();
+                const moved = moveSelectedBoxBy(nudgeStep, 0, {
+                    captureUndo: !keyboardNudgeActive,
+                });
+                keyboardNudgeActive = keyboardNudgeActive || moved;
+                return;
+            }
+            if (event.key === "ArrowUp" && hasSelectedBox) {
+                event.preventDefault();
+                const moved = moveSelectedBoxBy(0, -nudgeStep, {
+                    captureUndo: !keyboardNudgeActive,
+                });
+                keyboardNudgeActive = keyboardNudgeActive || moved;
+                return;
+            }
+            if (event.key === "ArrowDown" && hasSelectedBox) {
+                event.preventDefault();
+                const moved = moveSelectedBoxBy(0, nudgeStep, {
+                    captureUndo: !keyboardNudgeActive,
+                });
+                keyboardNudgeActive = keyboardNudgeActive || moved;
+                return;
+            }
             if ((event.key === "Delete" || event.key === "Backspace") &&
                 selectedBoxIdRef.current != null) {
                 if (event.repeat) {
@@ -1015,9 +1186,16 @@ export default function LabelerPage() {
                 removeBox(selectedBoxIdRef.current);
             }
         };
+        const handleKeyUp = (event) => {
+            if (event.key.startsWith("Arrow")) {
+                keyboardNudgeActive = false;
+            }
+        };
         window.addEventListener("keydown", handleKeyDown);
+        window.addEventListener("keyup", handleKeyUp);
         return () => {
             window.removeEventListener("keydown", handleKeyDown);
+            window.removeEventListener("keyup", handleKeyUp);
         };
     }, [currentImageName, isLabelingLocked]);
     // Initialize on mount
@@ -1104,7 +1282,7 @@ export default function LabelerPage() {
                 React.createElement("div", { className: "grid gap-4" },
                     React.createElement(LabelerHeader, { currentImageItem: currentImageItem, visibleImages: visibleImages, hasFrames: images.length > 0, interactionLocked: isLabelingLocked, currentIndex: currentIndex, currentIsCheckpoint: currentIsCheckpoint, checkpointImageName: checkpointImageName, naturalSize: naturalSize, zoomLabel: zoomLabel, onNavigate: navigate, onOpenCheckpoint: openCheckpoint, onSaveCheckpoint: saveCheckpoint, onOpenAutolabelModal: () => setIsAutolabelModalOpen(true), onSaveLabel: () => saveCurrentLabel(false), onSaveLabelAndNext: () => saveCurrentLabel(true) }),
                     React.createElement(LabelerSidebar, { images: images, visibleImages: visibleImages, activeFramesDir: activeFramesDir, frameFolders: frameFolders, filterValue: filterValue, searchQuery: searchQuery, isLoading: isLoading, disabled: isLabelingLocked, onFramesDirChange: changeFramesDirectory, onFilterChange: setFilterValue, onSearchChange: setSearchQuery, onRefresh: () => reloadConfig(true), onImageSelect: selectImage, currentImageName: currentImageName }),
-                    React.createElement(LabelerToolPanel, { classNames: classNames, boxes: boxes, selectedBox: selectedBox, selectedBoxId: selectedBoxId, activeClassId: activeClassId, dirty: dirty, hasLabelFile: hasLabelFile, parseError: parseError, undoStack: undoStack, zoomLabel: zoomLabel, currentImageName: currentImageName, currentIsCheckpoint: currentIsCheckpoint, checkpointImageName: checkpointImageName, disabled: isLabelingLocked, onSyncSelectedBoxClass: syncSelectedBoxClass, onUndo: undoLastChange, onRemoveBox: removeBox, onClearAllBoxes: clearAllBoxes, onReloadLabel: () => selectImage(currentImageNameRef.current || "", {
+                    React.createElement(LabelerToolPanel, { classNames: classNames, boxes: boxes, selectedBox: selectedBox, selectedBoxId: selectedBoxId, activeClassId: activeClassId, dirty: dirty, hasLabelFile: hasLabelFile, parseError: parseError, undoStack: undoStack, zoomLabel: zoomLabel, currentImageName: currentImageName, currentIsCheckpoint: currentIsCheckpoint, checkpointImageName: checkpointImageName, disabled: isLabelingLocked, onSyncSelectedBoxClass: syncSelectedBoxClass, onUndo: undoLastChange, onRemoveBox: removeBox, onDuplicateBox: duplicateSelectedBox, onClearAllBoxes: clearAllBoxes, onReloadLabel: () => selectImage(currentImageNameRef.current || "", {
                             force: true,
                         }), onBoxSelect: syncSelectedBoxId }))),
             React.createElement("section", { className: "min-h-0" },

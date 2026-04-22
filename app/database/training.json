@@ -1,6 +1,6 @@
 {
-  "framesDir": "train/frames/frame_20260421_3199",
-  "labelsDir": "train/labels/frame_20260421_3199",
+  "framesDir": "train/frames/frame_20260421_190",
+  "labelsDir": "train/labels/frame_20260421_190",
   "datasetDir": "train/dataset",
   "runsDir": "train/runs",
   "classNames": "person",
@@ -12,7 +12,7 @@
   "patience": 5,
   "valRatio": 0.2,
   "seed": 42,
-  "device": "cpu",
+  "device": "auto",
   "runName": "visitor_person_cpu_bootstrap",
   "allowEmptyLabels": false,
   "cache": false
