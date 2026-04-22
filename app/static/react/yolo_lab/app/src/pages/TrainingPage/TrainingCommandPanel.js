@@ -32,7 +32,7 @@ export function TrainingCommandPanel({ layout, formValues, suggestions, frameFol
                         React.createElement(Select, { name: "training-frames-dir", label: "Folder frame aktif", value: formValues.framesDir || "", onChange: (event) => onFrameFolderChange(event.target.value), options: frameFolders.map((folder) => ({
                                 value: folder.path,
                                 label: folder.label,
-                            })), placeholder: "Pilih folder frame...", helpText: "Nilai ini otomatis mengisi `framesDir` dan pasangan `labelsDir` dengan nama folder yang sama." }))),
+                            })), placeholder: "Pilih folder frame...", helpText: "Pilih subfolder frame yang sedang kamu pakai. Saat diganti, `framesDir` dan pasangan `labelsDir` ikut diselaraskan agar training tetap memakai pasangan data yang benar." }))),
                 (layout || []).map((section) => (React.createElement("details", { key: section.id, className: "rounded-sm border border-base-300 bg-base-100/85", open: section.id === "dataset" || section.id === "training" },
                     React.createElement("summary", { className: "cursor-pointer list-none px-5 py-4" },
                         React.createElement("div", { className: "flex items-start justify-between gap-3" },

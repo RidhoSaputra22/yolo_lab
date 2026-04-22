@@ -1,5 +1,6 @@
 import React from "react";
-import { Alert, Button, Input, Modal, Paragraph } from "../../ui.js";
+import { PathInput } from "../../components/PathInput.js";
+import { Alert, Button, Modal, Paragraph } from "../../ui.js";
 export function LabelerAutolabelModal({ open, onClose, activeFramesDir, totalImages, currentImageName, autolabelConfig, autolabelSuggestions, autolabelWarnings, job, onAutolabelConfigChange, onAutolabelCurrent, onAutolabelAll, }) {
     const modelValue = String(autolabelConfig.model || "");
     const isRunning = Boolean(job?.running);
@@ -18,11 +19,10 @@ export function LabelerAutolabelModal({ open, onClose, activeFramesDir, totalIma
                 React.createElement("div", { className: "rounded-sm border border-base-300 bg-base-200/40 p-3 text-sm" },
                     React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, "Frame aktif"),
                     React.createElement("strong", { className: "mt-2 block break-all text-slate-900" }, currentImageName || "Belum ada"))),
-            React.createElement(Input, { name: "autolabel-model", label: "Auto-label model", placeholder: "model/yolo26x.pt", helpText: "Path file `.pt` lokal atau nama model Ultralytics untuk bootstrap label.", value: modelValue, onChange: (event) => onAutolabelConfigChange({
+            React.createElement(PathInput, { name: "autolabel-model", label: "Auto-label model", placeholder: "model/yolo26x.pt", helpText: "Path file `.pt` lokal atau nama model Ultralytics untuk membuat label awal otomatis. Model yang lebih cocok dengan domain data biasanya memberi box awal yang lebih rapi, tetapi hasilnya tetap perlu dicek manual.", value: modelValue, onChange: (newValue) => onAutolabelConfigChange({
                     ...autolabelConfig,
-                    model: event.target.value,
-                }), list: autolabelSuggestions.length ? "autolabel-model-suggestions" : undefined, disabled: isRunning }),
-            autolabelSuggestions.length ? (React.createElement("datalist", { id: "autolabel-model-suggestions" }, autolabelSuggestions.map((item) => (React.createElement("option", { key: item, value: item }))))) : null,
+                    model: newValue,
+                }), suggestions: autolabelSuggestions, disabled: isRunning }),
             React.createElement("div", { className: "rounded-sm border border-base-300 bg-base-200/30 p-4" },
                 React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700" }, "Alur kerja"),
                 React.createElement(Paragraph, { className: "mt-2 text-sm leading-6 opacity-100" }, "Gunakan tombol frame aktif untuk refresh label pada gambar yang sedang dibuka. Tombol semua frame akan memproses seluruh folder aktif dan melewati label yang sudah ada agar hasil manual tetap aman.")),

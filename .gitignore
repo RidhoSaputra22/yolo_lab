@@ -127,4 +127,12 @@ htmlcov/
 *.jpg
 *.jpeg
 *.png
-
+*.cache
+*.log
+*.zip
+*.tar.gz
+*.tar
+*.pt
+*.weights
+*.onnx
+*.json

@@ -12,7 +12,7 @@ export function LabelerToolPanel({ classNames, selectedBox, selectedBoxId, activ
                 React.createElement(Select, { name: "active-class", label: "Class aktif", value: String(selectedBox ? selectedBox.classId : activeClassId), onChange: (event) => onSyncSelectedBoxClass(event.target.value), options: classNames.map((name, index) => ({
                         value: String(index),
                         label: `${index} - ${name}`,
-                    })), disabled: disabled }),
+                    })), helpText: "Class default untuk box baru. Jika ada box yang sedang dipilih, mengubah nilai ini juga akan mengganti class box tersebut.", disabled: disabled }),
                 React.createElement("div", { className: "grid gap-2 sm:grid-cols-2" },
                     React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-sm border border-base-300 bg-base-100", disabled: !undoStack.length || disabled, onClick: onUndo }, "Undo (Ctrl+Z)"),
                     React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-sm border border-base-300 bg-base-100", disabled: !selectedBox || disabled, onClick: () => selectedBox && onRemoveBox(selectedBox.id) }, "Hapus box (Del)"),

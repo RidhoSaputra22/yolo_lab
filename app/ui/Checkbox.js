@@ -1,4 +1,5 @@
 import React from "react";
+import FieldLabel from "./FieldLabel.js";
 
 /**
  * Checkbox component styled with DaisyUI v4 form-control
@@ -45,14 +46,7 @@ export default function Checkbox({
 
   return (
     <div className={`form-control w-full ${className}`}>
-      {label && (
-        <label className="label">
-          <span className="label-text">
-            {label}
-            {required && <span className="text-error ml-1">*</span>}
-          </span>
-        </label>
-      )}
+      <FieldLabel htmlFor={name} label={label} required={required} helpText={helpText} />
       {single ? (
         <label className="flex items-center gap-3 cursor-pointer py-1">
           <input
@@ -91,11 +85,6 @@ export default function Checkbox({
             </label>
           ))}
         </div>
-      )}
-      {helpText && (
-        <label className="label">
-          <span className="label-text-alt text-base-content/70">{helpText}</span>
-        </label>
       )}
       {error && (
         <label className="label">

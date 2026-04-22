@@ -52,6 +52,7 @@ export function LabelerToolPanel({
               value: String(index),
               label: `${index} - ${name}`,
             }))}
+            helpText="Class default untuk box baru. Jika ada box yang sedang dipilih, mengubah nilai ini juga akan mengganti class box tersebut."
             disabled={disabled}
           />
 

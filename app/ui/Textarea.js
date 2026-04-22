@@ -1,4 +1,5 @@
 import React from "react";
+import FieldLabel from "./FieldLabel.js";
 
 /**
  * Textarea component styled with DaisyUI v4 form-control
@@ -28,14 +29,7 @@ export default function Textarea({
   const textareaId = name || label || Math.random().toString(36).slice(2, 10);
   return (
     <div className={`form-control w-full ${className}`}>
-      {label && (
-        <label className="label" htmlFor={textareaId}>
-          <span className="label-text font-medium">
-            {label}
-            {required && <span className="text-error ml-1">*</span>}
-          </span>
-        </label>
-      )}
+      <FieldLabel htmlFor={textareaId} label={label} required={required} helpText={helpText} />
       <textarea
         id={textareaId}
         name={name}
@@ -47,11 +41,6 @@ export default function Textarea({
         className={`textarea textarea-bordered w-full font-mono${error ? " textarea-error" : ""}`}
         {...rest}
       />
-      {helpText && !error && (
-        <label className="label">
-          <span className="label-text-alt text-base-content/70">{helpText}</span>
-        </label>
-      )}
       {error && (
         <label className="label">
           <span className="label-text-alt text-error">{error}</span>

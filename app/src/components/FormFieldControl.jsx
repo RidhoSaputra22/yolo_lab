@@ -1,5 +1,5 @@
 import React from "react";
-import { Input, Select, Textarea } from "../ui.js";
+import { FieldLabel, Input, Select, Textarea } from "../ui.js";
 import { PathInput } from "./PathInput.jsx";
 import { fieldValueToString } from "../shared/formHelpers.js";
 
@@ -11,9 +11,7 @@ export function FormFieldControl({ field, value, suggestions, onChange }) {
   if (field.type === "bool") {
     return (
       <div className="form-control w-full">
-        <label className="label" htmlFor={field.name}>
-          <span className="label-text font-medium">{field.label}</span>
-        </label>
+        <FieldLabel htmlFor={field.name} label={field.label} helpText={field.helpText || null} />
         <label
           htmlFor={field.name}
           className="flex min-h-12 cursor-pointer items-center gap-3 rounded-sm border border-base-300 bg-base-100/80 px-4 transition-colors hover:border-base-content/20"
@@ -30,11 +28,6 @@ export function FormFieldControl({ field, value, suggestions, onChange }) {
             {value ? "Aktif" : "Nonaktif"}
           </span>
         </label>
-        {field.helpText ? (
-          <label className="label">
-            <span className="label-text-alt text-base-content/70">{field.helpText}</span>
-          </label>
-        ) : null}
       </div>
     );
   }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Button, Input, Modal } from "../ui.js";
+import { Button, FieldLabel, Input, Modal } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
 import { displayProjectPath, normalizeProjectRelativePath } from "../shared/formHelpers.js";
 
@@ -21,6 +21,7 @@ export function PathInput({
   required = false,
   helpText = null,
   placeholder = "",
+  disabled = false,
 }) {
   const [showBrowser, setShowBrowser] = useState(false);
   const [currentPath, setCurrentPath] = useState("");
@@ -82,14 +83,7 @@ export function PathInput({
 
   return (
     <div>
-      {label && (
-        <label className="label" htmlFor={name}>
-          <span className="label-text font-medium">
-            {label}
-            {required && <span className="text-error ml-1">*</span>}
-          </span>
-        </label>
-      )}
+      <FieldLabel htmlFor={name} label={label} required={required} helpText={helpText} />
 
       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
         <div className="min-w-0">
@@ -101,6 +95,7 @@ export function PathInput({
             value={value}
             onChange={(event) => onChange(event.target.value)}
             list={suggestions.length ? `suggestions-${name}` : undefined}
+            disabled={disabled}
           />
         </div>
         <div>
@@ -113,17 +108,12 @@ export function PathInput({
               setShowBrowser(true);
             }}
             className="w-full justify-center px-5 sm:w-auto sm:min-w-[108px]"
+            disabled={disabled}
           >
             Browse
           </Button>
         </div>
       </div>
-
-      {helpText && (
-        <label className="label">
-          <span className="label-text-alt text-base-content/70">{helpText}</span>
-        </label>
-      )}
 
       {suggestions.length > 0 && (
         <datalist id={`suggestions-${name}`}>

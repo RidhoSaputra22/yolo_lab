@@ -1,5 +1,6 @@
 import React from "react";
-import { Alert, Button, Input, Modal, Paragraph } from "../../ui.js";
+import { PathInput } from "../../components/PathInput.jsx";
+import { Alert, Button, Modal, Paragraph } from "../../ui.js";
 
 export function LabelerAutolabelModal({
   open,
@@ -86,29 +87,21 @@ export function LabelerAutolabelModal({
           </div>
         </div>
 
-        <Input
+        <PathInput
           name="autolabel-model"
           label="Auto-label model"
           placeholder="model/yolo26x.pt"
-          helpText="Path file `.pt` lokal atau nama model Ultralytics untuk bootstrap label."
+          helpText="Path file `.pt` lokal atau nama model Ultralytics untuk membuat label awal otomatis. Model yang lebih cocok dengan domain data biasanya memberi box awal yang lebih rapi, tetapi hasilnya tetap perlu dicek manual."
           value={modelValue}
-          onChange={(event) =>
+          onChange={(newValue) =>
             onAutolabelConfigChange({
               ...autolabelConfig,
-              model: event.target.value,
+              model: newValue,
             })
           }
-          list={autolabelSuggestions.length ? "autolabel-model-suggestions" : undefined}
+          suggestions={autolabelSuggestions}
           disabled={isRunning}
         />
-
-        {autolabelSuggestions.length ? (
-          <datalist id="autolabel-model-suggestions">
-            {autolabelSuggestions.map((item) => (
-              <option key={item} value={item} />
-            ))}
-          </datalist>
-        ) : null}
 
         <div className="rounded-sm border border-base-300 bg-base-200/30 p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">

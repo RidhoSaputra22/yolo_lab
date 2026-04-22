@@ -75,7 +75,7 @@ export function TrainingCommandPanel({
                   label: folder.label,
                 }))}
                 placeholder="Pilih folder frame..."
-                helpText="Nilai ini otomatis mengisi `framesDir` dan pasangan `labelsDir` dengan nama folder yang sama."
+                helpText="Pilih subfolder frame yang sedang kamu pakai. Saat diganti, `framesDir` dan pasangan `labelsDir` ikut diselaraskan agar training tetap memakai pasangan data yang benar."
               />
             </div>
           </Card>

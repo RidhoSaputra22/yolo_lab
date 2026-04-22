@@ -3,6 +3,7 @@ export { default as Badge } from "../ui/Badge.js";
 export { default as Button } from "../ui/Button.js";
 export { default as Card } from "../ui/Card.js";
 export { default as Checkbox } from "../ui/Checkbox.js";
+export { default as FieldLabel } from "../ui/FieldLabel.js";
 export { default as Input } from "../ui/Input.js";
 export { default as Modal } from "../ui/Modal.js";
 export { default as Paragraph } from "../ui/Paragraph.js";

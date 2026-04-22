@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Button, Input, Modal } from "../ui.js";
+import { Button, FieldLabel, Input, Modal } from "../ui.js";
 import { fetchJson } from "../shared/api.js";
 import { displayProjectPath, normalizeProjectRelativePath } from "../shared/formHelpers.js";
 /**
@@ -11,7 +11,7 @@ import { displayProjectPath, normalizeProjectRelativePath } from "../shared/form
  * - Shows directory structure and navigation
  * - Returns displayPath format for consistency
  */
-export function PathInput({ name, label, value, suggestions = [], onChange, required = false, helpText = null, placeholder = "", }) {
+export function PathInput({ name, label, value, suggestions = [], onChange, required = false, helpText = null, placeholder = "", disabled = false, }) {
     const [showBrowser, setShowBrowser] = useState(false);
     const [currentPath, setCurrentPath] = useState("");
     const [entries, setEntries] = useState([]);
@@ -66,20 +66,15 @@ export function PathInput({ name, label, value, suggestions = [], onChange, requ
     };
     const displayCurrentPath = displayProjectPath(currentPath, rootName);
     return (React.createElement("div", null,
-        label && (React.createElement("label", { className: "label", htmlFor: name },
-            React.createElement("span", { className: "label-text font-medium" },
-                label,
-                required && React.createElement("span", { className: "text-error ml-1" }, "*")))),
+        React.createElement(FieldLabel, { htmlFor: name, label: label, required: required, helpText: helpText }),
         React.createElement("div", { className: "grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end" },
             React.createElement("div", { className: "min-w-0" },
-                React.createElement(Input, { name: name, type: "text", required: required, placeholder: placeholder, value: value, onChange: (event) => onChange(event.target.value), list: suggestions.length ? `suggestions-${name}` : undefined })),
+                React.createElement(Input, { name: name, type: "text", required: required, placeholder: placeholder, value: value, onChange: (event) => onChange(event.target.value), list: suggestions.length ? `suggestions-${name}` : undefined, disabled: disabled })),
             React.createElement("div", null,
                 React.createElement(Button, { type: "button", size: "md", variant: "outline", onClick: () => {
                         setCurrentPath(normalizeProjectRelativePath(value, rootName));
                         setShowBrowser(true);
-                    }, className: "w-full justify-center px-5 sm:w-auto sm:min-w-[108px]" }, "Browse"))),
-        helpText && (React.createElement("label", { className: "label" },
-            React.createElement("span", { className: "label-text-alt text-base-content/70" }, helpText))),
+                    }, className: "w-full justify-center px-5 sm:w-auto sm:min-w-[108px]", disabled: disabled }, "Browse"))),
         suggestions.length > 0 && (React.createElement("datalist", { id: `suggestions-${name}` }, suggestions.map((item) => (React.createElement("option", { key: item, value: item }))))),
         React.createElement(Modal, { open: showBrowser, onClose: () => setShowBrowser(false), title: "Select Path" },
             React.createElement("div", { className: "max-h-96 overflow-hidden flex flex-col" },

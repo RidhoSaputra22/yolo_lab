@@ -28,7 +28,8 @@ export function footageFormLayout() {
           label: "Footage directory",
           type: "path",
           required: true,
-          helpText: "Video mentah disimpan di sini. Default: `train/footage`.",
+          helpText:
+            "Folder sumber video mentah yang akan discan saat ekstraksi frame. Menjaga footage terpusat di sini memudahkan batch extract dan audit file asal.",
         },
         {
           name: "framesDir",
@@ -36,7 +37,7 @@ export function footageFormLayout() {
           type: "path",
           required: true,
           helpText:
-            "Subfolder output dibuat otomatis di bawah path ini dengan format `frame_YYYYMMDD_jumlahFrame`.",
+            "Folder root penyimpanan hasil extract. Sistem akan membuat subfolder baru di bawah path ini agar hasil lama tidak tertimpa tanpa sengaja.",
         },
       ],
     },
@@ -49,25 +50,29 @@ export function footageFormLayout() {
           name: "sampleEvery",
           label: "Frame step",
           type: "int",
-          helpText: "Ambil 1 frame tiap N frame. Mis. 15 berarti 0, 15, 30, dan seterusnya.",
+          helpText:
+            "Ambil 1 frame tiap N frame. Nilai lebih besar membuat proses lebih cepat dan dataset lebih kecil, tetapi momen penting bisa lebih mudah terlewat.",
         },
         {
           name: "maxFramesPerVideo",
           label: "Max frames per video",
           type: "int",
-          helpText: "0 berarti tanpa batas.",
+          helpText:
+            "Batas jumlah frame yang diambil dari setiap video. Isi `0` untuk tanpa batas; nilai kecil cocok saat ingin membuat sampel dataset dengan cepat.",
         },
         {
           name: "jpegQuality",
           label: "JPEG quality",
           type: "int",
-          helpText: "Kualitas output JPEG 1..100.",
+          helpText:
+            "Kualitas kompresi JPEG dari `1` sampai `100`. Nilai tinggi menjaga detail objek lebih baik, tetapi ukuran file hasil juga ikut membesar.",
         },
         {
           name: "overwriteFrames",
           label: "Overwrite frames lama",
           type: "bool",
-          helpText: "Hapus isi folder frame lama sebelum ekstraksi ulang.",
+          helpText:
+            "Jika aktif, isi folder frame lama akan dibersihkan sebelum ekstraksi ulang. Gunakan saat kamu yakin hasil sebelumnya memang ingin diganti.",
         },
       ],
     },

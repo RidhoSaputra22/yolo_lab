@@ -2,6 +2,7 @@
  * Reusable labelled input using DaisyUI v4.
  */
 import React, { useState } from "react";
+import FieldLabel from "./FieldLabel.js";
 
 /**
  * Input component styled with DaisyUI v4 form-control
@@ -36,14 +37,7 @@ export default function Input({
 
   return (
     <div className="form-control w-full">
-      {label && (
-        <label className="label" htmlFor={inputId}>
-          <span className="label-text font-medium">
-            {label}
-            {required && <span className="text-error ml-1">*</span>}
-          </span>
-        </label>
-      )}
+      <FieldLabel htmlFor={inputId} label={label} required={required} helpText={helpText} />
       {type === "password" ? (
         <div className="relative">
           <input
@@ -112,11 +106,6 @@ export default function Input({
           className={inputClassName}
           {...rest}
         />
-      )}
-      {helpText && !error && (
-        <label className="label">
-          <span className="label-text-alt text-base-content/70">{helpText}</span>
-        </label>
       )}
       {error && (
         <label className="label">

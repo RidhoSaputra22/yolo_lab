@@ -4,7 +4,7 @@
   "datasetDir": "train/dataset",
   "runsDir": "train/runs",
   "classNames": "person",
-  "trainModel": "model/yolov5nu.pt",
+  "trainModel": "model/yolo26x.pt",
   "imgsz": 640,
   "epochs": 10,
   "batch": 4,
@@ -13,7 +13,7 @@
   "valRatio": 0.2,
   "seed": 42,
   "device": "auto",
-  "runName": "visitor_person_cpu_bootstrap",
+  "runName": "visitor_person_cpu_bootstrap_yolo26x",
   "allowEmptyLabels": false,
   "cache": false
 }

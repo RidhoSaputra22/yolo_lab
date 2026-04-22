@@ -1,4 +1,5 @@
 import React from "react";
+import FieldLabel from "./FieldLabel.js";
 /**
  * Checkbox component styled with DaisyUI v4 form-control
  * @param {object} props
@@ -31,17 +32,12 @@ export default function Checkbox({ name, label = null, options = [], checked = [
         }
     };
     return (React.createElement("div", { className: `form-control w-full ${className}` },
-        label && (React.createElement("label", { className: "label" },
-            React.createElement("span", { className: "label-text" },
-                label,
-                required && React.createElement("span", { className: "text-error ml-1" }, "*")))),
+        React.createElement(FieldLabel, { htmlFor: name, label: label, required: required, helpText: helpText }),
         single ? (React.createElement("label", { className: "flex items-center gap-3 cursor-pointer py-1" },
             React.createElement("input", { type: "checkbox", name: name, value: "1", checked: checked.includes("1"), required: required, className: "checkbox checkbox-primary", onChange: handleChange, ...rest }),
             React.createElement("span", { className: "label-text" }, options[0]?.label || ""))) : (React.createElement("div", { className: `flex ${layout === "vertical" ? "flex-col" : "flex-wrap"} gap-4` }, options.map((option) => (React.createElement("label", { key: option.value, className: `flex items-center gap-3 cursor-pointer ${option.disabled ? "opacity-50" : ""}` },
             React.createElement("input", { type: "checkbox", name: name, value: option.value, checked: checked.includes(option.value), required: required, disabled: option.disabled, className: "checkbox checkbox-primary", onChange: handleChange, ...rest }),
             React.createElement("span", { className: "label-text" }, option.label)))))),
-        helpText && (React.createElement("label", { className: "label" },
-            React.createElement("span", { className: "label-text-alt text-base-content/70" }, helpText))),
         error && (React.createElement("label", { className: "label" },
             React.createElement("span", { className: "label-text-alt text-error" }, error)))));
 }

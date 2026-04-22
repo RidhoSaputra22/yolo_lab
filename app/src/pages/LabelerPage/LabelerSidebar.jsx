@@ -74,7 +74,7 @@ export function LabelerSidebar({
               label: folder.label,
             }))}
             placeholder="Pilih folder frame..."
-            helpText="Labeler akan memuat frame dari subfolder `train/frames` yang kamu pilih."
+            helpText="Menentukan subfolder `train/frames` yang sedang dibuka di labeler. Saat diganti, daftar gambar dan pasangan folder label ikut berpindah."
             disabled={disabled}
           />
 
@@ -89,6 +89,7 @@ export function LabelerSidebar({
                 { value: "pending", label: "Belum dilabel" },
                 { value: "done", label: "Sudah dilabel" },
               ]}
+              helpText="Menyaring daftar frame berdasarkan progres labeling supaya review manual lebih cepat."
               disabled={disabled}
             />
 
@@ -98,6 +99,7 @@ export function LabelerSidebar({
               placeholder="Cari nama file..."
               value={searchQuery}
               onChange={(event) => onSearchChange(event.target.value)}
+              helpText="Cari berdasarkan nama file untuk langsung melompat ke frame tertentu tanpa scroll panjang."
               disabled={disabled}
             />
           </div>

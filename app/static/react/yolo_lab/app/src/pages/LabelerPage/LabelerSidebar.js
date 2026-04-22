@@ -28,14 +28,14 @@ export function LabelerSidebar({ images, visibleImages, currentImageName, active
                 React.createElement(Select, { name: "labeler-frames-dir", label: "Pilih subfolder frames", value: activeFramesDir || "", onChange: (event) => onFramesDirChange(event.target.value), options: frameFolders.map((folder) => ({
                         value: folder.path,
                         label: folder.label,
-                    })), placeholder: "Pilih folder frame...", helpText: "Labeler akan memuat frame dari subfolder `train/frames` yang kamu pilih.", disabled: disabled }),
+                    })), placeholder: "Pilih folder frame...", helpText: "Menentukan subfolder `train/frames` yang sedang dibuka di labeler. Saat diganti, daftar gambar dan pasangan folder label ikut berpindah.", disabled: disabled }),
                 React.createElement("div", { className: "grid gap-3 sm:grid-cols-2" },
                     React.createElement(Select, { name: "labeler-filter", label: "Status frame", value: filterValue, onChange: (event) => onFilterChange(event.target.value), options: [
                             { value: "all", label: "Semua frame" },
                             { value: "pending", label: "Belum dilabel" },
                             { value: "done", label: "Sudah dilabel" },
-                        ], disabled: disabled }),
-                    React.createElement(Input, { name: "labeler-search", label: "Cari frame", placeholder: "Cari nama file...", value: searchQuery, onChange: (event) => onSearchChange(event.target.value), disabled: disabled })),
+                        ], helpText: "Menyaring daftar frame berdasarkan progres labeling supaya review manual lebih cepat.", disabled: disabled }),
+                    React.createElement(Input, { name: "labeler-search", label: "Cari frame", placeholder: "Cari nama file...", value: searchQuery, onChange: (event) => onSearchChange(event.target.value), helpText: "Cari berdasarkan nama file untuk langsung melompat ke frame tertentu tanpa scroll panjang.", disabled: disabled })),
                 React.createElement("div", { className: "flex items-center justify-between gap-2 rounded-sm border border-base-300 bg-base-200/40 px-3 py-2" },
                     React.createElement("div", { className: "min-w-0" },
                         React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, "Aktif"),

@@ -1,5 +1,5 @@
 import React from "react";
-import { Input, Select, Textarea } from "../ui.js";
+import { FieldLabel, Input, Select, Textarea } from "../ui.js";
 import { PathInput } from "./PathInput.js";
 import { fieldValueToString } from "../shared/formHelpers.js";
 /**
@@ -9,13 +9,10 @@ import { fieldValueToString } from "../shared/formHelpers.js";
 export function FormFieldControl({ field, value, suggestions, onChange }) {
     if (field.type === "bool") {
         return (React.createElement("div", { className: "form-control w-full" },
-            React.createElement("label", { className: "label", htmlFor: field.name },
-                React.createElement("span", { className: "label-text font-medium" }, field.label)),
+            React.createElement(FieldLabel, { htmlFor: field.name, label: field.label, helpText: field.helpText || null }),
             React.createElement("label", { htmlFor: field.name, className: "flex min-h-12 cursor-pointer items-center gap-3 rounded-sm border border-base-300 bg-base-100/80 px-4 transition-colors hover:border-base-content/20" },
                 React.createElement("input", { id: field.name, type: "checkbox", name: field.name, checked: Boolean(value), className: "checkbox checkbox-primary", onChange: (event) => onChange(field.name, event.target.checked) }),
-                React.createElement("span", { className: "text-sm text-base-content/80" }, value ? "Aktif" : "Nonaktif")),
-            field.helpText ? (React.createElement("label", { className: "label" },
-                React.createElement("span", { className: "label-text-alt text-base-content/70" }, field.helpText))) : null));
+                React.createElement("span", { className: "text-sm text-base-content/80" }, value ? "Aktif" : "Nonaktif"))));
     }
     if (field.type === "textarea") {
         return (React.createElement(Textarea, { name: field.name, label: field.label, rows: 4, placeholder: field.placeholder || "", helpText: field.helpText || null, value: fieldValueToString(value), onChange: (event) => onChange(field.name, event.target.value) }));

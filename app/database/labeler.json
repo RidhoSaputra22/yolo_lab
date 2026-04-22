@@ -4,7 +4,7 @@
   "searchQuery": "",
   "activeClassId": 0,
   "autolabelConfig": {
-    "model": "",
+    "model": "train/runs/visitor_person_cpu_bootstrap_yolo26x/weights/best.pt",
     "conf": 0.35,
     "imgsz": 960,
     "device": "auto"
