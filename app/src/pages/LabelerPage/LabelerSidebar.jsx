@@ -12,15 +12,20 @@ export function LabelerSidebar({
   visibleImages,
   currentImageName,
   activeFramesDir,
+  activeLabelsDir,
   frameFolders,
   filterValue,
   searchQuery,
   isLoading,
   disabled = false,
+  archiveDisabled = false,
+  archiveWarning = "",
   onFramesDirChange,
   onFilterChange,
   onSearchChange,
   onRefresh,
+  onOpenImportModal,
+  onOpenExportModal,
   onImageSelect,
 }) {
   const summaryCards = [
@@ -122,6 +127,70 @@ export function LabelerSidebar({
               disabled={isLoading || disabled}
             >
               Refresh
+            </Button>
+          </div>
+        </div>
+      </LabelerSidebarSection>
+
+      <LabelerSidebarSection
+        title="Bundle"
+        eyebrow="Import / Export"
+        description="Satukan folder frame aktif dan pasangan label-nya ke bundle zip, atau masukkan bundle export kembali ke workspace."
+        badge={
+          <Badge type="info" className="px-3 py-3">
+            ZIP
+          </Badge>
+        }
+        defaultOpen
+      >
+        <div className="space-y-4">
+          {archiveWarning ? (
+            <Alert type="warning" className="rounded-sm text-sm">
+              {archiveWarning}
+            </Alert>
+          ) : (
+            <Alert type="info" className="rounded-sm text-sm">
+              Import menerima bundle hasil export labeler ini dengan isi `frames/` dan `labels/`.
+            </Alert>
+          )}
+
+          <div className="grid gap-3">
+            <div className="rounded-sm border border-base-300 bg-base-200/40 px-3 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Frames aktif
+              </p>
+              <p className="mt-2 break-all font-mono text-[11px] text-slate-700">
+                {activeFramesDir || "-"}
+              </p>
+            </div>
+            <div className="rounded-sm border border-base-300 bg-base-200/40 px-3 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Labels aktif
+              </p>
+              <p className="mt-2 break-all font-mono text-[11px] text-slate-700">
+                {activeLabelsDir || "-"}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button
+              variant="info"
+              isSubmit={false}
+              className="rounded-sm px-4"
+              onClick={onOpenImportModal}
+              disabled={archiveDisabled}
+            >
+              Import Frames
+            </Button>
+            <Button
+              variant="warning"
+              isSubmit={false}
+              className="rounded-sm px-4"
+              onClick={onOpenExportModal}
+              disabled={archiveDisabled}
+            >
+              Export Frames
             </Button>
           </div>
         </div>

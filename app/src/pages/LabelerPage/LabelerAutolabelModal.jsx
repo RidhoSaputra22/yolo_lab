@@ -1,9 +1,106 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { PathInput } from "../../components/PathInput.jsx";
 import { joinClasses } from "../../shared/utils.js";
 import { Alert, Badge, Button, Input, Paragraph } from "../../ui.js";
 
 const FRAME_GRID_BATCH_SIZE = 120;
+const DRAG_SELECT_THRESHOLD = 12;
+const DRAG_SCROLL_EDGE_SIZE = 48;
+const DRAG_SCROLL_MAX_STEP = 18;
+
+function isTextInputElement(target) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
+
+  const tagName = String(target.tagName || "").toLowerCase();
+  return tagName === "input" || tagName === "textarea" || tagName === "select";
+}
+
+function clampToRange(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function rectanglesIntersect(rectA, rectB) {
+  return !(
+    rectA.right < rectB.left ||
+    rectA.left > rectB.right ||
+    rectA.bottom < rectB.top ||
+    rectA.top > rectB.bottom
+  );
+}
+
+function buildSelectionRect(startPoint, endPoint, containerRect) {
+  const startX = clampToRange(startPoint.x, containerRect.left, containerRect.right);
+  const startY = clampToRange(startPoint.y, containerRect.top, containerRect.bottom);
+  const endX = clampToRange(endPoint.x, containerRect.left, containerRect.right);
+  const endY = clampToRange(endPoint.y, containerRect.top, containerRect.bottom);
+  const left = Math.min(startX, endX);
+  const top = Math.min(startY, endY);
+  const right = Math.max(startX, endX);
+  const bottom = Math.max(startY, endY);
+
+  return {
+    clientRect: {
+      left,
+      top,
+      right,
+      bottom,
+      width: right - left,
+      height: bottom - top,
+    },
+    overlayRect: {
+      left: left - containerRect.left,
+      top: top - containerRect.top,
+      width: right - left,
+      height: bottom - top,
+    },
+  };
+}
+
+function imageNameSetsEqual(leftNames, rightNames) {
+  if (leftNames.size !== rightNames.size) {
+    return false;
+  }
+
+  for (const imageName of leftNames) {
+    if (!rightNames.has(imageName)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function getImageRangeNames(imageNames, startImageName, endImageName) {
+  const startIndex = imageNames.indexOf(startImageName);
+  const endIndex = imageNames.indexOf(endImageName);
+  if (startIndex < 0 || endIndex < 0) {
+    return [];
+  }
+
+  const rangeStart = Math.min(startIndex, endIndex);
+  const rangeEnd = Math.max(startIndex, endIndex);
+  return imageNames.slice(rangeStart, rangeEnd + 1);
+}
+
+function mergeUniqueImageNames(...collections) {
+  return Array.from(
+    new Set(
+      collections.flatMap((collection) =>
+        Array.isArray(collection)
+          ? collection
+          : collection instanceof Set
+            ? Array.from(collection)
+            : [],
+      ),
+    ),
+  );
+}
 
 function frameStatus(item) {
   if (item.parseError) {
@@ -29,6 +126,7 @@ export function LabelerAutolabelModal({
   autolabelWarnings,
   job,
   onAutolabelConfigChange,
+  onReplaceSelection,
   onSelectCurrentImage,
   onSelectVisibleImages,
   onSelectPendingImages,
@@ -39,6 +137,15 @@ export function LabelerAutolabelModal({
   onAutolabelAll,
 }) {
   const [visiblePreviewCount, setVisiblePreviewCount] = useState(FRAME_GRID_BATCH_SIZE);
+  const [scrollTargetImageName, setScrollTargetImageName] = useState(null);
+  const [dragSelectionRect, setDragSelectionRect] = useState(null);
+  const imageCardRefs = useRef(new Map());
+  const mainbarViewportRef = useRef(null);
+  const dragSelectionStateRef = useRef(null);
+  const dragSelectionCleanupRef = useRef(null);
+  const dragSelectionSetRef = useRef(new Set());
+  const selectionAnchorImageNameRef = useRef(null);
+  const suppressCardClickUntilRef = useRef(0);
 
   const modelValue = String(autolabelConfig.model || "");
   const isRunning = Boolean(job?.running);
@@ -53,6 +160,10 @@ export function LabelerAutolabelModal({
   );
   const pendingVisibleImages = useMemo(
     () => (visibleImages || []).filter((item) => !item.hasLabelFile),
+    [visibleImages],
+  );
+  const visibleImageNames = useMemo(
+    () => (visibleImages || []).map((item) => item.name),
     [visibleImages],
   );
   const renderedVisibleImages = useMemo(
@@ -73,7 +184,29 @@ export function LabelerAutolabelModal({
     ),
     [selectedImageNames, imageLookup],
   );
+  const currentVisibleImageIndex = useMemo(
+    () => (visibleImages || []).findIndex((item) => item.name === currentImageName),
+    [visibleImages, currentImageName],
+  );
   const hasMoreVisibleImages = renderedVisibleImages.length < (visibleImages || []).length;
+
+  const setSelectionAnchor = (imageName) => {
+    const normalizedImageName = String(imageName || "").trim();
+    selectionAnchorImageNameRef.current = visibleImageNames.includes(normalizedImageName)
+      ? normalizedImageName
+      : null;
+  };
+
+  const getFallbackAnchorImageName = () => {
+    if (currentImageName && visibleImageNames.includes(currentImageName)) {
+      return currentImageName;
+    }
+
+    const lastSelectedVisibleImageName = [...selectedImageNames]
+      .reverse()
+      .find((imageName) => visibleImageNames.includes(imageName));
+    return lastSelectedVisibleImageName || visibleImageNames[0] || null;
+  };
 
   useEffect(() => {
     if (!open) {
@@ -81,10 +214,33 @@ export function LabelerAutolabelModal({
     }
 
     setVisiblePreviewCount(FRAME_GRID_BATCH_SIZE);
+    setScrollTargetImageName(null);
+    setDragSelectionRect(null);
+    dragSelectionCleanupRef.current?.();
+    dragSelectionCleanupRef.current = null;
+    dragSelectionStateRef.current = null;
+    dragSelectionSetRef.current = new Set();
+    selectionAnchorImageNameRef.current = getFallbackAnchorImageName();
+  }, [open, activeFramesDir]);
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         onClose();
+        return;
+      }
+
+      if (isTextInputElement(event.target)) {
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "a") {
+        event.preventDefault();
+        handleSelectVisibleImages();
       }
     };
 
@@ -92,7 +248,298 @@ export function LabelerAutolabelModal({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onClose, activeFramesDir]);
+  }, [open, onClose, handleSelectVisibleImages]);
+
+  useEffect(
+    () => () => {
+      dragSelectionCleanupRef.current?.();
+      dragSelectionCleanupRef.current = null;
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (
+      selectionAnchorImageNameRef.current &&
+      visibleImageNames.includes(selectionAnchorImageNameRef.current)
+    ) {
+      return;
+    }
+
+    selectionAnchorImageNameRef.current = getFallbackAnchorImageName();
+  }, [visibleImageNames, selectedImageNames, currentImageName]);
+
+  useEffect(() => {
+    if (!dragSelectionRect) {
+      return undefined;
+    }
+
+    const previousUserSelect = document.body.style.userSelect;
+    const previousCursor = document.body.style.cursor;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "crosshair";
+
+    return () => {
+      document.body.style.userSelect = previousUserSelect;
+      document.body.style.cursor = previousCursor;
+    };
+  }, [dragSelectionRect]);
+
+  useEffect(() => {
+    if (!scrollTargetImageName) {
+      return;
+    }
+
+    const targetCard = imageCardRefs.current.get(scrollTargetImageName);
+    if (!targetCard) {
+      return;
+    }
+
+    targetCard.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest",
+    });
+    targetCard.focus({ preventScroll: true });
+    setScrollTargetImageName(null);
+  }, [renderedVisibleImages, scrollTargetImageName]);
+
+  const handleSelectCurrentImage = () => {
+    onSelectCurrentImage();
+    setSelectionAnchor(currentImageName);
+
+    if (!currentImageName || currentVisibleImageIndex < 0) {
+      setScrollTargetImageName(null);
+      return;
+    }
+
+    const requiredVisibleCount = Math.min(
+      visibleImages.length,
+      Math.max(
+        FRAME_GRID_BATCH_SIZE,
+        Math.ceil((currentVisibleImageIndex + 1) / FRAME_GRID_BATCH_SIZE) * FRAME_GRID_BATCH_SIZE,
+      ),
+    );
+
+    setVisiblePreviewCount((current) => Math.max(current, requiredVisibleCount));
+    setScrollTargetImageName(currentImageName);
+  };
+
+  function handleSelectVisibleImages() {
+    onSelectVisibleImages();
+    setSelectionAnchor(
+      currentImageName && visibleImageNames.includes(currentImageName)
+        ? currentImageName
+        : visibleImageNames[0] || null,
+    );
+  }
+
+  const handleSelectPendingImages = () => {
+    onSelectPendingImages();
+    setSelectionAnchor(
+      pendingVisibleImages.find((item) => item.name === currentImageName)?.name ||
+        pendingVisibleImages[0]?.name ||
+        null,
+    );
+  };
+
+  const handleClearVisibleSelection = () => {
+    onClearSelection();
+    selectionAnchorImageNameRef.current = null;
+  };
+
+  const resolveDragSelection = (clientRect, dragState) => {
+    const hitImageNames = renderedVisibleImages.reduce((nextSelection, item) => {
+      const cardNode = imageCardRefs.current.get(item.name);
+      if (!cardNode) {
+        return nextSelection;
+      }
+
+      if (rectanglesIntersect(clientRect, cardNode.getBoundingClientRect())) {
+        nextSelection.add(item.name);
+      }
+
+      return nextSelection;
+    }, new Set());
+
+    const nextSelection = dragState.additive
+      ? new Set([...dragState.baseSelection, ...hitImageNames])
+      : hitImageNames;
+
+    if (!imageNameSetsEqual(dragSelectionSetRef.current, nextSelection)) {
+      dragSelectionSetRef.current = nextSelection;
+      onReplaceSelection(Array.from(nextSelection));
+    }
+
+    if (dragState.originImageName) {
+      setSelectionAnchor(dragState.originImageName);
+    }
+  };
+
+  const finishDragSelection = ({ shouldSuppressClick = false } = {}) => {
+    const dragState = dragSelectionStateRef.current;
+    if (!dragState) {
+      return;
+    }
+
+    if (dragState.active && shouldSuppressClick) {
+      suppressCardClickUntilRef.current = performance.now() + 250;
+    }
+
+    dragSelectionCleanupRef.current?.();
+    dragSelectionCleanupRef.current = null;
+    dragSelectionStateRef.current = null;
+    dragSelectionSetRef.current = new Set();
+    setDragSelectionRect(null);
+  };
+
+  const getAutoScrollDelta = (pointerY, viewportRect) => {
+    if (pointerY < viewportRect.top) {
+      return -DRAG_SCROLL_MAX_STEP;
+    }
+    if (pointerY > viewportRect.bottom) {
+      return DRAG_SCROLL_MAX_STEP;
+    }
+
+    const topDistance = pointerY - viewportRect.top;
+    if (topDistance < DRAG_SCROLL_EDGE_SIZE) {
+      const ratio = (DRAG_SCROLL_EDGE_SIZE - topDistance) / DRAG_SCROLL_EDGE_SIZE;
+      return -Math.max(1, Math.round(ratio * DRAG_SCROLL_MAX_STEP));
+    }
+
+    const bottomDistance = viewportRect.bottom - pointerY;
+    if (bottomDistance < DRAG_SCROLL_EDGE_SIZE) {
+      const ratio = (DRAG_SCROLL_EDGE_SIZE - bottomDistance) / DRAG_SCROLL_EDGE_SIZE;
+      return Math.max(1, Math.round(ratio * DRAG_SCROLL_MAX_STEP));
+    }
+
+    return 0;
+  };
+
+  const handleGridMouseDown = (event) => {
+    if (event.button !== 0 || !mainbarViewportRef.current) {
+      return;
+    }
+
+    dragSelectionCleanupRef.current?.();
+
+    dragSelectionStateRef.current = {
+      startPoint: {
+        x: event.clientX,
+        y: event.clientY,
+      },
+      baseSelection: new Set(selectedImageNames),
+      additive: event.shiftKey || event.ctrlKey || event.metaKey,
+      originImageName:
+        event.target instanceof Element
+          ? event.target.closest("[data-image-name]")?.getAttribute("data-image-name")
+          : null,
+      active: false,
+    };
+    dragSelectionSetRef.current = new Set(selectedImageNames);
+
+    const handleWindowMouseMove = (moveEvent) => {
+      const dragState = dragSelectionStateRef.current;
+      const viewportNode = mainbarViewportRef.current;
+      if (!dragState || !viewportNode) {
+        return;
+      }
+
+      const currentPoint = {
+        x: moveEvent.clientX,
+        y: moveEvent.clientY,
+      };
+      const movedEnough =
+        Math.abs(currentPoint.x - dragState.startPoint.x) >= DRAG_SELECT_THRESHOLD ||
+        Math.abs(currentPoint.y - dragState.startPoint.y) >= DRAG_SELECT_THRESHOLD;
+
+      if (!dragState.active && !movedEnough) {
+        return;
+      }
+
+      dragState.active = true;
+
+      const viewportRect = viewportNode.getBoundingClientRect();
+      const autoScrollDelta = getAutoScrollDelta(currentPoint.y, viewportRect);
+      if (autoScrollDelta !== 0) {
+        viewportNode.scrollTop += autoScrollDelta;
+      }
+
+      const nextRect = buildSelectionRect(
+        dragState.startPoint,
+        currentPoint,
+        viewportNode.getBoundingClientRect(),
+      );
+
+      if (moveEvent.cancelable) {
+        moveEvent.preventDefault();
+      }
+      setDragSelectionRect(nextRect.overlayRect);
+      resolveDragSelection(nextRect.clientRect, dragState);
+    };
+
+    const handleWindowMouseUp = () => {
+      finishDragSelection({ shouldSuppressClick: true });
+    };
+
+    const handleWindowBlur = () => {
+      finishDragSelection();
+    };
+
+    dragSelectionCleanupRef.current = () => {
+      window.removeEventListener("mousemove", handleWindowMouseMove);
+      window.removeEventListener("mouseup", handleWindowMouseUp);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
+
+    window.addEventListener("mousemove", handleWindowMouseMove, { passive: false });
+    window.addEventListener("mouseup", handleWindowMouseUp);
+    window.addEventListener("blur", handleWindowBlur);
+  };
+
+  const handleImageCardClick = (event, imageName) => {
+    if (performance.now() < suppressCardClickUntilRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    const normalizedImageName = String(imageName || "").trim();
+    if (!normalizedImageName) {
+      return;
+    }
+
+    const isRangeSelection = event.shiftKey;
+    const isToggleSelection = event.ctrlKey || event.metaKey;
+
+    if (isRangeSelection) {
+      const anchorImageName =
+        selectionAnchorImageNameRef.current && visibleImageNames.includes(selectionAnchorImageNameRef.current)
+          ? selectionAnchorImageNameRef.current
+          : getFallbackAnchorImageName() || normalizedImageName;
+      const rangedImageNames = getImageRangeNames(
+        visibleImageNames,
+        anchorImageName,
+        normalizedImageName,
+      );
+
+      if (isToggleSelection) {
+        onReplaceSelection(mergeUniqueImageNames(selectedImageNames, rangedImageNames));
+      } else {
+        onReplaceSelection(rangedImageNames);
+      }
+      return;
+    }
+
+    setSelectionAnchor(normalizedImageName);
+
+    if (isToggleSelection) {
+      onToggleImageSelection(normalizedImageName);
+      return;
+    }
+
+    onReplaceSelection([normalizedImageName]);
+  };
 
   if (!open) {
     return null;
@@ -114,16 +561,12 @@ export function LabelerAutolabelModal({
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-base-300 px-5 py-4 md:px-6">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
-                Auto Label Workspace
+                Label otomatis dengan YOLO
               </p>
               <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
-                Sidebar form + mainbar frame selection
+                Auto Labeler
               </h2>
-              <Paragraph className="mt-2 max-w-3xl text-sm leading-6 opacity-100">
-                Form auto-label tetap di kiri, sedangkan grid kanan mengikuti folder aktif dan filter
-                frame di labeler agar kita bisa memilih banyak target sekaligus sebelum menjalankan
-                inferensi.
-              </Paragraph>
+              
             </div>
 
             <Button
@@ -141,6 +584,45 @@ export function LabelerAutolabelModal({
             <aside className="min-h-0 overflow-y-auto border-b border-base-300 bg-base-100 xl:border-b-0 xl:border-r">
               <div className="space-y-4 p-5">
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                     <div className="rounded-sm border border-base-300 bg-base-200/30 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">
+                    Aksi auto-label
+                    
+                  </p>
+                  <div className="mt-4 grid gap-2">
+                    <Button
+                      variant="warning"
+                      outline
+                      isSubmit={false}
+                      className="rounded-sm justify-start"
+                      disabled={!currentImageName || !modelValue.trim() || isRunning}
+                      onClick={onAutolabelCurrent}
+                    >
+                      Auto-label frame aktif
+                    </Button>
+                    <Button
+                      variant="warning"
+                      isSubmit={false}
+                      className="rounded-sm justify-start"
+                      disabled={!selectedCount || !modelValue.trim() || isRunning}
+                      onClick={onAutolabelSelection}
+                    >
+                      Auto-label frame terpilih
+                    </Button>
+                    <Button
+                      variant="warning"
+                      outline
+                      isSubmit={false}
+                      className="rounded-sm justify-start"
+                      disabled={!totalImages || !modelValue.trim() || isRunning}
+                      onClick={onAutolabelAll}
+                    >
+                      Auto-label semua frame
+                    </Button>
+                  </div>
+                 
+                </div>
+
                   <div className="rounded-sm border border-base-300 bg-base-200/40 p-3 text-sm">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Folder aktif
@@ -299,9 +781,7 @@ export function LabelerAutolabelModal({
                           <p className="font-medium text-slate-900">
                             Suppress nested duplicate person boxes
                           </p>
-                          <p className="text-xs text-slate-500">
-                            Cocok untuk mengurangi double detect orang yang sama pada auto-labeling.
-                          </p>
+                          
                         </div>
                       </label>
                     </div>
@@ -328,47 +808,7 @@ export function LabelerAutolabelModal({
                   </div>
                 </div>
 
-                <div className="rounded-sm border border-base-300 bg-base-200/30 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">
-                    Aksi auto-label
-                  </p>
-                  <div className="mt-4 grid gap-2">
-                    <Button
-                      variant="warning"
-                      outline
-                      isSubmit={false}
-                      className="rounded-sm justify-start"
-                      disabled={!currentImageName || !modelValue.trim() || isRunning}
-                      onClick={onAutolabelCurrent}
-                    >
-                      Auto-label frame aktif
-                    </Button>
-                    <Button
-                      variant="warning"
-                      isSubmit={false}
-                      className="rounded-sm justify-start"
-                      disabled={!selectedCount || !modelValue.trim() || isRunning}
-                      onClick={onAutolabelSelection}
-                    >
-                      Auto-label frame terpilih
-                    </Button>
-                    <Button
-                      variant="warning"
-                      outline
-                      isSubmit={false}
-                      className="rounded-sm justify-start"
-                      disabled={!totalImages || !modelValue.trim() || isRunning}
-                      onClick={onAutolabelAll}
-                    >
-                      Auto-label semua frame
-                    </Button>
-                  </div>
-                  <Paragraph className="mt-3 text-sm leading-6 opacity-100">
-                    `frame aktif` dan `frame terpilih` akan me-refresh label target. `semua frame`
-                    tetap aman untuk batch besar karena label yang sudah ada akan dipertahankan.
-                  </Paragraph>
-                </div>
-
+             
                 {isRunning ? (
                   <Alert type="info" className="rounded-sm text-sm">
                     Auto-label sedang berjalan. Kamu masih bisa meninjau pilihan frame di panel
@@ -399,32 +839,7 @@ export function LabelerAutolabelModal({
               <div className="flex h-full min-h-0 flex-col">
                 <div className="border-b border-base-300 bg-base-100/80 px-5 py-4">
                   <div className="flex flex-col gap-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">
-                          Mainbar Frame Grid
-                        </p>
-                        <h3 className="mt-2 text-xl font-bold text-slate-900">
-                          Pilih banyak frame untuk auto-label
-                        </h3>
-                        <Paragraph className="mt-2 text-sm leading-6 opacity-100">
-                          Grid ini memakai hasil filter dan pencarian yang sedang aktif di sidebar
-                          labeler. Klik kartu frame untuk menambah atau menghapusnya dari selection.
-                        </Paragraph>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <Badge type="info" className="px-3 py-3">
-                          Terlihat: {visibleImages.length}
-                        </Badge>
-                        <Badge type="warning" className="px-3 py-3">
-                          Terpilih: {selectedCount}
-                        </Badge>
-                        <Badge type="ghost" className="px-3 py-3">
-                          Pending: {pendingVisibleImages.length}
-                        </Badge>
-                      </div>
-                    </div>
+                   
 
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -434,7 +849,7 @@ export function LabelerAutolabelModal({
                         size="sm"
                         className="rounded-sm"
                         disabled={!currentImageName}
-                        onClick={onSelectCurrentImage}
+                        onClick={handleSelectCurrentImage}
                       >
                         Pilih frame aktif
                       </Button>
@@ -445,7 +860,7 @@ export function LabelerAutolabelModal({
                         size="sm"
                         className="rounded-sm"
                         disabled={!visibleImages.length}
-                        onClick={onSelectVisibleImages}
+                        onClick={handleSelectVisibleImages}
                       >
                         Pilih semua terlihat
                       </Button>
@@ -456,7 +871,7 @@ export function LabelerAutolabelModal({
                         size="sm"
                         className="rounded-sm"
                         disabled={!pendingVisibleImages.length}
-                        onClick={onSelectPendingImages}
+                        onClick={handleSelectPendingImages}
                       >
                         Pilih pending
                       </Button>
@@ -467,25 +882,33 @@ export function LabelerAutolabelModal({
                         size="sm"
                         className="rounded-sm"
                         disabled={!selectedCount}
-                        onClick={onClearSelection}
+                        onClick={handleClearVisibleSelection}
                       >
                         Reset selection
                       </Button>
                     </div>
+
+                    <p className="text-xs text-slate-500">
+                      Klik untuk pilih satu frame, `Ctrl/Cmd + klik` untuk toggle, `Shift + klik`
+                      untuk pilih rentang, dan `Ctrl/Cmd + A` untuk memilih semua frame terlihat.
+                    </p>
                   </div>
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto p-5">
-                  {visibleImages.length ? (
-                    <>
-                      {visibleImages.length > visiblePreviewCount ? (
-                        <Alert type="info" className="mb-4 rounded-sm text-sm">
-                          Menampilkan {renderedVisibleImages.length} dari {visibleImages.length} frame
-                          agar grid tetap ringan. Tombol load more tersedia di bawah.
-                        </Alert>
-                      ) : null}
-
-                      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                <div className="relative min-h-0 flex-1">
+                  <div
+                    ref={mainbarViewportRef}
+                    className={joinClasses(
+                      "h-full min-h-0 overflow-y-auto p-5",
+                      dragSelectionRect ? "cursor-crosshair" : "",
+                    )}
+                  >
+                    {visibleImages.length ? (
+                      <>
+                        <div
+                          className="grid select-none gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+                          onMouseDown={handleGridMouseDown}
+                        >
                         {renderedVisibleImages.map((item) => {
                           const isSelected = selectionSet.has(item.name);
                           const isCurrent = item.name === currentImageName;
@@ -494,14 +917,29 @@ export function LabelerAutolabelModal({
                           return (
                             <button
                               key={item.name}
+                              data-image-name={item.name}
                               type="button"
                               aria-pressed={isSelected}
-                              onClick={() => onToggleImageSelection(item.name)}
+                              aria-current={isCurrent ? "true" : undefined}
+                              onClick={(event) => handleImageCardClick(event, item.name)}
+                              onDragStart={(event) => event.preventDefault()}
+                              ref={(node) => {
+                                if (node) {
+                                  imageCardRefs.current.set(item.name, node);
+                                  return;
+                                }
+                                imageCardRefs.current.delete(item.name);
+                              }}
                               className={joinClasses(
-                                "group overflow-hidden rounded-sm border bg-base-100 text-left transition duration-150",
+                                "group overflow-hidden rounded-sm border bg-base-100 text-left transition duration-150 select-none",
                                 isSelected
                                   ? "border-warning bg-warning/10 shadow-lg ring-1 ring-warning/40"
-                                  : "border-base-300 hover:-translate-y-0.5 hover:border-base-content/20 hover:shadow-md",
+                                  : joinClasses(
+                                      "border-base-300",
+                                      dragSelectionRect
+                                        ? ""
+                                        : "hover:-translate-y-0.5 hover:border-base-content/20 hover:shadow-md",
+                                    ),
                                 isCurrent && !isSelected ? "border-info/70 ring-1 ring-info/20" : "",
                               )}
                             >
@@ -510,7 +948,12 @@ export function LabelerAutolabelModal({
                                   src={`/frames/${encodeURIComponent(item.name)}`}
                                   alt={item.name}
                                   loading="lazy"
-                                  className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]"
+                                  draggable={false}
+                                  onDragStart={(event) => event.preventDefault()}
+                                  className={joinClasses(
+                                    "pointer-events-none h-full w-full select-none object-cover transition duration-200",
+                                    dragSelectionRect ? "" : "group-hover:scale-[1.02]",
+                                  )}
                                 />
                                 <div className="absolute left-3 top-3 flex flex-wrap gap-2">
                                   {isSelected ? (
@@ -553,31 +996,46 @@ export function LabelerAutolabelModal({
                             </button>
                           );
                         })}
-                      </div>
-
-                      {hasMoreVisibleImages ? (
-                        <div className="mt-5 flex justify-center">
-                          <Button
-                            variant="ghost"
-                            outline
-                            isSubmit={false}
-                            className="rounded-sm"
-                            onClick={() =>
-                              setVisiblePreviewCount((current) =>
-                                Math.min(current + FRAME_GRID_BATCH_SIZE, visibleImages.length),
-                              )
-                            }
-                          >
-                            Tampilkan {Math.min(FRAME_GRID_BATCH_SIZE, visibleImages.length - visiblePreviewCount)} frame lagi
-                          </Button>
                         </div>
-                      ) : null}
-                    </>
-                  ) : (
-                    <Alert type="info" className="rounded-sm text-sm">
-                      Tidak ada frame aktif yang cocok dengan filter dan pencarian saat ini.
-                    </Alert>
-                  )}
+
+                        {hasMoreVisibleImages ? (
+                          <div className="mt-5 flex justify-center">
+                            <Button
+                              variant="ghost"
+                              outline
+                              isSubmit={false}
+                              className="rounded-sm"
+                              onClick={() =>
+                                setVisiblePreviewCount((current) =>
+                                  Math.min(current + FRAME_GRID_BATCH_SIZE, visibleImages.length),
+                                )
+                              }
+                            >
+                              Tampilkan {Math.min(FRAME_GRID_BATCH_SIZE, visibleImages.length - visiblePreviewCount)} frame lagi
+                            </Button>
+                          </div>
+                        ) : null}
+                      </>
+                    ) : (
+                      <Alert type="info" className="rounded-sm text-sm">
+                        Tidak ada frame aktif yang cocok dengan filter dan pencarian saat ini.
+                      </Alert>
+                    )}
+                  </div>
+
+                  {dragSelectionRect ? (
+                    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
+                      <div
+                        className="absolute rounded-sm border-2 border-warning bg-warning/20 shadow-sm"
+                        style={{
+                          left: `${dragSelectionRect.left}px`,
+                          top: `${dragSelectionRect.top}px`,
+                          width: `${dragSelectionRect.width}px`,
+                          height: `${dragSelectionRect.height}px`,
+                        }}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </section>

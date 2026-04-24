@@ -2,7 +2,7 @@
  * Route handler — createFetchHandler(appState).
  */
 
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 import { PROJECT_DIR, REACT_MODULES_DIR, REACT_SHELL_PATH, STATIC_DIR } from "./constants.js";
 import { HttpError } from "./errors.js";
@@ -118,6 +118,27 @@ export function createFetchHandler(appState) {
           const imageName = decodeURIComponent(pathname.slice("/frames/".length));
           const imagePath = appState.imagePath(imageName);
           return fileResponse(imagePath, { method: request.method });
+        }
+
+        if (pathname === "/api/frames/archive/export") {
+          const archive = appState.exportFrameArchive();
+          try {
+            const response = fileResponse(archive.archivePath, {
+              method: request.method,
+              contentType: "application/zip",
+              headers: {
+                "Content-Disposition": `attachment; filename="${archive.archiveName}"`,
+              },
+            });
+            const cleanupTimer = setTimeout(() => {
+              rmSync(archive.tempDir, { recursive: true, force: true });
+            }, 300_000);
+            cleanupTimer.unref?.();
+            return response;
+          } catch (error) {
+            rmSync(archive.tempDir, { recursive: true, force: true });
+            throw error;
+          }
         }
 
         if (pathname === "/api/config") {
@@ -374,6 +395,11 @@ export function createFetchHandler(appState) {
         return jsonResponse(await appState.footageRunner.importFiles(formData), 200);
       }
 
+      if (pathname === "/api/frames/archive/import") {
+        const formData = await request.formData();
+        return jsonResponse(await appState.importFrameArchive(formData), 200);
+      }
+
       const payload = await readJsonRequest(request);
 
       if (pathname === "/api/preferences") {
@@ -404,6 +430,11 @@ export function createFetchHandler(appState) {
         const imageName = String(payload.image || "").trim();
         const result = appState.saveCheckpointImage(imageName);
         return jsonResponse(result, 200);
+      }
+
+      if (pathname === "/api/frames/delete") {
+        const imageName = String(payload.image || "").trim();
+        return jsonResponse(appState.deleteFrame(imageName), 200);
       }
 
       if (pathname === "/api/autolabel") {

@@ -24,6 +24,7 @@ import { displayPath, pathInside, rebaseSubdirectoryPath, resolveProjectPath } f
 import { classNamesFromDataYaml } from "./parsers.js";
 import { PagePreferenceStore } from "./preferences.js";
 import { AutolabelRunManager } from "./managers/autolabel-manager.js";
+import { FrameArchiveManager } from "./managers/frame-archive-manager.js";
 import { FootageRunManager } from "./managers/footage-manager.js";
 import { TestRunManager } from "./managers/test-manager.js";
 import { TrainingRunManager } from "./managers/training-manager.js";
@@ -47,6 +48,7 @@ export class AppState {
     testRunner,
     trainingRunner,
     autolabelRunner,
+    frameArchiveManager,
     pagePreferences,
     pythonBin,
     trainScript,
@@ -61,6 +63,7 @@ export class AppState {
     this.testRunner = testRunner;
     this.trainingRunner = trainingRunner;
     this.autolabelRunner = autolabelRunner;
+    this.frameArchiveManager = frameArchiveManager;
     this.pagePreferences = pagePreferences;
     this.pythonBin = pythonBin;
     this.trainScript = path.resolve(trainScript);
@@ -216,6 +219,54 @@ export class AppState {
     mkdirSync(path.dirname(labelPath), { recursive: true });
     writeFileSync(labelPath, `${lines.join("\n")}${lines.length ? "\n" : ""}`, "utf8");
     return { saved: true, boxCount: lines.length, labelPath: String(labelPath) };
+  }
+
+  deleteFrame(imageName) {
+    const safeImageName = path.basename(this.imagePath(imageName));
+    const imagePath = this.imagePath(safeImageName);
+    const labelPath = this.labelPath(safeImageName);
+    const hadLabelFile = existsSync(labelPath);
+    const activeCheckpointImage = this.readCheckpointImage();
+    const checkpointCleared = activeCheckpointImage === safeImageName;
+
+    unlinkSync(imagePath);
+    if (hadLabelFile) {
+      unlinkSync(labelPath);
+    }
+    if (checkpointCleared) {
+      this.clearCheckpointImage();
+    }
+
+    return {
+      deleted: true,
+      image: safeImageName,
+      framePath: displayPath(imagePath),
+      labelPath: hadLabelFile ? displayPath(labelPath) : null,
+      labelDeleted: hadLabelFile,
+      checkpointCleared,
+      checkpointImage: this.readCheckpointImage(),
+      remainingImageCount: listTopLevelFiles(this.framesDir, IMAGE_EXTENSIONS).length,
+    };
+  }
+
+  exportFrameArchive() {
+    return this.frameArchiveManager.exportArchive({
+      framesDir: this.framesDir,
+      labelsDir: this.labelsDir,
+      classNames: this.classNames,
+      checkpointImage: this.readCheckpointImage(),
+    });
+  }
+
+  async importFrameArchive(formData) {
+    const result = await this.frameArchiveManager.importArchive(formData);
+    const nextFramesDir = resolveProjectPath(result.framesDir);
+    const activePaths = this.setFramesDir(nextFramesDir);
+    return {
+      ...result,
+      ...activePaths,
+      checkpointImage: this.readCheckpointImage(),
+    };
   }
 
   autolabelConfigPayload(overrides = {}) {
@@ -402,6 +453,12 @@ export function createServerState(options) {
     autolabelRunner: new AutolabelRunManager({
       projectDir: PROJECT_DIR,
       trainScript: DEFAULT_TRAIN_RUNNER,
+      pythonBin,
+    }),
+    frameArchiveManager: new FrameArchiveManager({
+      projectDir: PROJECT_DIR,
+      framesRootDir,
+      labelsRootDir,
       pythonBin,
     }),
     pagePreferences,

@@ -31,6 +31,7 @@ import {
   LabelerToolPanel,
   LabelerHeader,
   LabelerAutolabelModal,
+  LabelerArchiveModal,
   LabelerLogs,
   BOX_COLORS,
   MAX_UNDO_STEPS,
@@ -47,12 +48,35 @@ import {
 
 const AUTO_CHECKPOINT_SAVE_AND_NEXT_INTERVAL = 10;
 
+function getDownloadFilename(contentDisposition, fallbackName) {
+  const headerValue = String(contentDisposition || "");
+  const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1]);
+  }
+
+  const filenameMatch = headerValue.match(/filename="?([^"]+)"?/i);
+  return filenameMatch?.[1] || fallbackName;
+}
+
+async function readResponseError(response) {
+  const contentType = String(response.headers.get("content-type") || "");
+  if (contentType.includes("application/json")) {
+    const payload = await response.json().catch(() => ({}));
+    return payload?.error || `HTTP ${response.status}`;
+  }
+
+  const text = await response.text().catch(() => "");
+  return text || `HTTP ${response.status}`;
+}
+
 export default function LabelerPage() {
   // State management
   const [classNames, setClassNames] = useState([]);
   const [images, setImages] = useState([]);
   const [frameFolders, setFrameFolders] = useState([]);
   const [activeFramesDir, setActiveFramesDir] = useState("");
+  const [activeLabelsDir, setActiveLabelsDir] = useState("");
   const [currentImageName, setCurrentImageName] = useState(null);
   const [checkpointImageName, setCheckpointImageName] = useState(null);
   const [boxes, setBoxes] = useState([]);
@@ -82,6 +106,9 @@ export default function LabelerPage() {
   const [autolabelWarnings, setAutolabelWarnings] = useState([]);
   const [autolabelJob, setAutolabelJob] = useState(null);
   const [isAutolabelModalOpen, setIsAutolabelModalOpen] = useState(false);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [archiveModalMode, setArchiveModalMode] = useState("import");
+  const [isDeletingCurrentFrame, setIsDeletingCurrentFrame] = useState(false);
   const [autolabelSelectedImages, setAutolabelSelectedImages] = useState([]);
   const [isPreferenceReady, setIsPreferenceReady] = useState(false);
 
@@ -467,6 +494,24 @@ export default function LabelerPage() {
   const getLabelApiUrl = (name) =>
     `/api/labels?image=${encodeURIComponent(name)}`;
 
+  const clearActiveFrameState = () => {
+    loadTokenRef.current += 1;
+    interactionRef.current = null;
+    draftBoxesRef.current = null;
+    currentImageNameRef.current = null;
+    navigationImageNameRef.current = null;
+    setCurrentImageName(null);
+    setImageSrc("");
+    setNaturalSize({ width: 0, height: 0 });
+    setHasLabelFile(false);
+    setParseError(null);
+    markDirty(false);
+    syncNextBoxId([]);
+    setBoxes([]);
+    syncSelectedBoxId(null);
+    setUndoStack([]);
+  };
+
   const syncCheckpointState = (checkpointName) => {
     const normalized =
       typeof checkpointName === "string" ? checkpointName.trim() : "";
@@ -636,6 +681,7 @@ export default function LabelerPage() {
       setCheckpointImageName(checkpointName);
       setFrameFolders(config.frameFolders || []);
       setActiveFramesDir(config.activeFramesDir || "");
+      setActiveLabelsDir(config.activeLabelsDir || "");
       if (!preferencesHydratedRef.current) {
         setFilterValue(
           typeof pagePreferences.filterValue === "string" && pagePreferences.filterValue
@@ -683,8 +729,7 @@ export default function LabelerPage() {
       if (nextImages.length) {
         await selectImage(nextImages[0].name);
       } else {
-        setCurrentImageName(null);
-        setBoxes([]);
+        clearActiveFrameState();
       }
       return { config, images: nextImages };
     } catch (error) {
@@ -692,6 +737,233 @@ export default function LabelerPage() {
       return null;
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const openArchiveWorkspace = (mode = "import") => {
+    setArchiveModalMode(mode === "export" ? "export" : "import");
+    setIsArchiveModalOpen(true);
+  };
+
+  const handleImportFrameArchive = async ({ file, targetSubdir }) => {
+    if (isLoading) {
+      setNotice(createNotice("warning", "Tunggu sampai workspace selesai dimuat."));
+      return false;
+    }
+    if (isLabelingLocked) {
+      setNotice(createNotice("warning", "Import dinonaktifkan saat auto-label berjalan."));
+      return false;
+    }
+    if (dirtyRef.current) {
+      setNotice(
+        createNotice(
+          "warning",
+          "Frame aktif punya perubahan yang belum disimpan. Simpan dulu sebelum import bundle baru.",
+        ),
+      );
+      return false;
+    }
+    if (!file) {
+      setNotice(createNotice("warning", "Pilih file zip bundle sebelum import."));
+      return false;
+    }
+
+    try {
+      setNotice(createNotice("info", "Mengimpor bundle frame-label ke workspace..."));
+      const formData = new FormData();
+      formData.append("archive", file);
+      if (String(targetSubdir || "").trim()) {
+        formData.append("targetSubdir", String(targetSubdir || "").trim());
+      }
+
+      const result = await fetchJson("/api/frames/archive/import", {
+        method: "POST",
+        body: formData,
+      });
+      await reloadConfig(false);
+      setIsArchiveModalOpen(false);
+      setNotice(
+        createNotice(
+          "success",
+          `${result.imageCount || 0} frame dan ${result.labelCount || 0} label berhasil diimport ke ${result.framesDir}.`,
+        ),
+      );
+      return true;
+    } catch (error) {
+      setNotice(createNotice("error", error.message));
+      return false;
+    }
+  };
+
+  const handleExportFrameArchive = async () => {
+    if (isLoading) {
+      setNotice(createNotice("warning", "Tunggu sampai workspace selesai dimuat."));
+      return false;
+    }
+    if (isLabelingLocked) {
+      setNotice(createNotice("warning", "Export dinonaktifkan saat auto-label berjalan."));
+      return false;
+    }
+    if (dirtyRef.current) {
+      setNotice(
+        createNotice(
+          "warning",
+          "Frame aktif punya perubahan yang belum disimpan. Simpan dulu supaya isi zip sinkron dengan label di disk.",
+        ),
+      );
+      return false;
+    }
+    if (!imagesRef.current.length) {
+      setNotice(createNotice("warning", "Tidak ada frame di folder aktif untuk diexport."));
+      return false;
+    }
+
+    try {
+      setNotice(createNotice("info", "Membuat bundle zip frame-label..."));
+      const response = await fetch("/api/frames/archive/export", {
+        method: "GET",
+      });
+      if (!response.ok) {
+        throw new Error(await readResponseError(response));
+      }
+
+      const archiveBlob = await response.blob();
+      const archiveName = getDownloadFilename(
+        response.headers.get("content-disposition"),
+        `yolo-lab-frames-${Date.now()}.zip`,
+      );
+      const downloadUrl = window.URL.createObjectURL(archiveBlob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = archiveName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(downloadUrl);
+      }, 1000);
+
+      setIsArchiveModalOpen(false);
+      setNotice(createNotice("success", `Bundle ${archiveName} siap diunduh.`));
+      return true;
+    } catch (error) {
+      setNotice(createNotice("error", error.message));
+      return false;
+    }
+  };
+
+  const getDeletionFallbackImageName = (imageName) => {
+    const normalizedImageName = String(imageName || "").trim();
+    if (!normalizedImageName) {
+      return null;
+    }
+
+    const findNeighbor = (collection) => {
+      const list = Array.isArray(collection) ? collection : [];
+      const currentIndexInList = list.findIndex((item) => item.name === normalizedImageName);
+      if (currentIndexInList < 0) {
+        return null;
+      }
+      return list[currentIndexInList + 1]?.name || list[currentIndexInList - 1]?.name || null;
+    };
+
+    return findNeighbor(visibleImages) || findNeighbor(imagesRef.current) || null;
+  };
+
+  const handleDeleteCurrentFrame = async () => {
+    if (isLoading || isDeletingCurrentFrame) {
+      setNotice(createNotice("warning", "Tunggu sampai workspace selesai dimuat."));
+      return false;
+    }
+    if (isLabelingLocked) {
+      setNotice(createNotice("warning", "Hapus frame dinonaktifkan saat auto-label berjalan."));
+      return false;
+    }
+
+    const imageName = String(currentImageNameRef.current || "").trim();
+    if (!imageName) {
+      setNotice(createNotice("warning", "Tidak ada frame aktif untuk dihapus."));
+      return false;
+    }
+
+    const currentItem = imagesRef.current.find((item) => item.name === imageName) || null;
+    const checkpointWarning = checkpointImageNameRef.current === imageName
+      ? "\n\nFrame ini juga sedang menjadi checkpoint aktif dan checkpoint akan ikut dibersihkan."
+      : "";
+    const dirtyWarning = dirtyRef.current
+      ? "\n\nPerubahan box yang belum disimpan pada frame ini akan ikut hilang."
+      : "";
+    const labelWarning = currentItem?.hasLabelFile
+      ? " beserta file label YOLO pasangannya"
+      : "";
+    const confirmed = window.confirm(
+      `Hapus frame aktif "${imageName}"${labelWarning}?${checkpointWarning}${dirtyWarning}\n\nAksi ini tidak bisa dibatalkan.`,
+    );
+    if (!confirmed) {
+      return false;
+    }
+
+    const nextImageName = getDeletionFallbackImageName(imageName);
+
+    setIsDeletingCurrentFrame(true);
+    try {
+      setNotice(createNotice("info", `Menghapus frame ${imageName}...`));
+      const result = await fetchJson("/api/frames/delete", {
+        method: "POST",
+        body: JSON.stringify({ image: imageName }),
+      });
+
+      markDirty(false);
+
+      const refreshedConfig = await reloadConfig(false);
+      if (!refreshedConfig) {
+        const nextCheckpointImage =
+          typeof result.checkpointImage === "string" && result.checkpointImage.trim()
+            ? result.checkpointImage.trim()
+            : null;
+        checkpointImageNameRef.current = nextCheckpointImage;
+        setCheckpointImageName(nextCheckpointImage);
+        setImages((current) =>
+          current
+            .filter((item) => item.name !== imageName)
+            .map((item) => ({
+              ...item,
+              isCheckpoint: item.name === nextCheckpointImage,
+            })),
+        );
+        clearActiveFrameState();
+        setNotice(
+          createNotice(
+            "warning",
+            `Frame ${imageName} sudah dihapus, tetapi workspace gagal dimuat ulang. Klik Refresh untuk sinkron ulang.`,
+          ),
+        );
+        return false;
+      }
+
+      const refreshedImages = refreshedConfig?.images || [];
+      if (
+        nextImageName &&
+        refreshedImages.some((item) => item.name === nextImageName) &&
+        currentImageNameRef.current !== nextImageName
+      ) {
+        await selectImage(nextImageName, { force: true });
+      }
+
+      setNotice(
+        createNotice(
+          "success",
+          result.labelDeleted
+            ? `Frame ${imageName} dan file label pasangannya berhasil dihapus.`
+            : `Frame ${imageName} berhasil dihapus.`,
+        ),
+      );
+      return true;
+    } catch (error) {
+      setNotice(createNotice("error", error.message));
+      return false;
+    } finally {
+      setIsDeletingCurrentFrame(false);
     }
   };
 
@@ -1743,8 +2015,12 @@ export default function LabelerPage() {
           undoLastChange();
         } else if (event.key === "s" || event.key === "S") {
           event.preventDefault();
-          void saveCurrentLabel(event.shiftKey);
-        } else if ((event.key === "x" || event.key === "X") && selectedBoxIdRef.current != null) {
+          void saveCurrentLabel(event.shiftKey);          
+        } else if (event.key === "a" || event.key === "A") {
+          event.preventDefault();
+          navigate(-1);
+        }
+        else if ((event.key === "x" || event.key === "X") && selectedBoxIdRef.current != null) {
           if (event.repeat) {
             return;
           }
@@ -1880,6 +2156,11 @@ export default function LabelerPage() {
   const currentIsCheckpoint = Boolean(
     currentImageItem && currentImageItem.name === checkpointImageName,
   );
+  const archiveWarning = isLabelingLocked
+    ? "Import/export dinonaktifkan sementara selama auto-label masih berjalan."
+    : dirty
+      ? "Simpan frame aktif terlebih dahulu sebelum import atau export bundle."
+      : "";
   const currentIndex = visibleImages.findIndex(
     (item) => item.name === currentImageName,
   );
@@ -1892,12 +2173,12 @@ export default function LabelerPage() {
   return (
     <>
       <div
-        className="grid h-full min-h-0 gap-4 grid-rows-[minmax(280px,42vh)_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] lg:grid-rows-1"
+        className="grid h-full min-h-0 gap-4 grid-rows-[minmax(280px,42vh)_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] lg:grid-rows-1 "
         style={{
           height: "calc(100% - var(--yolo-log-dock-height, 0px))",
         }}
       >
-        <aside className="min-h-0 h-[550px] overflow-y-scroll pr-1">
+        <aside className="min-h-0  overflow-y-scroll pr-1 h-[600px]">
           <div className="grid gap-4">
             <LabelerHeader
               currentImageItem={currentImageItem}
@@ -1921,15 +2202,20 @@ export default function LabelerPage() {
               images={images}
               visibleImages={visibleImages}
               activeFramesDir={activeFramesDir}
+              activeLabelsDir={activeLabelsDir}
               frameFolders={frameFolders}
               filterValue={filterValue}
               searchQuery={searchQuery}
               isLoading={isLoading}
               disabled={isLabelingLocked}
+              archiveWarning={archiveWarning}
+              archiveDisabled={isLoading}
               onFramesDirChange={changeFramesDirectory}
               onFilterChange={setFilterValue}
               onSearchChange={setSearchQuery}
               onRefresh={() => reloadConfig(true)}
+              onOpenImportModal={() => openArchiveWorkspace("import")}
+              onOpenExportModal={() => openArchiveWorkspace("export")}
               onImageSelect={selectImage}
               currentImageName={currentImageName}
             />
@@ -1983,6 +2269,9 @@ export default function LabelerPage() {
             onZoomIn={zoomIn}
             onZoomOut={zoomOut}
             onResetZoom={resetZoom}
+            onDeleteCurrentFrame={handleDeleteCurrentFrame}
+            deleteDisabled={Boolean(isLoading || isLabelingLocked || isDeletingCurrentFrame || !currentImageName)}
+            deleteBusy={isDeletingCurrentFrame}
             onCanvasMouseDown={handleCanvasMouseDown}
           />
         </section>
@@ -2004,6 +2293,7 @@ export default function LabelerPage() {
         autolabelWarnings={autolabelWarnings}
         job={autolabelJob}
         onAutolabelConfigChange={setAutolabelConfig}
+        onReplaceSelection={replaceAutolabelSelection}
         onSelectCurrentImage={selectCurrentAutolabelImage}
         onSelectVisibleImages={selectVisibleAutolabelImages}
         onSelectPendingImages={selectPendingAutolabelImages}
@@ -2013,6 +2303,21 @@ export default function LabelerPage() {
         onAutolabelSelection={handleAutolabelSelection}
         onAutolabelAll={handleAutolabelAll}
       />
+
+      <LabelerArchiveModal
+        open={isArchiveModalOpen}
+        initialMode={archiveModalMode}
+        onClose={() => setIsArchiveModalOpen(false)}
+        activeFramesDir={activeFramesDir}
+        activeLabelsDir={activeLabelsDir}
+        images={images}
+        classNames={classNames}
+        currentImageName={currentImageName}
+        disabled={Boolean(isLoading || isLabelingLocked || dirty)}
+        warningMessage={archiveWarning}
+        onImport={handleImportFrameArchive}
+        onExport={handleExportFrameArchive}
+N      />
     </>
   );
 }

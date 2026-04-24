@@ -137,5 +137,5 @@ htmlcov/
 *.onnx
 *.json
 
-static/*
+app/static/*
 

@@ -1,10 +1,10 @@
 {
-  "framesDir": "train/frames/frame_20260421_190",
-  "labelsDir": "train/labels/frame_20260421_190",
+  "framesDir": "train/frames/frame_20260422_3634",
+  "labelsDir": "train/labels/frame_20260422_3634",
   "datasetDir": "train/dataset",
   "runsDir": "train/runs",
   "classNames": "person",
-  "trainModel": "model/yolo26x.pt",
+  "trainModel": "model/yolov5nu.pt",
   "imgsz": 640,
   "epochs": 10,
   "batch": 4,
@@ -13,7 +13,7 @@
   "valRatio": 0.2,
   "seed": 42,
   "device": "auto",
-  "runName": "visitor_person_cpu_bootstrap_yolo26x",
+  "runName": "visitor_person_cpu_bootstrap_yolov5nu",
   "allowEmptyLabels": false,
   "cache": false
 }

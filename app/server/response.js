@@ -162,7 +162,15 @@ function parseByteRange(rangeHeader, sizeBytes) {
   return { start, end };
 }
 
-export function fileResponse(filePath, { method = "GET", contentType = null, rangeHeader = null } = {}) {
+export function fileResponse(
+  filePath,
+  {
+    method = "GET",
+    contentType = null,
+    rangeHeader = null,
+    headers: extraHeaders = null,
+  } = {},
+) {
   if (!existsSync(filePath) || !statSync(filePath).isFile()) {
     throw new HttpError(404, "File tidak ditemukan.");
   }
@@ -174,6 +182,13 @@ export function fileResponse(filePath, { method = "GET", contentType = null, ran
   headers.set("Accept-Ranges", "bytes");
   if ([".html", ".js", ".css"].includes(path.extname(filePath).toLowerCase())) {
     headers.set("Cache-Control", "no-store");
+  }
+  if (extraHeaders) {
+    for (const [key, value] of Object.entries(extraHeaders)) {
+      if (value != null) {
+        headers.set(key, String(value));
+      }
+    }
   }
 
   if (range) {

@@ -6,7 +6,7 @@ import { LabelerSidebarSection } from "./LabelerSidebarSection.js";
  * Left sidebar component for LabelerPage
  * Shows dataset navigator, frames list, and summary stats
  */
-export function LabelerSidebar({ images, visibleImages, currentImageName, activeFramesDir, frameFolders, filterValue, searchQuery, isLoading, disabled = false, onFramesDirChange, onFilterChange, onSearchChange, onRefresh, onImageSelect, }) {
+export function LabelerSidebar({ images, visibleImages, currentImageName, activeFramesDir, activeLabelsDir, frameFolders, filterValue, searchQuery, isLoading, disabled = false, archiveDisabled = false, archiveWarning = "", onFramesDirChange, onFilterChange, onSearchChange, onRefresh, onOpenImportModal, onOpenExportModal, onImageSelect, }) {
     const summaryCards = [
         { label: "Total frame", value: images.length },
         { label: "Sudah dilabel", value: images.filter((item) => item.hasLabelFile).length },
@@ -41,6 +41,19 @@ export function LabelerSidebar({ images, visibleImages, currentImageName, active
                         React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, "Aktif"),
                         React.createElement("p", { className: "mt-1 break-all font-mono text-[11px] text-slate-700" }, activeFramesDir || "-")),
                     React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-sm border border-base-300 px-4", onClick: onRefresh, disabled: isLoading || disabled }, "Refresh")))),
+        React.createElement(LabelerSidebarSection, { title: "Bundle", eyebrow: "Import / Export", description: "Satukan folder frame aktif dan pasangan label-nya ke bundle zip, atau masukkan bundle export kembali ke workspace.", badge: React.createElement(Badge, { type: "info", className: "px-3 py-3" }, "ZIP"), defaultOpen: true },
+            React.createElement("div", { className: "space-y-4" },
+                archiveWarning ? (React.createElement(Alert, { type: "warning", className: "rounded-sm text-sm" }, archiveWarning)) : (React.createElement(Alert, { type: "info", className: "rounded-sm text-sm" }, "Import menerima bundle hasil export labeler ini dengan isi `frames/` dan `labels/`.")),
+                React.createElement("div", { className: "grid gap-3" },
+                    React.createElement("div", { className: "rounded-sm border border-base-300 bg-base-200/40 px-3 py-3" },
+                        React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, "Frames aktif"),
+                        React.createElement("p", { className: "mt-2 break-all font-mono text-[11px] text-slate-700" }, activeFramesDir || "-")),
+                    React.createElement("div", { className: "rounded-sm border border-base-300 bg-base-200/40 px-3 py-3" },
+                        React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, "Labels aktif"),
+                        React.createElement("p", { className: "mt-2 break-all font-mono text-[11px] text-slate-700" }, activeLabelsDir || "-"))),
+                React.createElement("div", { className: "grid gap-3 sm:grid-cols-2" },
+                    React.createElement(Button, { variant: "info", isSubmit: false, className: "rounded-sm px-4", onClick: onOpenImportModal, disabled: archiveDisabled }, "Import Frames"),
+                    React.createElement(Button, { variant: "warning", isSubmit: false, className: "rounded-sm px-4", onClick: onOpenExportModal, disabled: archiveDisabled }, "Export Frames")))),
         React.createElement(LabelerSidebarSection, { title: "Frames", eyebrow: "Browser", description: "Pilih frame yang ingin dilabel dari daftar aktif.", badge: React.createElement(Badge, { type: "info", className: "px-3 py-3" }, visibleImages.length), defaultOpen: true },
             React.createElement("div", { className: "space-y-3 h-[400px] overflow-auto" }, visibleImages.length ? (visibleImages.map((item) => {
                 const itemState = item.parseError
