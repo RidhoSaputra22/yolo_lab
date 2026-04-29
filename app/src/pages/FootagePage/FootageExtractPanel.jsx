@@ -4,7 +4,7 @@ import { FormFieldControl } from "../../components/FormFieldControl.jsx";
 
 export function FootageExtractPanel({ layout, formValues, suggestions, onFieldChange }) {
   return (
-    <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+    <Card className="rounded-md border border-base-300 bg-base-100/90 shadow-lg">
       <div className="space-y-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
@@ -20,7 +20,7 @@ export function FootageExtractPanel({ layout, formValues, suggestions, onFieldCh
             <details
               key={section.id}
               open
-              className="rounded-sm border border-base-300 bg-base-100/85"
+              className="rounded-md border border-base-300 bg-base-100/85"
             >
               <summary className="cursor-pointer list-none px-4 py-4">
                 <p className="text-sm font-bold text-slate-900">{section.title}</p>

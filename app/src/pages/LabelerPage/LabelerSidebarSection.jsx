@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { joinClasses } from "../../shared/utils.js";
+import { Badge } from "../../ui.js";
 
 export function LabelerSidebarSection({
   title,
@@ -22,7 +23,7 @@ export function LabelerSidebarSection({
   return (
     <details
       className={joinClasses(
-        "group overflow-hidden rounded-sm border border-base-300 bg-base-100/90 shadow-lg",
+        "overflow-visible rounded-md border border-base-300 bg-base-100/90 shadow-lg",
         className,
       )}
       open={open}
@@ -38,20 +39,28 @@ export function LabelerSidebarSection({
             ) : null}
             <h3 className="mt-1 text-lg font-bold text-slate-900">{title}</h3>
             {description ? (
-              <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {description}
+              </p>
             ) : null}
           </div>
 
           <div className="flex items-center gap-2">
-            {badge}
-            <span className="text-xs font-semibold text-slate-400 transition-transform duration-150 group-open:rotate-180">
-              ▼
-            </span>
+            <Badge>
+              <span className="font-semibold text-white transition-transform duration-150 group-open:rotate-180">
+                ▼
+              </span>
+            </Badge>
           </div>
         </div>
       </summary>
 
-      <div className={joinClasses("border-t border-base-300 px-4 py-4", contentClassName)}>
+      <div
+        className={joinClasses(
+          "border-t border-base-300 px-4 py-4",
+          contentClassName,
+        )}
+      >
         {children}
       </div>
     </details>

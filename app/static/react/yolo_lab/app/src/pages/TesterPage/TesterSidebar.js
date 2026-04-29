@@ -6,7 +6,7 @@ import { Card } from "../../ui.js";
  */
 export function TesterSidebar({ runtimePaths }) {
     return (React.createElement("aside", { className: "grid h-fit gap-4 xl:sticky xl:top-28" },
-        React.createElement(Card, { className: "rounded-sm border border-base-300 bg-slate-900 text-slate-50 shadow-xl" },
+        React.createElement(Card, { className: "rounded-md border border-base-300 bg-slate-900 text-slate-50 shadow-xl" },
             React.createElement("div", { className: "space-y-3" },
                 React.createElement("div", null,
                     React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-200" }, "Runtime"),
@@ -16,7 +16,7 @@ export function TesterSidebar({ runtimePaths }) {
                     ["Runner", runtimePaths.runnerScript],
                     ["Python", runtimePaths.pythonBin],
                     ["Output", runtimePaths.defaultOutputDir],
-                ].map(([label, value]) => (React.createElement("div", { key: label, className: "rounded-sm border border-white/10 bg-white/5 px-3 py-2" },
+                ].map(([label, value]) => (React.createElement("div", { key: label, className: "rounded-md border border-white/10 bg-white/5 px-3 py-2" },
                     React.createElement("p", { className: "text-[10px] uppercase tracking-[0.18em] text-slate-400" }, label),
                     React.createElement("p", { className: "mt-1 break-all font-mono text-[11px] text-slate-100" }, value)))))) : (React.createElement("p", { className: "text-xs text-slate-300" }, "Memuat runtime config..."))))));
 }

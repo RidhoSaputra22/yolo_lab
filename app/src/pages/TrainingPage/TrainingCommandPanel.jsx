@@ -27,7 +27,7 @@ export function TrainingCommandPanel({
   }[previewState];
 
   return (
-    <Card className="min-w-0 rounded-sm border border-base-300 bg-base-100/90 shadow-xl">
+    <Card className="min-w-0 rounded-md border border-base-300 bg-base-100/90 shadow-xl">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-700">
@@ -49,7 +49,7 @@ export function TrainingCommandPanel({
       <div className="mt-5 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         {/* Form sections */}
         <div className="grid gap-3">
-          <Card className="min-w-0 rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+          <Card className="min-w-0 rounded-md border border-base-300 bg-base-100/90 shadow-lg">
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -83,7 +83,7 @@ export function TrainingCommandPanel({
           {(layout || []).map((section) => (
             <details
               key={section.id}
-              className="rounded-sm border border-base-300 bg-base-100/85"
+              className="rounded-md border border-base-300 bg-base-100/85"
               open={section.id === "dataset" || section.id === "training"}
             >
               <summary className="cursor-pointer list-none px-5 py-4">
@@ -123,7 +123,7 @@ export function TrainingCommandPanel({
         {/* Command preview + preset summary */}
         <div className="grid gap-4">
           {/* Command display */}
-          <Card className="min-w-0 rounded-sm border border-base-300 bg-slate-950 text-slate-100 shadow-lg">
+          <Card className="min-w-0 rounded-md border border-base-300 bg-slate-950 text-slate-100 shadow-lg">
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-lg font-bold">Command</h3>
@@ -131,7 +131,7 @@ export function TrainingCommandPanel({
                   {previewBadge.label}
                 </Badge>
               </div>
-              <pre className="max-h-[320px] overflow-auto rounded-sm bg-slate-900/70 p-4 text-xs leading-6 text-slate-100">
+              <pre className="max-h-[320px] overflow-auto rounded-md bg-slate-900/70 p-4 text-xs leading-6 text-slate-100">
                 {previewError ||
                   preview?.commandDisplay ||
                   "Isi form konfigurasi untuk melihat command training."}
@@ -140,7 +140,7 @@ export function TrainingCommandPanel({
           </Card>
 
           {/* Preset summary */}
-          <Card className="min-w-0 rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+          <Card className="min-w-0 rounded-md border border-base-300 bg-base-100/90 shadow-lg">
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-lg font-bold">Preset Penting</h3>
@@ -150,7 +150,7 @@ export function TrainingCommandPanel({
               </div>
               <div className="grid gap-3">
                 {presetSummary.map(([label, value]) => (
-                  <div key={label} className="rounded-sm border border-base-300 bg-base-200/50 p-3">
+                  <div key={label} className="rounded-md border border-base-300 bg-base-200/50 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       {label}
                     </p>

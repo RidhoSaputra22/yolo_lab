@@ -33,7 +33,7 @@ export function TesterFormSection({ layout, formValues, suggestions, onFieldChan
         if (!visibleFields.length) {
             return null;
         }
-        return (React.createElement("details", { key: section.id, className: "rounded-sm border border-base-300 bg-base-100/85", open: section.id === "source"
+        return (React.createElement("details", { key: section.id, className: "rounded-md border border-base-300 bg-base-100/85", open: section.id === "source"
                 || section.id === "yolo-tuning"
                 || section.id === "model"
                 || section.id === "employee-tracking" },

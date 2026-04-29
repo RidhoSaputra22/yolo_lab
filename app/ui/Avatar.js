@@ -52,7 +52,7 @@ export default function Avatar({
       {...rest}
     >
       <div
-        className={`${sizeClass} rounded-sm ${src ? "" : "bg-primary text-primary-content placeholder"} flex justify-center items-center`}
+        className={`${sizeClass} rounded-md ${src ? "" : "bg-primary text-primary-content placeholder"} flex justify-center items-center`}
       >
         {src ? (
           <img src={src} alt={name} />

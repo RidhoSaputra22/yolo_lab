@@ -90,7 +90,7 @@ function ToastCard({ toast, onDismiss }) {
   return (
     <div
       className={joinClasses(
-        "pointer-events-auto flex items-start gap-3 rounded-sm border px-4 py-3 shadow-xl backdrop-blur-sm transition",
+        "pointer-events-auto flex items-start gap-3 rounded-md border px-4 py-3 shadow-xl backdrop-blur-sm transition",
         toneClass[resolvedType] || toneClass.info,
       )}
       role={resolvedType === "error" ? "alert" : "status"}
@@ -103,7 +103,7 @@ function ToastCard({ toast, onDismiss }) {
       </div>
       <button
         type="button"
-        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm  text-sm font-semibold hover:border-current focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-slate-100 "
+        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md  text-sm font-semibold hover:border-current focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-slate-100 "
         aria-label="Tutup notifikasi"
         onClick={() => onDismiss(toast.id)}
       >

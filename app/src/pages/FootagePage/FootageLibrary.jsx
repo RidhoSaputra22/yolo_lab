@@ -14,7 +14,7 @@ export function FootageLibrary({
 
   return (
     <div className="grid gap-4">
-      <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+      <Card className="rounded-md border border-base-300 bg-base-100/90 shadow-lg">
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -36,7 +36,7 @@ export function FootageLibrary({
           </div>
 
           {!footageItems.length ? (
-            <Alert type="info" className="rounded-sm text-sm">
+            <Alert type="info" className="rounded-md text-sm">
               Belum ada footage di folder ini. Import video dulu, lalu jalankan ekstraksi frame.
             </Alert>
           ) : (
@@ -47,7 +47,7 @@ export function FootageLibrary({
                     key={item.path}
                     type="button"
                     className={joinClasses(
-                      "rounded-sm border p-3 text-left transition",
+                      "rounded-md border p-3 text-left transition",
                       item.path === selectedFootagePath
                         ? "border-primary bg-primary/5 shadow-md"
                         : "border-base-300 bg-base-100 hover:border-primary hover:bg-primary/5",
@@ -72,7 +72,7 @@ export function FootageLibrary({
               </div>
 
               <div className="grid gap-4">
-                <div className="overflow-hidden rounded-sm border border-base-300 bg-slate-950 shadow-xl">
+                <div className="overflow-hidden rounded-md border border-base-300 bg-slate-950 shadow-xl">
                   {selectedFootage?.previewUrl ? (
                     <video
                       key={selectedFootage.previewUrl}
@@ -97,7 +97,7 @@ export function FootageLibrary({
                     ["Ukuran file", selectedFootage?.sizeLabel || "-"],
                     ["Update", formatTimestamp(selectedFootage?.modifiedAt)],
                   ].map(([label, value]) => (
-                    <div key={label} className="rounded-sm border border-base-300 bg-base-200/50 p-3">
+                    <div key={label} className="rounded-md border border-base-300 bg-base-200/50 p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         {label}
                       </p>
@@ -111,7 +111,7 @@ export function FootageLibrary({
         </div>
       </Card>
 
-      <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+      <Card className="rounded-md border border-base-300 bg-base-100/90 shadow-lg">
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -133,7 +133,7 @@ export function FootageLibrary({
           </div>
 
           {!framePreview.length ? (
-            <Alert type="info" className="rounded-sm text-sm">
+            <Alert type="info" className="rounded-md text-sm">
               Belum ada frame hasil extract. Setelah extract berjalan, preview frame akan tampil di sini.
             </Alert>
           ) : (
@@ -141,7 +141,7 @@ export function FootageLibrary({
               {framePreview.map((frame) => (
                 <div
                   key={frame.name}
-                  className="overflow-hidden rounded-sm border border-base-300 bg-base-100 shadow-md"
+                  className="overflow-hidden rounded-md border border-base-300 bg-base-100 shadow-md"
                 >
                   <img
                     src={frame.imageUrl}
@@ -168,7 +168,7 @@ export function FootageLibrary({
                       <Button
                         variant="ghost"
                         isSubmit={false}
-                        className="rounded-sm border border-base-300 px-4"
+                        className="rounded-md border border-base-300 px-4"
                         onClick={onOpenLabeler}
                       >
                         Buka Labeler

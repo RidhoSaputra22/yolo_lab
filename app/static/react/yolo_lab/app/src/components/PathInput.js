@@ -85,12 +85,12 @@ export function PathInput({ name, label, value, suggestions = [], onChange, requ
                             React.createElement("p", { className: "text-sm font-mono break-all text-base-content" }, displayCurrentPath)),
                         !isRoot && parentPath && (React.createElement(Button, { type: "button", size: "sm", variant: "outline", onClick: handleParentClick, className: "whitespace-nowrap" }, ".. Parent")))),
                 React.createElement("div", { className: "flex-1 overflow-y-auto p-6" },
-                    error && (React.createElement("div", { className: "rounded-sm border border-error bg-error/10 p-3 text-sm text-error mb-4" }, error)),
+                    error && (React.createElement("div", { className: "rounded-md border border-error bg-error/10 p-3 text-sm text-error mb-4" }, error)),
                     loading && (React.createElement("div", { className: "flex items-center justify-center py-8" },
                         React.createElement("span", { className: "loading loading-spinner loading-sm" }),
                         React.createElement("span", { className: "ml-2 text-sm" }, "Loading..."))),
                     !loading && entries.length === 0 && !error && (React.createElement("p", { className: "text-sm text-base-content/60" }, "Empty directory")),
-                    !loading && entries.length > 0 && (React.createElement("div", { className: "space-y-1" }, entries.map((entry) => (React.createElement("div", { key: entry.path, className: `flex items-center gap-2 rounded-sm border p-2 cursor-pointer transition ${entry.path === selectedPath
+                    !loading && entries.length > 0 && (React.createElement("div", { className: "space-y-1" }, entries.map((entry) => (React.createElement("div", { key: entry.path, className: `flex items-center gap-2 rounded-md border p-2 cursor-pointer transition ${entry.path === selectedPath
                             ? "border-primary bg-primary/5"
                             : "border-base-300 bg-base-100 hover:border-primary hover:bg-primary/5"}`, onClick: () => {
                             if (entry.isDirectory) {

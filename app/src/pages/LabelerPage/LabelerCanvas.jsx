@@ -29,10 +29,10 @@ export function LabelerCanvas({
   onCanvasMouseLeave,
 }) {
   return (
-    <Card className="h-full rounded-sm border border-base-300 bg-base-100/90 shadow-xl">
+    <Card className="h-full rounded-md border border-base-300 bg-base-100/90 shadow-xl">
       <div className="flex h-full min-h-0 h-screen flex-col gap-4">
         {!currentImageName ? (
-          <div className="grid min-h-0 flex-1 place-items-center rounded-sm border border-dashed border-base-300 bg-base-200/40 p-8 text-center text-sm text-slate-500">
+          <div className="grid min-h-0 flex-1 place-items-center rounded-md border border-dashed border-base-300 bg-base-200/40 p-8 text-center text-sm text-slate-500">
             Frame belum dimuat. Pilih salah satu item di sidebar.
           </div>
         ) : (
@@ -44,7 +44,7 @@ export function LabelerCanvas({
                   outline
                   isSubmit={false}
                   size="sm"
-                  className="rounded-sm bg-base-100/95 px-4 shadow-md backdrop-blur"
+                  className="rounded-md bg-base-100/95 px-4 shadow-md backdrop-blur"
                   disabled={deleteDisabled}
                   loading={deleteBusy}
                   onClick={onDeleteCurrentFrame}
@@ -56,14 +56,14 @@ export function LabelerCanvas({
 
             {interactionDisabled ? (
               <div className="pointer-events-none absolute inset-x-4 top-16 z-10">
-                <Alert type="warning" className="rounded-sm shadow-md">
+                <Alert type="warning" className="rounded-md shadow-md">
                   Auto-label sedang berjalan. Edit bounding box dikunci sampai proses selesai.
                 </Alert>
               </div>
             ) : null}
             <div
               ref={stageViewportRef}
-              className="relative min-h-0 max-h-[550px] h-full flex-1 overflow-auto rounded-sm border border-base-300 bg-base-100 p-4"
+              className="relative min-h-0 max-h-[550px] h-full flex-1 overflow-auto rounded-md border border-base-300 bg-base-100 p-4"
               style={{
                 overscrollBehavior: "contain",
                 backgroundImage:
@@ -81,7 +81,7 @@ export function LabelerCanvas({
               >
                 <div
                   ref={frameShellRef}
-                  className="absolute overflow-hidden rounded-sm border border-base-300 bg-white shadow-2xl"
+                  className="absolute overflow-hidden rounded-md border border-base-300 bg-white shadow-2xl"
                   style={{
                     left: stageLayout.frameOffsetX,
                     top: stageLayout.frameOffsetY,

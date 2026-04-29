@@ -149,7 +149,7 @@ export function PathInput({
           {/* File browser: Entries list */}
           <div className="flex-1 overflow-y-auto p-6">
             {error && (
-              <div className="rounded-sm border border-error bg-error/10 p-3 text-sm text-error mb-4">
+              <div className="rounded-md border border-error bg-error/10 p-3 text-sm text-error mb-4">
                 {error}
               </div>
             )}
@@ -170,7 +170,7 @@ export function PathInput({
                 {entries.map((entry) => (
                   <div
                     key={entry.path}
-                    className={`flex items-center gap-2 rounded-sm border p-2 cursor-pointer transition ${
+                    className={`flex items-center gap-2 rounded-md border p-2 cursor-pointer transition ${
                       entry.path === selectedPath
                         ? "border-primary bg-primary/5"
                         : "border-base-300 bg-base-100 hover:border-primary hover:bg-primary/5"

@@ -59,7 +59,7 @@ export function LabelerSidebar({
             {summaryCards.map((item) => (
               <div
                 key={item.label}
-                className="rounded-sm border border-base-300 bg-base-200/40 px-3 py-3"
+                className="rounded-md border border-base-300 bg-base-200/40 px-3 py-3"
               >
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   {item.label}
@@ -109,7 +109,7 @@ export function LabelerSidebar({
             />
           </div>
 
-          <div className="flex items-center justify-between gap-2 rounded-sm border border-base-300 bg-base-200/40 px-3 py-2">
+          <div className="flex items-center justify-between gap-2 rounded-md border border-base-300 bg-base-200/40 px-3 py-2">
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Aktif
@@ -122,7 +122,7 @@ export function LabelerSidebar({
               variant="ghost"
               isSubmit={false}
               size="sm"
-              className="rounded-sm border border-base-300 px-4"
+              className="rounded-md border border-base-300 px-4"
               onClick={onRefresh}
               disabled={isLoading || disabled}
             >
@@ -145,17 +145,17 @@ export function LabelerSidebar({
       >
         <div className="space-y-4">
           {archiveWarning ? (
-            <Alert type="warning" className="rounded-sm text-sm">
+            <Alert type="warning" className="rounded-md text-sm">
               {archiveWarning}
             </Alert>
           ) : (
-            <Alert type="info" className="rounded-sm text-sm">
+            <Alert type="info" className="rounded-md text-sm">
               Import menerima bundle hasil export labeler ini dengan isi `frames/` dan `labels/`.
             </Alert>
           )}
 
           <div className="grid gap-3">
-            <div className="rounded-sm border border-base-300 bg-base-200/40 px-3 py-3">
+            <div className="rounded-md border border-base-300 bg-base-200/40 px-3 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Frames aktif
               </p>
@@ -163,7 +163,7 @@ export function LabelerSidebar({
                 {activeFramesDir || "-"}
               </p>
             </div>
-            <div className="rounded-sm border border-base-300 bg-base-200/40 px-3 py-3">
+            <div className="rounded-md border border-base-300 bg-base-200/40 px-3 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Labels aktif
               </p>
@@ -177,7 +177,7 @@ export function LabelerSidebar({
             <Button
               variant="info"
               isSubmit={false}
-              className="rounded-sm px-4"
+              className="rounded-md px-4"
               onClick={onOpenImportModal}
               disabled={archiveDisabled}
             >
@@ -186,7 +186,7 @@ export function LabelerSidebar({
             <Button
               variant="warning"
               isSubmit={false}
-              className="rounded-sm px-4"
+              className="rounded-md px-4"
               onClick={onOpenExportModal}
               disabled={archiveDisabled}
             >
@@ -223,7 +223,7 @@ export function LabelerSidebar({
                   onClick={() => onImageSelect(item.name)}
                   disabled={disabled}
                   className={joinClasses(
-                    "w-full rounded-sm border p-4 text-left transition duration-150 disabled:cursor-not-allowed disabled:opacity-70",
+                    "w-full rounded-md border p-4 text-left transition duration-150 disabled:cursor-not-allowed disabled:opacity-70",
                     item.name === currentImageName
                       ? "border-warning bg-warning/10 shadow-md"
                       : "border-base-300 bg-base-100 hover:-translate-y-0.5 hover:border-base-content/20",
@@ -249,7 +249,7 @@ export function LabelerSidebar({
               );
             })
           ) : (
-            <Alert type="info" className="rounded-sm text-sm">
+            <Alert type="info" className="rounded-md text-sm">
               Tidak ada frame yang cocok dengan filter saat ini.
             </Alert>
           )}

@@ -22,7 +22,7 @@ export function LabelerSidebar({ images, visibleImages, currentImageName, active
     return (React.createElement("div", { className: "grid gap-4" },
         React.createElement(LabelerSidebarSection, { title: "Dataset", eyebrow: "Navigator", description: "Atur folder aktif, filter daftar frame, dan ringkas progres labeling dari satu panel.", badge: React.createElement(Badge, { type: "warning", className: "px-3 py-3" }, frameFolders.length), defaultOpen: true },
             React.createElement("div", { className: "space-y-4" },
-                React.createElement("div", { className: "grid grid-cols-2 gap-3" }, summaryCards.map((item) => (React.createElement("div", { key: item.label, className: "rounded-sm border border-base-300 bg-base-200/40 px-3 py-3" },
+                React.createElement("div", { className: "grid grid-cols-2 gap-3" }, summaryCards.map((item) => (React.createElement("div", { key: item.label, className: "rounded-md border border-base-300 bg-base-200/40 px-3 py-3" },
                     React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, item.label),
                     React.createElement("p", { className: "mt-2 text-lg font-bold text-slate-900" }, item.value))))),
                 React.createElement(Select, { name: "labeler-frames-dir", label: "Pilih subfolder frames", value: activeFramesDir || "", onChange: (event) => onFramesDirChange(event.target.value), options: frameFolders.map((folder) => ({
@@ -36,24 +36,24 @@ export function LabelerSidebar({ images, visibleImages, currentImageName, active
                             { value: "done", label: "Sudah dilabel" },
                         ], helpText: "Menyaring daftar frame berdasarkan progres labeling supaya review manual lebih cepat.", disabled: disabled }),
                     React.createElement(Input, { name: "labeler-search", label: "Cari frame", placeholder: "Cari nama file...", value: searchQuery, onChange: (event) => onSearchChange(event.target.value), helpText: "Cari berdasarkan nama file untuk langsung melompat ke frame tertentu tanpa scroll panjang.", disabled: disabled })),
-                React.createElement("div", { className: "flex items-center justify-between gap-2 rounded-sm border border-base-300 bg-base-200/40 px-3 py-2" },
+                React.createElement("div", { className: "flex items-center justify-between gap-2 rounded-md border border-base-300 bg-base-200/40 px-3 py-2" },
                     React.createElement("div", { className: "min-w-0" },
                         React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, "Aktif"),
                         React.createElement("p", { className: "mt-1 break-all font-mono text-[11px] text-slate-700" }, activeFramesDir || "-")),
-                    React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-sm border border-base-300 px-4", onClick: onRefresh, disabled: isLoading || disabled }, "Refresh")))),
+                    React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-md border border-base-300 px-4", onClick: onRefresh, disabled: isLoading || disabled }, "Refresh")))),
         React.createElement(LabelerSidebarSection, { title: "Bundle", eyebrow: "Import / Export", description: "Satukan folder frame aktif dan pasangan label-nya ke bundle zip, atau masukkan bundle export kembali ke workspace.", badge: React.createElement(Badge, { type: "info", className: "px-3 py-3" }, "ZIP"), defaultOpen: true },
             React.createElement("div", { className: "space-y-4" },
-                archiveWarning ? (React.createElement(Alert, { type: "warning", className: "rounded-sm text-sm" }, archiveWarning)) : (React.createElement(Alert, { type: "info", className: "rounded-sm text-sm" }, "Import menerima bundle hasil export labeler ini dengan isi `frames/` dan `labels/`.")),
+                archiveWarning ? (React.createElement(Alert, { type: "warning", className: "rounded-md text-sm" }, archiveWarning)) : (React.createElement(Alert, { type: "info", className: "rounded-md text-sm" }, "Import menerima bundle hasil export labeler ini dengan isi `frames/` dan `labels/`.")),
                 React.createElement("div", { className: "grid gap-3" },
-                    React.createElement("div", { className: "rounded-sm border border-base-300 bg-base-200/40 px-3 py-3" },
+                    React.createElement("div", { className: "rounded-md border border-base-300 bg-base-200/40 px-3 py-3" },
                         React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, "Frames aktif"),
                         React.createElement("p", { className: "mt-2 break-all font-mono text-[11px] text-slate-700" }, activeFramesDir || "-")),
-                    React.createElement("div", { className: "rounded-sm border border-base-300 bg-base-200/40 px-3 py-3" },
+                    React.createElement("div", { className: "rounded-md border border-base-300 bg-base-200/40 px-3 py-3" },
                         React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500" }, "Labels aktif"),
                         React.createElement("p", { className: "mt-2 break-all font-mono text-[11px] text-slate-700" }, activeLabelsDir || "-"))),
                 React.createElement("div", { className: "grid gap-3 sm:grid-cols-2" },
-                    React.createElement(Button, { variant: "info", isSubmit: false, className: "rounded-sm px-4", onClick: onOpenImportModal, disabled: archiveDisabled }, "Import Frames"),
-                    React.createElement(Button, { variant: "warning", isSubmit: false, className: "rounded-sm px-4", onClick: onOpenExportModal, disabled: archiveDisabled }, "Export Frames")))),
+                    React.createElement(Button, { variant: "info", isSubmit: false, className: "rounded-md px-4", onClick: onOpenImportModal, disabled: archiveDisabled }, "Import Frames"),
+                    React.createElement(Button, { variant: "warning", isSubmit: false, className: "rounded-md px-4", onClick: onOpenExportModal, disabled: archiveDisabled }, "Export Frames")))),
         React.createElement(LabelerSidebarSection, { title: "Frames", eyebrow: "Browser", description: "Pilih frame yang ingin dilabel dari daftar aktif.", badge: React.createElement(Badge, { type: "info", className: "px-3 py-3" }, visibleImages.length), defaultOpen: true },
             React.createElement("div", { className: "space-y-3 h-[400px] overflow-auto" }, visibleImages.length ? (visibleImages.map((item) => {
                 const itemState = item.parseError
@@ -61,7 +61,7 @@ export function LabelerSidebar({ images, visibleImages, currentImageName, active
                     : item.hasLabelFile
                         ? { type: "success", label: "Ada file label" }
                         : { type: "ghost", label: "Belum ada file" };
-                return (React.createElement("button", { key: item.name, type: "button", onClick: () => onImageSelect(item.name), disabled: disabled, className: joinClasses("w-full rounded-sm border p-4 text-left transition duration-150 disabled:cursor-not-allowed disabled:opacity-70", item.name === currentImageName
+                return (React.createElement("button", { key: item.name, type: "button", onClick: () => onImageSelect(item.name), disabled: disabled, className: joinClasses("w-full rounded-md border p-4 text-left transition duration-150 disabled:cursor-not-allowed disabled:opacity-70", item.name === currentImageName
                         ? "border-warning bg-warning/10 shadow-md"
                         : "border-base-300 bg-base-100 hover:-translate-y-0.5 hover:border-base-content/20") },
                     React.createElement("div", { className: "flex items-start justify-between gap-3" },
@@ -70,5 +70,5 @@ export function LabelerSidebar({ images, visibleImages, currentImageName, active
                     React.createElement("div", { className: "mt-3 flex flex-wrap gap-2" },
                         React.createElement(Badge, { type: itemState.type, className: "px-3 py-3" }, itemState.label),
                         item.isCheckpoint ? (React.createElement(Badge, { type: "warning", outline: true, className: "px-3 py-3" }, "Checkpoint")) : null)));
-            })) : (React.createElement(Alert, { type: "info", className: "rounded-sm text-sm" }, "Tidak ada frame yang cocok dengan filter saat ini."))))));
+            })) : (React.createElement(Alert, { type: "info", className: "rounded-md text-sm" }, "Tidak ada frame yang cocok dengan filter saat ini."))))));
 }

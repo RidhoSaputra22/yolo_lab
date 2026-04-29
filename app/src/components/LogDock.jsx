@@ -83,7 +83,7 @@ export function LogDock({
       className="fixed inset-x-0 bottom-0 z-30 border-t border-base-300 bg-base-100/88 shadow-2xl bg-white"
     >
       <div className="w-full ">
-        <div className="overflow-hidden rounded-sm border border-base-300 bg-base-100/92 shadow-lg">
+        <div className="overflow-hidden rounded-md border border-base-300 bg-base-100/92 shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div>
               <p className={joinClasses("text-[11px] font-semibold uppercase tracking-[0.28em]", accentClass)}>
@@ -103,7 +103,7 @@ export function LogDock({
                 variant="ghost"
                 isSubmit={false}
                 size="sm"
-                className="rounded-sm border border-base-300 bg-base-100 px-4"
+                className="rounded-md border border-base-300 bg-base-100 px-4"
                 onClick={() => setCollapsed((current) => !current)}
               >
                 {collapsed ? "▲" : "▼"}
@@ -115,7 +115,7 @@ export function LogDock({
             <div className="border-t border-base-300 px-4 pb-4">
               <pre
                 ref={preRef}
-                className="max-h-[30vh] min-h-[160px] overflow-auto rounded-sm bg-slate-950 p-4 text-xs leading-6 text-slate-100"
+                className="max-h-[30vh] min-h-[160px] overflow-auto rounded-md bg-slate-950 p-4 text-xs leading-6 text-slate-100"
               >
                 {logs.length ? logs.join("\n") : emptyMessage}
               </pre>

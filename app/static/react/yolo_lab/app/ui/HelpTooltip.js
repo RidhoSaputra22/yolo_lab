@@ -45,7 +45,7 @@ export default function HelpTooltip({ text, label }) {
     if (!text) {
         return null;
     }
-    const tooltipNode = open ? (React.createElement("span", { ref: tooltipRef, className: "pointer-events-none fixed z-[999] w-72 max-w-[calc(100vw-1.5rem)] rounded-sm border border-slate-800 bg-slate-950 px-3 py-2 text-left text-xs leading-5 text-slate-100 shadow-xl", id: tooltipId, role: "tooltip", style: {
+    const tooltipNode = open ? (React.createElement("span", { ref: tooltipRef, className: "pointer-events-none fixed z-[999] w-72 max-w-[calc(100vw-1.5rem)] rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-left text-xs leading-5 text-slate-100 shadow-xl", id: tooltipId, role: "tooltip", style: {
             left: position?.left ?? 12,
             top: position?.top ?? 12,
             opacity: position ? 1 : 0,

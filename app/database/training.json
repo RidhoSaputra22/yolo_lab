@@ -6,14 +6,14 @@
   "classNames": "person",
   "trainModel": "model/yolov5nu.pt",
   "imgsz": 640,
-  "epochs": 10,
+  "epochs": "20",
   "batch": 4,
   "workers": 0,
-  "patience": 5,
+  "patience": "10",
   "valRatio": 0.2,
   "seed": 42,
   "device": "auto",
-  "runName": "visitor_person_cpu_bootstrap_yolov5nu",
+  "runName": "visitor_person_cpu_bootstrap_yolov5nu_epoch20",
   "allowEmptyLabels": false,
   "cache": false
 }

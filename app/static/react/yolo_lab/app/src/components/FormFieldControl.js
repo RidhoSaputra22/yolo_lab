@@ -13,7 +13,7 @@ export function FormFieldControl({ field, value, suggestions, onChange }) {
     if (field.type === "bool") {
         return (React.createElement("div", { className: "form-control w-full" },
             React.createElement(FieldLabel, { htmlFor: field.name, label: field.label, helpText: field.helpText || null }),
-            React.createElement("label", { htmlFor: field.name, className: "flex min-h-12 cursor-pointer items-center gap-3 rounded-sm border border-base-300 bg-base-100/80 px-4 transition-colors hover:border-base-content/20" },
+            React.createElement("label", { htmlFor: field.name, className: "flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-base-300 bg-base-100/80 px-4 transition-colors hover:border-base-content/20" },
                 React.createElement("input", { id: field.name, type: "checkbox", name: field.name, checked: Boolean(value), className: "checkbox checkbox-primary", onChange: (event) => onChange(field.name, event.target.checked) }),
                 React.createElement("span", { className: "text-sm text-base-content/80" }, value ? "Aktif" : "Nonaktif"))));
     }

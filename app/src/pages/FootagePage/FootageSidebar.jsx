@@ -5,7 +5,7 @@ import { MetricTile } from "../../components/MetricComponents.jsx";
 export function FootageSidebar({ runtimePaths, library }) {
   return (
     <aside className="grid h-fit gap-4 xl:sticky xl:top-28">
-      <Card className="rounded-sm border border-base-300 bg-slate-900 text-slate-50 shadow-xl">
+      <Card className="rounded-md border border-base-300 bg-slate-900 text-slate-50 shadow-xl">
         <div className="space-y-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-200">
@@ -23,7 +23,7 @@ export function FootageSidebar({ runtimePaths, library }) {
               ["Frames", library?.framesDir || runtimePaths?.defaultFramesDir || "-"],
               ["Labels", library?.labelsDir || runtimePaths?.defaultLabelsDir || "-"],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-sm border border-white/10 bg-white/5 px-3 py-2">
+              <div key={label} className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
                 <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">{label}</p>
                 <p className="mt-1 break-all font-mono text-[11px] text-slate-100">{value}</p>
               </div>
@@ -45,7 +45,7 @@ export function FootageSidebar({ runtimePaths, library }) {
         </div>
       </Card>
 
-      <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+      <Card className="rounded-md border border-base-300 bg-base-100/90 shadow-lg">
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-bold">Dataset</h3>
@@ -80,7 +80,7 @@ export function FootageSidebar({ runtimePaths, library }) {
             />
           </div>
 
-          <div className="rounded-sm border border-base-300 bg-base-200/40 px-3 py-2">
+          <div className="rounded-md border border-base-300 bg-base-200/40 px-3 py-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               Dataset Dir
             </p>

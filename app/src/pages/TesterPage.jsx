@@ -171,7 +171,7 @@ export default function TesterPage() {
   return (
     <div className="grid gap-4 pb-[160px] md:pb-[100px]">
       {/* Top action bar */}
-      <section className="flex flex-col gap-3 rounded-sm border border-base-300 bg-base-100/90 p-4 shadow-lg xl:flex-row xl:items-center xl:justify-between">
+      <section className="flex flex-col gap-3 rounded-md border border-base-300 bg-base-100/90 p-4 shadow-lg xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <Badge type={stateBadgeType} className="px-4 py-3 text-xs font-bold uppercase">
             {job?.state || "idle"}
@@ -192,7 +192,7 @@ export default function TesterPage() {
             variant="primary"
             isSubmit={false}
             size="sm"
-            className="rounded-sm px-5"
+            className="rounded-md px-5"
             disabled={Boolean(job?.running) || isConfigLoading}
             onClick={handleRun}
           >
@@ -203,7 +203,7 @@ export default function TesterPage() {
             outline
             isSubmit={false}
             size="sm"
-            className="rounded-sm px-4"
+            className="rounded-md px-4"
             disabled={!job?.running}
             onClick={handleStop}
           >
@@ -213,7 +213,7 @@ export default function TesterPage() {
             variant="ghost"
             isSubmit={false}
             size="sm"
-            className="rounded-sm border border-base-300 px-4"
+            className="rounded-md border border-base-300 px-4"
             onClick={handleRefresh}
           >
             ↻ Refresh
@@ -225,7 +225,7 @@ export default function TesterPage() {
       {runtimeWarnings.length > 0 && (
         <div className="grid gap-2">
           {runtimeWarnings.map((warning) => (
-            <Alert key={warning} type="warning" className="rounded-sm text-sm">
+            <Alert key={warning} type="warning" className="rounded-md text-sm">
               {warning}
             </Alert>
           ))}
@@ -237,7 +237,7 @@ export default function TesterPage() {
       
 
       {wantsEmployeeLabelingInVideo && formValues.faceRegistrySource === "backend" && (
-        <Alert type="info" className="rounded-sm text-sm leading-6">
+        <Alert type="info" className="rounded-md text-sm leading-6">
           Tracking petugas pada video sedang memakai registry dari backend. Jika ingin memaksa pembanding wajah dari folder lokal `petugas`, ubah `Sumber data petugas` menjadi `Folder lokal petugas`.
         </Alert>
       )}

@@ -7,7 +7,7 @@ import { joinClasses } from "../shared/utils.js";
  */
 export function StatusMetric({ label, value, detail, tone = "" }) {
   return (
-    <Card compact className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+    <Card compact className="rounded-md border border-base-300 bg-base-100/90 shadow-lg">
       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
         {label}
       </p>
@@ -24,7 +24,7 @@ export function StatusMetric({ label, value, detail, tone = "" }) {
  */
 export function MetricTile({ label, value, detail, tone = "", textColor = "text-slate-900" }) {
   return (
-    <div className="rounded-sm border border-base-300 bg-base-200/40 p-3">
+    <div className="rounded-md border border-base-300 bg-base-200/40 p-3">
       <p className={joinClasses("text-[11px] font-semibold uppercase tracking-[0.18em] ", textColor)}>
         {label}
       </p>

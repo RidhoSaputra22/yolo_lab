@@ -20,7 +20,7 @@ export function FormFieldControl({ field, value, suggestions, onChange }) {
         <FieldLabel htmlFor={field.name} label={field.label} helpText={field.helpText || null} />
         <label
           htmlFor={field.name}
-          className="flex min-h-12 cursor-pointer items-center gap-3 rounded-sm border border-base-300 bg-base-100/80 px-4 transition-colors hover:border-base-content/20"
+          className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-base-300 bg-base-100/80 px-4 transition-colors hover:border-base-content/20"
         >
           <input
             id={field.name}

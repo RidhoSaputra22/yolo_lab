@@ -17,7 +17,7 @@ export function FootageCommandPanel({
   }[previewState] || { type: "ghost", label: "menunggu" };
 
   return (
-    <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+    <Card className="rounded-md border border-base-300 bg-base-100/90 shadow-lg">
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -34,19 +34,19 @@ export function FootageCommandPanel({
         </div>
 
         {previewError ? (
-          <Alert type="error" className="rounded-sm text-sm">
+          <Alert type="error" className="rounded-md text-sm">
             {previewError}
           </Alert>
         ) : null}
 
         {job?.error ? (
-          <Alert type="error" className="rounded-sm text-sm">
+          <Alert type="error" className="rounded-md text-sm">
             {job.error}
           </Alert>
         ) : null}
 
         <div className="grid gap-3 lg:grid-cols-2">
-          <div className="rounded-sm border border-base-300 bg-slate-950 p-4">
+          <div className="rounded-md border border-base-300 bg-slate-950 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
               Command
             </p>
@@ -73,7 +73,7 @@ export function FootageCommandPanel({
               ["Finished", formatTimestamp(job?.finishedAt)],
               ["Output dir", job?.outputDir || preview?.config?.framesDir || defaults.framesDir || "-"],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-sm border border-base-300 bg-base-200/50 p-3">
+              <div key={label} className="rounded-md border border-base-300 bg-base-200/50 p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   {label}
                 </p>

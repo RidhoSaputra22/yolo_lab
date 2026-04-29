@@ -129,7 +129,7 @@ export function LabelerArchiveModal({
               key={item.key}
               type="button"
               className={joinClasses(
-                "rounded-sm border px-4 py-3 text-left transition duration-150",
+                "rounded-md border px-4 py-3 text-left transition duration-150",
                 mode === item.key
                   ? "border-warning bg-warning/10 shadow-sm"
                   : "border-base-300 bg-base-100 hover:border-base-content/20",
@@ -144,18 +144,18 @@ export function LabelerArchiveModal({
         </div>
 
         {warningMessage ? (
-          <Alert type="warning" className="rounded-sm text-sm">
+          <Alert type="warning" className="rounded-md text-sm">
             {warningMessage}
           </Alert>
         ) : (
-          <Alert type="info" className="rounded-sm text-sm">
+          <Alert type="info" className="rounded-md text-sm">
             Bundle export selalu menyatukan isi `frames/`, `labels/`, dan metadata archive
             supaya bisa diimport ulang oleh labeler ini.
           </Alert>
         )}
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-sm border border-base-300 bg-base-200/40 px-4 py-3">
+          <div className="rounded-md border border-base-300 bg-base-200/40 px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               Frames aktif
             </p>
@@ -163,7 +163,7 @@ export function LabelerArchiveModal({
               {activeFramesDir || "-"}
             </p>
           </div>
-          <div className="rounded-sm border border-base-300 bg-base-200/40 px-4 py-3">
+          <div className="rounded-md border border-base-300 bg-base-200/40 px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               Labels aktif
             </p>
@@ -177,7 +177,7 @@ export function LabelerArchiveModal({
           {metricCards.map((item) => (
             <div
               key={item.label}
-              className="rounded-sm border border-base-300 bg-base-100 px-4 py-3"
+              className="rounded-md border border-base-300 bg-base-100 px-4 py-3"
             >
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {item.label}
@@ -189,7 +189,7 @@ export function LabelerArchiveModal({
 
         {mode === "import" ? (
           <div className="space-y-4">
-            <div className="rounded-sm border border-dashed border-base-300 bg-base-200/30 p-4">
+            <div className="rounded-md border border-dashed border-base-300 bg-base-200/30 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-slate-900">
@@ -227,7 +227,7 @@ export function LabelerArchiveModal({
             />
 
             {selectedFile ? (
-              <div className="rounded-sm border border-base-300 bg-base-100 px-4 py-3">
+              <div className="rounded-md border border-base-300 bg-base-100 px-4 py-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="break-all text-sm font-semibold text-slate-900">
@@ -252,7 +252,7 @@ export function LabelerArchiveModal({
               <Button
                 variant="info"
                 isSubmit={false}
-                className="rounded-sm px-5"
+                className="rounded-md px-5"
                 disabled={!selectedFile || disabled}
                 loading={isImporting}
                 onClick={handleImport}
@@ -263,7 +263,7 @@ export function LabelerArchiveModal({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-sm border border-base-300 bg-base-100 px-4 py-4">
+            <div className="rounded-md border border-base-300 bg-base-100 px-4 py-4">
               <p className="text-sm font-semibold text-slate-900">
                 Bundle export dari folder aktif
               </p>
@@ -273,7 +273,7 @@ export function LabelerArchiveModal({
                 Lab lain.
               </p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-sm border border-base-300 bg-base-200/40 px-3 py-3">
+                <div className="rounded-md border border-base-300 bg-base-200/40 px-3 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     Current frame
                   </p>
@@ -281,7 +281,7 @@ export function LabelerArchiveModal({
                     {currentImageName || "-"}
                   </p>
                 </div>
-                <div className="rounded-sm border border-base-300 bg-base-200/40 px-3 py-3">
+                <div className="rounded-md border border-base-300 bg-base-200/40 px-3 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     Total box
                   </p>
@@ -300,7 +300,7 @@ export function LabelerArchiveModal({
               <Button
                 variant="warning"
                 isSubmit={false}
-                className="rounded-sm px-5"
+                className="rounded-md px-5"
                 disabled={disabled || !(images || []).length}
                 loading={isExporting}
                 onClick={handleExport}

@@ -5,14 +5,14 @@ import { Alert, Button, Card, Paragraph } from "../../ui.js";
  * Handles drawing boxes and mouse interactions on the canvas overlay
  */
 export function LabelerCanvas({ currentImageName, imageSrc, displayMetrics, stageLayout, stageViewportRef, frameShellRef, overlayRef, zoomLevel, zoomLabel, minZoomLevel, maxZoomLevel, interactionDisabled = false, onZoomIn, onZoomOut, onResetZoom, onDeleteCurrentFrame, deleteDisabled = false, deleteBusy = false, onCanvasMouseDown, onCanvasMouseMove, onCanvasMouseLeave, }) {
-    return (React.createElement(Card, { className: "h-full rounded-sm border border-base-300 bg-base-100/90 shadow-xl" },
-        React.createElement("div", { className: "flex h-full min-h-0 h-screen flex-col gap-4" }, !currentImageName ? (React.createElement("div", { className: "grid min-h-0 flex-1 place-items-center rounded-sm border border-dashed border-base-300 bg-base-200/40 p-8 text-center text-sm text-slate-500" }, "Frame belum dimuat. Pilih salah satu item di sidebar.")) : (React.createElement("div", { className: "relative min-h-0 flex-1" },
+    return (React.createElement(Card, { className: "h-full rounded-md border border-base-300 bg-base-100/90 shadow-xl" },
+        React.createElement("div", { className: "flex h-full min-h-0 h-screen flex-col gap-4" }, !currentImageName ? (React.createElement("div", { className: "grid min-h-0 flex-1 place-items-center rounded-md border border-dashed border-base-300 bg-base-200/40 p-8 text-center text-sm text-slate-500" }, "Frame belum dimuat. Pilih salah satu item di sidebar.")) : (React.createElement("div", { className: "relative min-h-0 flex-1" },
             React.createElement("div", { className: "pointer-events-none absolute left-4 top-4 z-20" },
                 React.createElement("div", { className: "pointer-events-auto" },
-                    React.createElement(Button, { variant: "error", outline: true, isSubmit: false, size: "sm", className: "rounded-sm bg-base-100/95 px-4 shadow-md backdrop-blur", disabled: deleteDisabled, loading: deleteBusy, onClick: onDeleteCurrentFrame }, "Hapus frame"))),
+                    React.createElement(Button, { variant: "error", outline: true, isSubmit: false, size: "sm", className: "rounded-md bg-base-100/95 px-4 shadow-md backdrop-blur", disabled: deleteDisabled, loading: deleteBusy, onClick: onDeleteCurrentFrame }, "Hapus frame"))),
             interactionDisabled ? (React.createElement("div", { className: "pointer-events-none absolute inset-x-4 top-16 z-10" },
-                React.createElement(Alert, { type: "warning", className: "rounded-sm shadow-md" }, "Auto-label sedang berjalan. Edit bounding box dikunci sampai proses selesai."))) : null,
-            React.createElement("div", { ref: stageViewportRef, className: "relative min-h-0 max-h-[550px] h-full flex-1 overflow-auto rounded-sm border border-base-300 bg-base-100 p-4", style: {
+                React.createElement(Alert, { type: "warning", className: "rounded-md shadow-md" }, "Auto-label sedang berjalan. Edit bounding box dikunci sampai proses selesai."))) : null,
+            React.createElement("div", { ref: stageViewportRef, className: "relative min-h-0 max-h-[550px] h-full flex-1 overflow-auto rounded-md border border-base-300 bg-base-100 p-4", style: {
                     overscrollBehavior: "contain",
                     backgroundImage: "linear-gradient(135deg, rgba(216, 91, 52, 0.06), transparent 34%), linear-gradient(315deg, rgba(29, 111, 82, 0.07), transparent 28%)",
                 } },
@@ -22,7 +22,7 @@ export function LabelerCanvas({ currentImageName, imageSrc, displayMetrics, stag
                         minWidth: "100%",
                         minHeight: "100%",
                     } },
-                    React.createElement("div", { ref: frameShellRef, className: "absolute overflow-hidden rounded-sm border border-base-300 bg-white shadow-2xl", style: {
+                    React.createElement("div", { ref: frameShellRef, className: "absolute overflow-hidden rounded-md border border-base-300 bg-white shadow-2xl", style: {
                             left: stageLayout.frameOffsetX,
                             top: stageLayout.frameOffsetY,
                             width: displayMetrics.width || undefined,

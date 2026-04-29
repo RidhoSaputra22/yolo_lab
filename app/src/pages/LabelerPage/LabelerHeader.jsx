@@ -28,7 +28,10 @@ export function LabelerHeader({
       eyebrow="Workspace"
       description="Navigasi frame dan jalankan aksi utama labeling tanpa meninggalkan sidebar."
       badge={
-        <Badge type={interactionLocked ? "warning" : "success"} className="px-3 py-3">
+        <Badge
+          type={interactionLocked ? "warning" : "success"}
+          className="px-3 py-3"
+        >
           {interactionLocked ? "Terkunci" : "Siap edit"}
         </Badge>
       }
@@ -36,7 +39,7 @@ export function LabelerHeader({
     >
       <div className="space-y-4">
         <div>
-          <h2 className="break-all text-xl font-bold tracking-tight text-slate-900">
+          <h2 className="break-all text-lg font-bold tracking-tight text-slate-900">
             {currentImageItem ? currentImageItem.name : "Belum ada frame"}
           </h2>
           <Paragraph className="mt-2 text-sm leading-6 opacity-100">
@@ -50,78 +53,201 @@ export function LabelerHeader({
           </Paragraph>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           <Button
             variant="ghost"
             isSubmit={false}
             size="sm"
-            className="rounded-sm border border-base-300 bg-base-100"
+            className="rounded-md border border-base-300 bg-base-100"
             disabled={!visibleImages.length || interactionLocked}
             onClick={() => onNavigate(-1)}
+            toolTip="Frame sebelumnya"
+            toolTipPosition="top"
           >
-            Prev
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="size-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18"
+              />
+            </svg>
           </Button>
           <Button
             variant="ghost"
             isSubmit={false}
             size="sm"
-            className="rounded-sm border border-base-300 bg-base-100"
+            className="rounded-md border border-base-300 bg-base-100"
             disabled={!visibleImages.length || interactionLocked}
             onClick={() => onNavigate(1)}
+            toolTip="Frame berikutnya"
+            toolTipPosition="top"
           >
-            Next
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-6"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3"
+              />
+            </svg>
           </Button>
           <Button
             variant="warning"
             outline
             isSubmit={false}
             size="sm"
-            className="rounded-sm"
+            className="rounded-md"
             disabled={!checkpointImageName || interactionLocked}
             onClick={onOpenCheckpoint}
+            toolTip="Lihat checkpoint"
+            toolTipPosition="top"
           >
-            Buka checkpoint
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="size-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"
+              />
+            </svg>
           </Button>
           <Button
             variant="warning"
             isSubmit={false}
             size="sm"
-            className="rounded-sm"
-            disabled={!currentImageItem?.name || currentIsCheckpoint || interactionLocked}
+            className="rounded-md"
+            disabled={
+              !currentImageItem?.name ||
+              currentIsCheckpoint ||
+              interactionLocked
+            }
             onClick={() => onSaveCheckpoint()}
+            toolTip="Simpan checkpoint"
+            toolTipPosition="top"
           >
-            {currentIsCheckpoint ? "Checkpoint aktif" : "Jadikan checkpoint"}
+            {currentIsCheckpoint ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="size-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-6"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5"
+                />
+              </svg>
+            )}
           </Button>
           <Button
             variant="warning"
             outline
             isSubmit={false}
             size="sm"
-            className="rounded-sm"
+            className="rounded-md"
             disabled={!hasFrames}
             onClick={onOpenAutolabelModal}
+            toolTip="Autolabel"
+            toolTipPosition="top"
           >
-            Auto Labeling
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="size-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 6h.008v.008H6V6Z"
+              />
+            </svg>
           </Button>
           <Button
             variant="primary"
             isSubmit={false}
             size="sm"
-            className="rounded-sm"
+            className="rounded-md"
             disabled={!currentImageItem?.name || interactionLocked}
             onClick={onSaveLabel}
+            toolTip="Simpan label"
+            toolTipPosition="top"
           >
-            Simpan
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="size-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z"
+              />
+            </svg>
           </Button>
           <Button
             variant="success"
             isSubmit={false}
             size="sm"
-            className="col-span-2 rounded-sm"
+            className="col-span-2 rounded-md"
             disabled={!currentImageItem?.name || interactionLocked}
             onClick={onSaveLabelAndNext}
+            toolTip="Simpan label dan frame berikutnya"
+            toolTipPosition="top"
           >
-            Simpan + Next
+            Simpan dan lanjut
           </Button>
         </div>
       </div>

@@ -67,7 +67,7 @@ export default function Stat({ title, value, description = null, icon = null, to
         React.createElement("div", { className: `mt-3 text-4xl font-bold tracking-tight ${currentTone.value}` }, value),
         (description || trendValue) && (React.createElement("div", { className: "mt-4 flex items-center justify-between gap-3" },
             React.createElement("span", { className: "text-xs text-base-content/40" }, description),
-            trendValue && (React.createElement("span", { className: `inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium ${trend === "up"
+            trendValue && (React.createElement("span", { className: `inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${trend === "up"
                     ? "bg-success/10 text-success"
                     : trend === "down"
                         ? "bg-error/10 text-error"

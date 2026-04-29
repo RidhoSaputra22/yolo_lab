@@ -61,7 +61,7 @@ export function LabelerToolPanel({
               variant="ghost"
               isSubmit={false}
               size="sm"
-              className="rounded-sm border border-base-300 bg-base-100"
+              className="rounded-md border border-base-300 bg-base-100"
               disabled={!undoStack.length || disabled}
               onClick={onUndo}
             >
@@ -71,7 +71,7 @@ export function LabelerToolPanel({
               variant="ghost"
               isSubmit={false}
               size="sm"
-              className="rounded-sm border border-base-300 bg-base-100"
+              className="rounded-md border border-base-300 bg-base-100"
               disabled={!selectedBox || disabled}
               onClick={() => selectedBox && onRemoveBox(selectedBox.id)}
             >
@@ -81,7 +81,7 @@ export function LabelerToolPanel({
               variant="ghost"
               isSubmit={false}
               size="sm"
-              className="rounded-sm border border-base-300 bg-base-100"
+              className="rounded-md border border-base-300 bg-base-100"
               disabled={!selectedBox || disabled}
               onClick={onDuplicateBox}
             >
@@ -91,7 +91,7 @@ export function LabelerToolPanel({
               variant="ghost"
               isSubmit={false}
               size="sm"
-              className="rounded-sm border border-base-300 bg-base-100"
+              className="rounded-md border border-base-300 bg-base-100"
               disabled={!boxes.length || disabled}
               onClick={() => {
                 const ok = window.confirm("Hapus semua box pada frame ini?");
@@ -106,7 +106,7 @@ export function LabelerToolPanel({
               variant="ghost"
               isSubmit={false}
               size="sm"
-              className="rounded-sm border border-base-300 bg-base-100"
+              className="rounded-md border border-base-300 bg-base-100"
               disabled={!currentImageName || disabled}
               onClick={onReloadLabel}
             >
@@ -124,14 +124,14 @@ export function LabelerToolPanel({
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="flex items-start justify-between gap-3 rounded-sm border border-base-300 bg-base-200/40 p-3 text-sm"
+                className="flex items-start justify-between gap-3 rounded-md border border-base-300 bg-base-200/40 p-3 text-sm"
               >
                 <span className="text-slate-500">{label}</span>
                 <strong className="max-w-[60%] break-all text-right text-slate-900">{value}</strong>
               </div>
             ))}
             {parseError ? (
-              <Alert type="warning" className="rounded-sm text-sm">
+              <Alert type="warning" className="rounded-md text-sm">
                 Label lama invalid, box dimulai kosong.
               </Alert>
             ) : null}
@@ -160,7 +160,7 @@ export function LabelerToolPanel({
                     type="button"
                     disabled={disabled}
                     onClick={() => onBoxSelect(box.id)}
-                    className={`w-full rounded-sm border bg-base-100 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-70 ${
+                    className={`w-full rounded-md border bg-base-100 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-70 ${
                       box.id === selectedBoxId
                         ? "border-warning bg-warning/10 shadow-md"
                         : "border-base-300"
@@ -182,12 +182,12 @@ export function LabelerToolPanel({
                 );
               })
             ) : (
-              <Alert type="info" className="rounded-sm text-sm">
+              <Alert type="info" className="rounded-md text-sm">
                 Belum ada box. Drag pada image untuk membuat box pertama.
               </Alert>
             )
           ) : (
-            <Alert type="info" className="rounded-sm text-sm">
+            <Alert type="info" className="rounded-md text-sm">
               Belum ada frame yang dibuka.
             </Alert>
           )}
@@ -204,35 +204,35 @@ export function LabelerToolPanel({
           <li>Klik box untuk pilih, lalu drag isi box untuk geser.</li>
           <li>Drag sudut atau sisi box untuk resize dari semua arah.</li>
           <li>
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+Z</code> untuk undo,{" "}
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+S</code> untuk simpan,{" "}
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+Shift+S</code> untuk simpan + next.
+            <code className="rounded-md bg-base-200 px-2 py-1 text-xs">Ctrl+Z</code> untuk undo,{" "}
+            <code className="rounded-md bg-base-200 px-2 py-1 text-xs">Ctrl+S</code> untuk simpan,{" "}
+            <code className="rounded-md bg-base-200 px-2 py-1 text-xs">Ctrl+Shift+S</code> untuk simpan + next.
           </li>
           <li>
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Delete</code> atau{" "}
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+X</code> untuk hapus box aktif.
+            <code className="rounded-md bg-base-200 px-2 py-1 text-xs">Delete</code> atau{" "}
+            <code className="rounded-md bg-base-200 px-2 py-1 text-xs">Ctrl+X</code> untuk hapus box aktif.
           </li>
           <li>
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">ArrowLeft</code> dan{" "}
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">ArrowRight</code> untuk pindah frame prev/next
+            <code className="rounded-md bg-base-200 px-2 py-1 text-xs">ArrowLeft</code> dan{" "}
+            <code className="rounded-md bg-base-200 px-2 py-1 text-xs">ArrowRight</code> untuk pindah frame prev/next
             selama box belum dipilih manual.
           </li>
           <li>
-            Setelah box dipilih manual, <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Arrow</code> akan
-            menggeser box aktif terus saat ditahan. <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Shift+Arrow</code>{" "}
-            atau <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+Arrow</code> menggeser 10 px.
+            Setelah box dipilih manual, <code className="rounded-md bg-base-200 px-2 py-1 text-xs">Arrow</code> akan
+            menggeser box aktif terus saat ditahan. <code className="rounded-md bg-base-200 px-2 py-1 text-xs">Shift+Arrow</code>{" "}
+            atau <code className="rounded-md bg-base-200 px-2 py-1 text-xs">Ctrl+Arrow</code> menggeser 10 px.
           </li>
           <li>
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Alt+ArrowLeft</code> atau{" "}
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Alt+ArrowRight</code> memaksa navigasi frame
+            <code className="rounded-md bg-base-200 px-2 py-1 text-xs">Alt+ArrowLeft</code> atau{" "}
+            <code className="rounded-md bg-base-200 px-2 py-1 text-xs">Alt+ArrowRight</code> memaksa navigasi frame
             walau box sedang dipilih.
           </li>
           <li>
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl + scroll</code> untuk zoom,{" "}
-            <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Ctrl+0</code> untuk kembali fit.
+            <code className="rounded-md bg-base-200 px-2 py-1 text-xs">Ctrl + scroll</code> untuk zoom,{" "}
+            <code className="rounded-md bg-base-200 px-2 py-1 text-xs">Ctrl+0</code> untuk kembali fit.
           </li>
           <li>
-            Setelah 10 kali <code className="rounded-sm bg-base-200 px-2 py-1 text-xs">Simpan + Next</code> berhasil,
+            Setelah 10 kali <code className="rounded-md bg-base-200 px-2 py-1 text-xs">Simpan + Next</code> berhasil,
             frame terakhir otomatis dijadikan checkpoint.
           </li>
           <li>Tombol duplikat membantu membuat box baru dari objek serupa dengan posisi awal yang sedikit digeser.</li>

@@ -284,7 +284,7 @@ export default function FootagePage({ onNavigate }) {
                 ? "warning"
                 : "ghost";
     return (React.createElement("div", { className: "grid gap-4 pb-[160px] md:pb-[100px]" },
-        React.createElement("section", { className: "flex flex-col gap-3 rounded-sm border border-base-300 bg-base-100/90 p-4 shadow-lg xl:flex-row xl:items-center xl:justify-between" },
+        React.createElement("section", { className: "flex flex-col gap-3 rounded-md border border-base-300 bg-base-100/90 p-4 shadow-lg xl:flex-row xl:items-center xl:justify-between" },
             React.createElement("div", { className: "flex flex-wrap items-center gap-3" },
                 React.createElement(Badge, { type: stateBadgeType, className: "px-4 py-3 text-xs font-bold uppercase" }, job?.state || "idle"),
                 React.createElement("div", { className: "text-sm" },
@@ -294,10 +294,10 @@ export default function FootagePage({ onNavigate }) {
                         job?.returnCode != null ? ` • code ${job.returnCode}` : "",
                         ` • ${formatCount(library?.footageCount || 0, "footage")}`))),
             React.createElement("div", { className: "flex flex-wrap items-center gap-2" },
-                React.createElement(Button, { variant: "info", isSubmit: false, size: "sm", className: "rounded-sm px-5", disabled: Boolean(job?.running) || isConfigLoading, onClick: handleRun }, "\u25B6 Ekstrak Frame"),
-                React.createElement(Button, { variant: "error", outline: true, isSubmit: false, size: "sm", className: "rounded-sm px-4", disabled: !job?.running, onClick: handleStop }, "\u25A0 Stop"),
-                React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-sm border border-base-300 px-4", onClick: handleRefresh }, "\u21BB Refresh"))),
-        runtimeWarnings.length > 0 && (React.createElement("div", { className: "grid gap-2" }, runtimeWarnings.map((warning) => (React.createElement(Alert, { key: warning, type: "warning", className: "rounded-sm text-sm" }, warning))))),
+                React.createElement(Button, { variant: "info", isSubmit: false, size: "sm", className: "rounded-md px-5", disabled: Boolean(job?.running) || isConfigLoading, onClick: handleRun }, "\u25B6 Ekstrak Frame"),
+                React.createElement(Button, { variant: "error", outline: true, isSubmit: false, size: "sm", className: "rounded-md px-4", disabled: !job?.running, onClick: handleStop }, "\u25A0 Stop"),
+                React.createElement(Button, { variant: "ghost", isSubmit: false, size: "sm", className: "rounded-md border border-base-300 px-4", onClick: handleRefresh }, "\u21BB Refresh"))),
+        runtimeWarnings.length > 0 && (React.createElement("div", { className: "grid gap-2" }, runtimeWarnings.map((warning) => (React.createElement(Alert, { key: warning, type: "warning", className: "rounded-md text-sm" }, warning))))),
         React.createElement("div", { className: "grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]" },
             React.createElement(FootageSidebar, { runtimePaths: runtimePaths, library: library }),
             React.createElement("section", { className: "grid gap-4" },

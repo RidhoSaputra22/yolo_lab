@@ -10,7 +10,7 @@ export function TrainingSidebar({ workspace, runtimePaths }) {
   return (
     <aside className="grid h-fit min-w-0 gap-4 xl:sticky xl:top-28">
       {/* Runtime config */}
-      <Card className="min-w-0 rounded-sm border border-base-300 bg-slate-900 text-slate-50 shadow-xl">
+      <Card className="min-w-0 rounded-md border border-base-300 bg-slate-900 text-slate-50 shadow-xl">
         <div className="space-y-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-200">
@@ -26,7 +26,7 @@ export function TrainingSidebar({ workspace, runtimePaths }) {
               ["Python", runtimePaths?.pythonBin || "-"],
               ["Runs Dir", runtimePaths?.defaultRunsDir || "-"],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-sm border border-white/10 bg-white/5 px-3 py-2">
+              <div key={label} className="rounded-md border border-white/10 bg-white/5 px-3 py-2">
                 <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">{label}</p>
                 <p className="text-wrap-anywhere mt-1 font-mono text-[11px] text-slate-100">{value}</p>
               </div>
@@ -41,7 +41,7 @@ export function TrainingSidebar({ workspace, runtimePaths }) {
       </Card>
 
       {/* Compact dataset snapshot */}
-      <Card className="min-w-0 rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+      <Card className="min-w-0 rounded-md border border-base-300 bg-base-100/90 shadow-lg">
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-bold">Dataset</h3>
@@ -66,7 +66,7 @@ export function TrainingSidebar({ workspace, runtimePaths }) {
             />
           </div>
 
-          <div className="rounded-sm border border-base-300 bg-base-200/40 px-3 py-2">
+          <div className="rounded-md border border-base-300 bg-base-200/40 px-3 py-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-black">
               Class
             </p>

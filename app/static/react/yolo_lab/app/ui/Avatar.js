@@ -35,5 +35,5 @@ export default function Avatar({ name = "User", src = null, size = "md", online 
     const sizeClass = sizeClasses[size] || sizeClasses.md;
     const textSize = textSizes[size] || textSizes.md;
     return (React.createElement("div", { className: `avatar${online ? " online" : ""}${ring ? " ring ring-primary ring-offset-base-100 ring-offset-2" : ""} ${className}`, ...rest },
-        React.createElement("div", { className: `${sizeClass} rounded-sm ${src ? "" : "bg-primary text-primary-content placeholder"} flex justify-center items-center` }, src ? (React.createElement("img", { src: src, alt: name })) : (React.createElement("span", { className: textSize }, initials)))));
+        React.createElement("div", { className: `${sizeClass} rounded-md ${src ? "" : "bg-primary text-primary-content placeholder"} flex justify-center items-center` }, src ? (React.createElement("img", { src: src, alt: name })) : (React.createElement("span", { className: textSize }, initials)))));
 }

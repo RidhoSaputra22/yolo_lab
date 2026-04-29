@@ -24,7 +24,7 @@ export default function ConfirmDelete({
   return (
     <Modal open={open} onClose={onCancel} title={title} size="sm">
       <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 w-10 h-10 rounded-sm bg-error/10 flex items-center justify-center">
+        <div className="flex-shrink-0 w-10 h-10 rounded-md bg-error/10 flex items-center justify-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-5 w-5 text-error"

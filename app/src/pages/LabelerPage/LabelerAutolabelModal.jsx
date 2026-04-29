@@ -555,7 +555,7 @@ export function LabelerAutolabelModal({
 
       <div className="relative flex h-full items-center justify-center p-3 md:p-6">
         <div
-          className="flex h-[min(92vh,980px)] w-[min(96vw,1540px)] flex-col overflow-hidden rounded-sm border border-slate-200 bg-base-100 shadow-2xl"
+          className="flex h-[min(92vh,980px)] w-[min(96vw,1540px)] flex-col overflow-hidden rounded-md border border-slate-200 bg-base-100 shadow-2xl"
           onClick={(event) => event.stopPropagation()}
         >
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-base-300 px-5 py-4 md:px-6">
@@ -573,7 +573,7 @@ export function LabelerAutolabelModal({
               variant="ghost"
               outline
               isSubmit={false}
-              className="rounded-sm"
+              className="rounded-md"
               onClick={onClose}
             >
               Tutup
@@ -584,7 +584,7 @@ export function LabelerAutolabelModal({
             <aside className="min-h-0 overflow-y-auto border-b border-base-300 bg-base-100 xl:border-b-0 xl:border-r">
               <div className="space-y-4 p-5">
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                     <div className="rounded-sm border border-base-300 bg-base-200/30 p-4">
+                     <div className="rounded-md border border-base-300 bg-base-200/30 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">
                     Aksi auto-label
                     
@@ -594,7 +594,7 @@ export function LabelerAutolabelModal({
                       variant="warning"
                       outline
                       isSubmit={false}
-                      className="rounded-sm justify-start"
+                      className="rounded-md justify-start"
                       disabled={!currentImageName || !modelValue.trim() || isRunning}
                       onClick={onAutolabelCurrent}
                     >
@@ -603,7 +603,7 @@ export function LabelerAutolabelModal({
                     <Button
                       variant="warning"
                       isSubmit={false}
-                      className="rounded-sm justify-start"
+                      className="rounded-md justify-start"
                       disabled={!selectedCount || !modelValue.trim() || isRunning}
                       onClick={onAutolabelSelection}
                     >
@@ -613,7 +613,7 @@ export function LabelerAutolabelModal({
                       variant="warning"
                       outline
                       isSubmit={false}
-                      className="rounded-sm justify-start"
+                      className="rounded-md justify-start"
                       disabled={!totalImages || !modelValue.trim() || isRunning}
                       onClick={onAutolabelAll}
                     >
@@ -623,7 +623,7 @@ export function LabelerAutolabelModal({
                  
                 </div>
 
-                  <div className="rounded-sm border border-base-300 bg-base-200/40 p-3 text-sm">
+                  <div className="rounded-md border border-base-300 bg-base-200/40 p-3 text-sm">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Folder aktif
                     </p>
@@ -632,7 +632,7 @@ export function LabelerAutolabelModal({
                     </strong>
                   </div>
 
-                  <div className="rounded-sm border border-base-300 bg-base-200/40 p-3 text-sm">
+                  <div className="rounded-md border border-base-300 bg-base-200/40 p-3 text-sm">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Total frame
                     </p>
@@ -641,7 +641,7 @@ export function LabelerAutolabelModal({
                     </strong>
                   </div>
 
-                  <div className="rounded-sm border border-base-300 bg-base-200/40 p-3 text-sm">
+                  <div className="rounded-md border border-base-300 bg-base-200/40 p-3 text-sm">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Frame aktif
                     </p>
@@ -650,7 +650,7 @@ export function LabelerAutolabelModal({
                     </strong>
                   </div>
 
-                  <div className="rounded-sm border border-base-300 bg-base-200/40 p-3 text-sm">
+                  <div className="rounded-md border border-base-300 bg-base-200/40 p-3 text-sm">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Frame terpilih
                     </p>
@@ -679,7 +679,7 @@ export function LabelerAutolabelModal({
                   disabled={isRunning}
                 />
 
-                <div className="rounded-sm border border-base-300 bg-base-200/30 p-4">
+                <div className="rounded-md border border-base-300 bg-base-200/30 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">
                     Tuning YOLO
                   </p>
@@ -751,7 +751,7 @@ export function LabelerAutolabelModal({
                   </div>
                 </div>
 
-                <div className="rounded-sm border border-base-300 bg-base-200/30 p-4">
+                <div className="rounded-md border border-base-300 bg-base-200/30 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">
                     Filter Double Detect
                   </p>
@@ -763,7 +763,7 @@ export function LabelerAutolabelModal({
 
                   <div className="mt-4 grid gap-4">
                     <div className="form-control w-full">
-                      <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-sm border border-base-300 bg-base-100/80 px-4 transition-colors hover:border-base-content/20">
+                      <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-base-300 bg-base-100/80 px-4 transition-colors hover:border-base-content/20">
                         <input
                           type="checkbox"
                           name="autolabel-suppress-nested-duplicates"
@@ -810,21 +810,21 @@ export function LabelerAutolabelModal({
 
              
                 {isRunning ? (
-                  <Alert type="info" className="rounded-sm text-sm">
+                  <Alert type="info" className="rounded-md text-sm">
                     Auto-label sedang berjalan. Kamu masih bisa meninjau pilihan frame di panel
                     kanan, tetapi proses berikutnya baru bisa dijalankan setelah job sekarang selesai.
                   </Alert>
                 ) : null}
 
                 {selectedCount > 0 && selectedExistingLabelCount > 0 ? (
-                  <Alert type="warning" className="rounded-sm text-sm">
+                  <Alert type="warning" className="rounded-md text-sm">
                     {selectedExistingLabelCount} frame terpilih sudah punya label dan akan di-refresh
                     saat menjalankan mode selection.
                   </Alert>
                 ) : null}
 
                 {autolabelWarnings.length ? (
-                  <Alert type="warning" className="rounded-sm text-sm">
+                  <Alert type="warning" className="rounded-md text-sm">
                     <div className="space-y-2">
                       {autolabelWarnings.map((warning) => (
                         <p key={warning}>{warning}</p>
@@ -847,7 +847,7 @@ export function LabelerAutolabelModal({
                         outline
                         isSubmit={false}
                         size="sm"
-                        className="rounded-sm"
+                        className="rounded-md"
                         disabled={!currentImageName}
                         onClick={handleSelectCurrentImage}
                       >
@@ -858,7 +858,7 @@ export function LabelerAutolabelModal({
                         outline
                         isSubmit={false}
                         size="sm"
-                        className="rounded-sm"
+                        className="rounded-md"
                         disabled={!visibleImages.length}
                         onClick={handleSelectVisibleImages}
                       >
@@ -869,7 +869,7 @@ export function LabelerAutolabelModal({
                         outline
                         isSubmit={false}
                         size="sm"
-                        className="rounded-sm"
+                        className="rounded-md"
                         disabled={!pendingVisibleImages.length}
                         onClick={handleSelectPendingImages}
                       >
@@ -880,7 +880,7 @@ export function LabelerAutolabelModal({
                         outline
                         isSubmit={false}
                         size="sm"
-                        className="rounded-sm"
+                        className="rounded-md"
                         disabled={!selectedCount}
                         onClick={handleClearVisibleSelection}
                       >
@@ -931,7 +931,7 @@ export function LabelerAutolabelModal({
                                 imageCardRefs.current.delete(item.name);
                               }}
                               className={joinClasses(
-                                "group overflow-hidden rounded-sm border bg-base-100 text-left transition duration-150 select-none",
+                                "group overflow-hidden rounded-md border bg-base-100 text-left transition duration-150 select-none",
                                 isSelected
                                   ? "border-warning bg-warning/10 shadow-lg ring-1 ring-warning/40"
                                   : joinClasses(
@@ -1004,7 +1004,7 @@ export function LabelerAutolabelModal({
                               variant="ghost"
                               outline
                               isSubmit={false}
-                              className="rounded-sm"
+                              className="rounded-md"
                               onClick={() =>
                                 setVisiblePreviewCount((current) =>
                                   Math.min(current + FRAME_GRID_BATCH_SIZE, visibleImages.length),
@@ -1017,7 +1017,7 @@ export function LabelerAutolabelModal({
                         ) : null}
                       </>
                     ) : (
-                      <Alert type="info" className="rounded-sm text-sm">
+                      <Alert type="info" className="rounded-md text-sm">
                         Tidak ada frame aktif yang cocok dengan filter dan pencarian saat ini.
                       </Alert>
                     )}
@@ -1026,7 +1026,7 @@ export function LabelerAutolabelModal({
                   {dragSelectionRect ? (
                     <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
                       <div
-                        className="absolute rounded-sm border-2 border-warning bg-warning/20 shadow-sm"
+                        className="absolute rounded-md border-2 border-warning bg-warning/20 shadow-sm"
                         style={{
                           left: `${dragSelectionRect.left}px`,
                           top: `${dragSelectionRect.top}px`,

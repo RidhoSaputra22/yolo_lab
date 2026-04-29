@@ -55,19 +55,16 @@ export default function App() {
         : route === "tester"
             ? {
                 eyebrow: "Offline Video Runner",
-                title: "YOLO Tester React",
-                description: "Jalankan runner test video, preview command, dan review hasil output per folder dalam app React yang berjalan di atas Bun.",
+                title: "YOLO Tester",
             }
             : route === "training"
                 ? {
                     eyebrow: "Dataset Training Pipeline",
-                    title: "YOLO Training React",
-                    description: "Bangun dataset dari label aktif lalu jalankan training YOLO tanpa auto-label ulang, lengkap dengan preview command dan monitoring run.",
+                    title: "YOLO Training",
                 }
                 : {
                     eyebrow: "Frame Annotation Workspace",
-                    title: "Manual Labeler React",
-                    description: "Review frame, koreksi bounding box YOLO, dan simpan label langsung dari canvas interaktif dalam app React Bun.",
+                    title: "Manual Labeler",
                 }, [route]);
     return (React.createElement(ToastProvider, null,
         React.createElement("div", { className: joinClasses(isLabelerRoute ? "flex h-screen flex-col overflow-hidden" : "min-h-screen", "bg-white text-base-content") },
@@ -75,17 +72,13 @@ export default function App() {
                 React.createElement("div", { className: "mx-auto flex w-full max-w-[1800px] px-4 lg:px-6 flex-col gap-4 py-4" },
                     React.createElement("div", { className: "flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between" },
                         React.createElement("div", { className: "space-y-2" },
-                            React.createElement("div", { className: "flex flex-wrap items-center gap-2" },
-                                React.createElement(Badge, { type: "warning", className: "gap-1 border-none px-3 py-3" }, "Train Toolkit"),
-                                React.createElement(Badge, { type: "info", outline: true, className: "px-3 py-3" }, "React + Bun")),
                             React.createElement("div", null,
                                 React.createElement("p", { className: "text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-700" }, pageMeta.eyebrow),
-                                React.createElement("h1", { className: "mt-2 text-3xl font-bold tracking-tight text-slate-900" }, pageMeta.title),
-                                React.createElement(Paragraph, { className: "mt-2 max-w-4xl text-sm leading-6 text-slate-600 opacity-100" }, pageMeta.description))),
+                                React.createElement("h1", { className: "mt-2 text-3xl font-bold tracking-tight text-slate-900" }, pageMeta.title))),
                         React.createElement("nav", { className: "flex flex-wrap gap-2" },
-                            React.createElement(Button, { variant: route === "labeler" ? "primary" : "ghost", isSubmit: false, className: joinClasses("rounded-sm px-5", route !== "labeler" && "border border-base-300 bg-base-100"), onClick: () => navigate("labeler") }, "Manual Labeler"),
-                            React.createElement(Button, { variant: route === "footage" ? "info" : "ghost", isSubmit: false, className: joinClasses("rounded-sm px-5", route !== "footage" && "border border-base-300 bg-base-100"), onClick: () => navigate("footage") }, "Footage Dataset"),
-                            React.createElement(Button, { variant: route === "tester" ? "secondary" : "ghost", isSubmit: false, className: joinClasses("rounded-sm px-5", route !== "tester" && "border border-base-300 bg-base-100"), onClick: () => navigate("tester") }, "YOLO Tester"),
-                            React.createElement(Button, { variant: route === "training" ? "warning" : "ghost", isSubmit: false, className: joinClasses("rounded-sm px-5", route !== "training" && "border border-base-300 bg-base-100"), onClick: () => navigate("training") }, "YOLO Training"))))),
+                            React.createElement(Button, { variant: route === "labeler" ? "primary" : "ghost", isSubmit: false, className: joinClasses("rounded-md px-5", route !== "labeler" && "border border-base-300 bg-base-100"), onClick: () => navigate("labeler") }, "Manual Labeler"),
+                            React.createElement(Button, { variant: route === "footage" ? "info" : "ghost", isSubmit: false, className: joinClasses("rounded-md px-5", route !== "footage" && "border border-base-300 bg-base-100"), onClick: () => navigate("footage") }, "Footage Dataset"),
+                            React.createElement(Button, { variant: route === "tester" ? "secondary" : "ghost", isSubmit: false, className: joinClasses("rounded-md px-5", route !== "tester" && "border border-base-300 bg-base-100"), onClick: () => navigate("tester") }, "YOLO Tester"),
+                            React.createElement(Button, { variant: route === "training" ? "warning" : "ghost", isSubmit: false, className: joinClasses("rounded-md px-5", route !== "training" && "border border-base-300 bg-base-100"), onClick: () => navigate("training") }, "YOLO Training"))))),
             React.createElement("main", { className: "mx-auto w-full max-w-[1800px] px-4 lg:px-6 py-5 lg:py-6" }, route === "footage" ? (React.createElement(FootagePage, { onNavigate: navigate })) : route === "tester" ? (React.createElement(TesterPage, { onNavigate: navigate })) : route === "training" ? (React.createElement(TrainingPage, { onNavigate: navigate })) : (React.createElement(LabelerPage, { onNavigate: navigate }))))));
 }

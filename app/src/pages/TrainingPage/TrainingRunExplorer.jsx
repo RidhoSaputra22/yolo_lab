@@ -85,7 +85,7 @@ export function TrainingRunExplorer({
     <>
       <div className="grid min-w-0 gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
         {/* Run list sidebar */}
-        <Card className="h-fit min-w-0 rounded-sm border border-base-300 bg-base-100/90 shadow-xl xl:sticky xl:top-28">
+        <Card className="h-fit min-w-0 rounded-md border border-base-300 bg-base-100/90 shadow-xl xl:sticky xl:top-28">
           <div className="space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -110,7 +110,7 @@ export function TrainingRunExplorer({
                     type="button"
                     onClick={() => onSelectRun(run.key)}
                     className={joinClasses(
-                      "w-full overflow-hidden rounded-sm border px-3 py-3 text-left transition duration-150",
+                      "w-full overflow-hidden rounded-md border px-3 py-3 text-left transition duration-150",
                       run.key === selectedRunKey
                         ? "border-warning bg-warning/10 shadow-md"
                         : "border-base-300 bg-base-100 hover:-translate-y-0.5 hover:border-base-content/20",
@@ -123,7 +123,7 @@ export function TrainingRunExplorer({
                   </button>
                 ))
               ) : (
-                <Alert type="info" className="rounded-sm text-sm">
+                <Alert type="info" className="rounded-md text-sm">
                   Belum ada run training di folder output.
                 </Alert>
               )}
@@ -132,7 +132,7 @@ export function TrainingRunExplorer({
         </Card>
 
         {/* Run details card */}
-        <Card className="min-w-0 rounded-sm border border-base-300 bg-base-100/90 shadow-xl">
+        <Card className="min-w-0 rounded-md border border-base-300 bg-base-100/90 shadow-xl">
           <div className="space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -152,7 +152,7 @@ export function TrainingRunExplorer({
                     variant="ghost"
                     isSubmit={false}
                     size="sm"
-                    className="rounded-sm border border-base-300 bg-base-100 px-4"
+                    className="rounded-md border border-base-300 bg-base-100 px-4"
                     disabled={!imageArtifacts.length}
                     onClick={() => setIsAssetModalOpen(true)}
                   >
@@ -169,7 +169,7 @@ export function TrainingRunExplorer({
               <>
                 {/* Run summary moved from sidebar */}
                 <div className="grid gap-3 md:grid-cols-4">
-                  <div className="rounded-sm border border-base-300 bg-base-200/40 p-3 md:col-span-2">
+                  <div className="rounded-md border border-base-300 bg-base-200/40 p-3 md:col-span-2">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Path
                     </p>
@@ -177,7 +177,7 @@ export function TrainingRunExplorer({
                       {selectedRun.path || "-"}
                     </p>
                   </div>
-                  <div className="rounded-sm border border-base-300 bg-base-200/40 p-3">
+                  <div className="rounded-md border border-base-300 bg-base-200/40 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Updated
                     </p>
@@ -185,7 +185,7 @@ export function TrainingRunExplorer({
                       {formatTimestamp(selectedRun.updatedAt)}
                     </p>
                   </div>
-                  <div className="rounded-sm border border-base-300 bg-base-200/40 p-3">
+                  <div className="rounded-md border border-base-300 bg-base-200/40 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Artifact
                     </p>
@@ -209,7 +209,7 @@ export function TrainingRunExplorer({
                   ].map(({ label, value, tone }) => (
                     <div
                       key={label}
-                      className={`rounded-sm border border-base-300 bg-base-200/40 p-3 ${tone || ""}`}
+                      className={`rounded-md border border-base-300 bg-base-200/40 p-3 ${tone || ""}`}
                     >
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         {label}
@@ -243,7 +243,7 @@ export function TrainingRunExplorer({
                       detail: `epochs ${selectedRun.config?.epochs ?? "-"}`,
                     },
                   ].map(({ label, value, detail }) => (
-                    <div key={label} className="rounded-sm border border-base-300 bg-base-200/40 p-3">
+                    <div key={label} className="rounded-md border border-base-300 bg-base-200/40 p-3">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         {label}
                       </p>
@@ -255,7 +255,7 @@ export function TrainingRunExplorer({
 
                 {/* Model and data config */}
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div className="rounded-sm border border-base-300 bg-base-200/40 p-3">
+                  <div className="rounded-md border border-base-300 bg-base-200/40 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Model
                     </p>
@@ -263,7 +263,7 @@ export function TrainingRunExplorer({
                       {selectedRun.config?.model || "-"}
                     </p>
                   </div>
-                  <div className="rounded-sm border border-base-300 bg-base-200/40 p-3">
+                  <div className="rounded-md border border-base-300 bg-base-200/40 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Data
                     </p>
@@ -280,7 +280,7 @@ export function TrainingRunExplorer({
                       href={selectedRun.artifacts.bestWeights.downloadUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="rounded-sm bg-warning px-4 py-2 text-sm font-semibold text-white hover:bg-warning/90"
+                      className="rounded-md bg-warning px-4 py-2 text-sm font-semibold text-white hover:bg-warning/90"
                     >
                       Best Weights
                     </a>
@@ -290,7 +290,7 @@ export function TrainingRunExplorer({
                       href={selectedRun.artifacts.lastWeights.downloadUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="rounded-sm border border-base-300 bg-base-100 px-4 py-2 text-sm font-semibold hover:bg-base-200"
+                      className="rounded-md border border-base-300 bg-base-100 px-4 py-2 text-sm font-semibold hover:bg-base-200"
                     >
                       Last Weights
                     </a>
@@ -300,7 +300,7 @@ export function TrainingRunExplorer({
                       href={selectedRun.artifacts.resultsCsv.downloadUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="rounded-sm bg-info px-4 py-2 text-sm font-semibold text-white hover:bg-info/90"
+                      className="rounded-md bg-info px-4 py-2 text-sm font-semibold text-white hover:bg-info/90"
                     >
                       results.csv
                     </a>
@@ -310,7 +310,7 @@ export function TrainingRunExplorer({
                       href={selectedRun.artifacts.argsYaml.downloadUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="rounded-sm border border-base-300 bg-base-100 px-4 py-2 text-sm font-semibold hover:bg-base-200"
+                      className="rounded-md border border-base-300 bg-base-100 px-4 py-2 text-sm font-semibold hover:bg-base-200"
                     >
                       args.yaml
                     </a>
@@ -328,7 +328,7 @@ export function TrainingRunExplorer({
                           type="button"
                           disabled={previewIndex < 0}
                           onClick={() => setActiveImageIndex(previewIndex)}
-                          className="overflow-hidden rounded-sm border border-base-300 bg-base-100 text-left shadow-md transition hover:-translate-y-0.5 hover:border-base-content/20 disabled:cursor-default disabled:hover:translate-y-0"
+                          className="overflow-hidden rounded-md border border-base-300 bg-base-100 text-left shadow-md transition hover:-translate-y-0.5 hover:border-base-content/20 disabled:cursor-default disabled:hover:translate-y-0"
                         >
                           <div className="border-b border-base-300 bg-slate-950">
                             <img
@@ -347,13 +347,13 @@ export function TrainingRunExplorer({
                     })}
                   </div>
                 ) : (
-                  <Alert type="info" className="rounded-sm text-sm">
+                  <Alert type="info" className="rounded-md text-sm">
                     Run ini belum memiliki artifact preview gambar.
                   </Alert>
                 )}
               </>
             ) : (
-              <Alert type="info" className="rounded-sm text-sm">
+              <Alert type="info" className="rounded-md text-sm">
                 Belum ada detail run yang bisa ditampilkan.
               </Alert>
             )}
@@ -368,7 +368,7 @@ export function TrainingRunExplorer({
         size="xl"
       >
         <div className="space-y-4">
-          <div className="flex flex-wrap items-start justify-between gap-3 rounded-sm border border-base-300 bg-base-200/30 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-base-300 bg-base-200/30 p-4">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
                 Asset Gallery
@@ -389,7 +389,7 @@ export function TrainingRunExplorer({
                   key={artifact.path}
                   type="button"
                   onClick={() => setActiveImageIndex(index)}
-                  className="group overflow-hidden rounded-sm border border-base-300 bg-base-100 text-left shadow-md transition duration-150 hover:-translate-y-0.5 hover:border-base-content/20"
+                  className="group overflow-hidden rounded-md border border-base-300 bg-base-100 text-left shadow-md transition duration-150 hover:-translate-y-0.5 hover:border-base-content/20"
                 >
                   <div className="overflow-hidden border-b border-base-300 bg-slate-950">
                     <img
@@ -408,7 +408,7 @@ export function TrainingRunExplorer({
               ))}
             </div>
           ) : (
-            <Alert type="info" className="rounded-sm text-sm">
+            <Alert type="info" className="rounded-md text-sm">
               Run ini belum memiliki asset gambar yang bisa ditampilkan.
             </Alert>
           )}
@@ -440,14 +440,14 @@ export function TrainingRunExplorer({
                   <>
                     <button
                       type="button"
-                      className="rounded-sm border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/15"
+                      className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/15"
                       onClick={showPreviousImage}
                     >
                       Prev
                     </button>
                     <button
                       type="button"
-                      className="rounded-sm border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/15"
+                      className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/15"
                       onClick={showNextImage}
                     >
                       Next
@@ -458,13 +458,13 @@ export function TrainingRunExplorer({
                   href={activeImageArtifact.downloadUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-sm border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/15"
+                  className="rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/15"
                 >
                   Buka Tab Baru
                 </a>
                 <button
                   type="button"
-                  className="rounded-sm bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+                  className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
                   onClick={() => setActiveImageIndex(-1)}
                 >
                   Tutup
@@ -472,7 +472,7 @@ export function TrainingRunExplorer({
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto rounded-sm border border-white/10 bg-black/40 p-3 md:p-6">
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto rounded-md border border-white/10 bg-black/40 p-3 md:p-6">
               <img
                 src={activeImageArtifact.downloadUrl}
                 alt={activeImageArtifact.name}

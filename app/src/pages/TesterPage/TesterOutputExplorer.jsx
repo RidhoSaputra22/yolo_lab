@@ -12,7 +12,7 @@ function SummaryMetrics({ summaryData }) {
   return (
     <div className="grid gap-3">
       {faceRegistry ? (
-        <div className="rounded-sm border border-base-300 bg-base-200/40 p-4">
+        <div className="rounded-md border border-base-300 bg-base-200/40 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-700">
               Registry Wajah
@@ -29,7 +29,7 @@ function SummaryMetrics({ summaryData }) {
               ["Skip no face", faceRegistry.skipped_no_face ?? 0],
               ["Skip error", faceRegistry.skipped_read_error ?? 0],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-sm border border-base-300 bg-base-100/80 p-3">
+              <div key={label} className="rounded-md border border-base-300 bg-base-100/80 p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   {label}
                 </p>
@@ -107,7 +107,7 @@ export function TesterOutputExplorer({
 }) {
   return (
     <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-xl">
+      <Card className="rounded-md border border-base-300 bg-base-100/90 shadow-xl">
         <div className="space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -137,7 +137,7 @@ export function TesterOutputExplorer({
                   type="button"
                   onClick={() => onSelectFolder(folder.key)}
                   className={joinClasses(
-                    "rounded-sm border p-4 text-left transition duration-150",
+                    "rounded-md border p-4 text-left transition duration-150",
                     folder.key === selectedFolderKey
                       ? "border-success bg-success/10 shadow-md"
                       : "border-base-300 bg-base-100 hover:-translate-y-0.5 hover:border-base-content/20",
@@ -160,7 +160,7 @@ export function TesterOutputExplorer({
                 </button>
               ))
             ) : (
-              <Alert type="info" className="rounded-sm text-sm">
+              <Alert type="info" className="rounded-md text-sm">
                 Belum ada folder output yang berisi artifact.
               </Alert>
             )}
@@ -168,7 +168,7 @@ export function TesterOutputExplorer({
         </div>
       </Card>
 
-      <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-xl">
+      <Card className="rounded-md border border-base-300 bg-base-100/90 shadow-xl">
         <div className="space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -194,7 +194,7 @@ export function TesterOutputExplorer({
                   ["File", formatCount(selectedFolder.fileCount, "file")],
                   ["Updated", selectedFolder.updatedAt],
                 ].map(([label, value]) => (
-                  <div key={label} className="rounded-sm border border-base-300 bg-base-200/50 p-3">
+                  <div key={label} className="rounded-md border border-base-300 bg-base-200/50 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       {label}
                     </p>
@@ -208,7 +208,7 @@ export function TesterOutputExplorer({
                   selectedFolder.runs.map((run) => (
                     <article
                       key={run.key}
-                      className="overflow-hidden rounded-sm border border-base-300 bg-base-100 shadow-md"
+                      className="overflow-hidden rounded-md border border-base-300 bg-base-100 shadow-md"
                     >
                       <RunVideoPreview run={run} />
 
@@ -265,7 +265,7 @@ export function TesterOutputExplorer({
                               href={run.video.downloadUrl}
                               variant="primary"
                               isSubmit={false}
-                              className="rounded-sm"
+                              className="rounded-md"
                               target="_blank"
                               rel="noreferrer"
                             >
@@ -277,7 +277,7 @@ export function TesterOutputExplorer({
                               href={run.summary.downloadUrl}
                               variant="warning"
                               isSubmit={false}
-                              className="rounded-sm"
+                              className="rounded-md"
                               target="_blank"
                               rel="noreferrer"
                             >
@@ -289,7 +289,7 @@ export function TesterOutputExplorer({
                               href={run.tracks.downloadUrl}
                               variant="info"
                               isSubmit={false}
-                              className="rounded-sm"
+                              className="rounded-md"
                               target="_blank"
                               rel="noreferrer"
                             >
@@ -302,7 +302,7 @@ export function TesterOutputExplorer({
                               href={artifact.downloadUrl}
                               variant="ghost"
                               isSubmit={false}
-                              className="rounded-sm border border-base-300 bg-base-100"
+                              className="rounded-md border border-base-300 bg-base-100"
                               target="_blank"
                               rel="noreferrer"
                             >
@@ -316,14 +316,14 @@ export function TesterOutputExplorer({
                     </article>
                   ))
                 ) : (
-                  <Alert type="info" className="rounded-sm text-sm">
+                  <Alert type="info" className="rounded-md text-sm">
                     Folder ini belum memiliki run yang bisa dirangkum.
                   </Alert>
                 )}
               </div>
             </>
           ) : (
-            <Alert type="info" className="rounded-sm text-sm">
+            <Alert type="info" className="rounded-md text-sm">
               Belum ada hasil test yang bisa ditampilkan.
             </Alert>
           )}

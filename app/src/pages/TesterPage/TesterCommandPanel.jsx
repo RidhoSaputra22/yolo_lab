@@ -23,7 +23,7 @@ export function TesterCommandPanel({
     <div className="grid gap-4">
       
 
-      <Card className="rounded-sm border border-base-300 bg-base-100/90 shadow-lg">
+      <Card className="rounded-md border border-base-300 bg-base-100/90 shadow-lg">
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-lg font-bold">Ringkasan Job</h3>
@@ -32,7 +32,7 @@ export function TesterCommandPanel({
             </Badge>
           </div>
           {job?.error ? (
-            <Alert type="error" className="rounded-sm text-sm">
+            <Alert type="error" className="rounded-md text-sm">
               {job.error}
             </Alert>
           ) : null}
@@ -43,7 +43,7 @@ export function TesterCommandPanel({
               ["Output Dir", job?.outputDir || defaults.outputDir || "-"],
               ["Command", job?.commandDisplay || "-"],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-sm border border-base-300 bg-base-200/50 p-3">
+              <div key={label} className="rounded-md border border-base-300 bg-base-200/50 p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   {label}
                 </p>

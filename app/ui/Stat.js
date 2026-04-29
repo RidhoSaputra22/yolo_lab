@@ -175,7 +175,7 @@ export default function Stat({
           <span className="text-xs text-base-content/40">{description}</span>
           {trendValue && (
             <span
-              className={`inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium ${
+              className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${
                 trend === "up"
                   ? "bg-success/10 text-success"
                   : trend === "down"
