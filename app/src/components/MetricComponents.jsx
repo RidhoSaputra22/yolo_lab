@@ -8,10 +8,10 @@ import { joinClasses } from "../shared/utils.js";
 export function StatusMetric({ label, value, detail, tone = "" }) {
   return (
     <Card compact className="rounded-md border border-base-300 bg-base-100/90 shadow-lg">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-base-content/60">
         {label}
       </p>
-      <p className={joinClasses("mt-2 break-all text-sm font-semibold text-slate-900", tone)}>
+      <p className={joinClasses("mt-2 break-all text-sm font-semibold text-base-content", tone)}>
         {value}
       </p>
       <Paragraph className="mt-2 text-xs">{detail}</Paragraph>
@@ -22,14 +22,14 @@ export function StatusMetric({ label, value, detail, tone = "" }) {
 /**
  * Metric tile component for displaying key metrics
  */
-export function MetricTile({ label, value, detail, tone = "", textColor = "text-slate-900" }) {
+export function MetricTile({ label, value, detail, tone = "", textColor = "" }) {
   return (
-    <div className="rounded-md border border-base-300 bg-base-200/40 p-3">
-      <p className={joinClasses("text-[11px] font-semibold uppercase tracking-[0.18em] ", textColor)}>
+    <div className="yolo-muted-panel rounded-md border border-base-300 bg-base-200/40 p-3">
+      <p className={joinClasses("text-[11px] font-semibold uppercase tracking-[0.18em] text-base-content/60", textColor)}>
         {label}
       </p>
-      <p className={joinClasses("mt-2 text-base font-semibold ", tone)}>{value}</p>
-      {detail ? <p className={joinClasses("mt-1 text-[11px] ", textColor)}>{detail}</p> : null}
+      <p className={joinClasses("mt-2 text-base font-semibold text-base-content", tone)}>{value}</p>
+      {detail ? <p className="mt-1 text-[11px] text-base-content/60">{detail}</p> : null}
     </div>
   );
 }

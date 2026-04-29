@@ -1,9 +1,9 @@
 {
   "footageDir": "train/footage",
-  "framesDir": "train/frames/frame_20260430_3634",
+  "framesDir": "train/frames/frame_20260430_3641",
   "sampleEvery": 15,
   "maxFramesPerVideo": 0,
   "jpegQuality": 100,
   "overwriteFrames": false,
-  "estimatedFrameCount": 3634
+  "estimatedFrameCount": 3641
 }

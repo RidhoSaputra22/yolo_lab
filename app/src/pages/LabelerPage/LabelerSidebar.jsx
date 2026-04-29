@@ -59,12 +59,12 @@ export function LabelerSidebar({
             {summaryCards.map((item) => (
               <div
                 key={item.label}
-                className="rounded-md border border-base-300 bg-base-200/40 px-3 py-3"
+                className="yolo-muted-panel rounded-md border border-base-300 bg-base-200/40 px-3 py-3"
               >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-base-content/60">
                   {item.label}
                 </p>
-                <p className="mt-2 text-lg font-bold text-slate-900">{item.value}</p>
+                <p className="mt-2 text-lg font-bold text-base-content">{item.value}</p>
               </div>
             ))}
           </div>
@@ -109,12 +109,12 @@ export function LabelerSidebar({
             />
           </div>
 
-          <div className="flex items-center justify-between gap-2 rounded-md border border-base-300 bg-base-200/40 px-3 py-2">
+          <div className="yolo-muted-panel flex items-center justify-between gap-2 rounded-md border border-base-300 bg-base-200/40 px-3 py-2">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-base-content/60">
                 Aktif
               </p>
-              <p className="mt-1 break-all font-mono text-[11px] text-slate-700">
+              <p className="mt-1 break-all font-mono text-[11px] text-base-content/70">
                 {activeFramesDir || "-"}
               </p>
             </div>
@@ -155,19 +155,19 @@ export function LabelerSidebar({
           )}
 
           <div className="grid gap-3">
-            <div className="rounded-md border border-base-300 bg-base-200/40 px-3 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div className="yolo-muted-panel rounded-md border border-base-300 bg-base-200/40 px-3 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-base-content/60">
                 Frames aktif
               </p>
-              <p className="mt-2 break-all font-mono text-[11px] text-slate-700">
+              <p className="mt-2 break-all font-mono text-[11px] text-base-content/70">
                 {activeFramesDir || "-"}
               </p>
             </div>
-            <div className="rounded-md border border-base-300 bg-base-200/40 px-3 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div className="yolo-muted-panel rounded-md border border-base-300 bg-base-200/40 px-3 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-base-content/60">
                 Labels aktif
               </p>
-              <p className="mt-2 break-all font-mono text-[11px] text-slate-700">
+              <p className="mt-2 break-all font-mono text-[11px] text-base-content/70">
                 {activeLabelsDir || "-"}
               </p>
             </div>
@@ -230,7 +230,7 @@ export function LabelerSidebar({
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <p className="break-all text-sm font-semibold text-slate-900">{item.name}</p>
+                    <p className="break-all text-sm font-semibold text-base-content">{item.name}</p>
                     <Badge type="warning" className="px-3 py-3">
                       {item.boxCount || 0}
                     </Badge>

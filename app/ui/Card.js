@@ -24,7 +24,7 @@ export default function Card({
     ? "cursor-pointer transition-shadow duration-200 hover:shadow-2xl hover:-translate-y-0.5 active:scale-[0.99]"
     : "";
   const highlightClass = highlight ? "ring-2 ring-primary" : "";
-  const cardClass = `card bg-base-100 shadow-xl ${highlightClass} ${className} ${hoverClass}`;
+  const cardClass = `card yolo-card bg-base-100 shadow-xl ${highlightClass} ${className} ${hoverClass}`;
   const bodyClass = `card-body${compact ? " p-4" : ""}`;
 
   const cardContent = (

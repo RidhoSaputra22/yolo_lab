@@ -190,12 +190,12 @@ export default function TrainingPage() {
         : job?.state === "finished" ? "success"
             : job?.running ? "warning" : "ghost";
     return (React.createElement("div", { className: "grid gap-4 pb-[160px] md:pb-[100px]" },
-        React.createElement("section", { className: "flex flex-col gap-3 rounded-md border border-base-300 bg-base-100/90 p-4 shadow-lg xl:flex-row xl:items-center xl:justify-between" },
+        React.createElement("section", { className: "yolo-toolbar flex flex-col gap-3 rounded-md border border-base-300 bg-base-100/90 p-4 shadow-lg xl:flex-row xl:items-center xl:justify-between" },
             React.createElement("div", { className: "flex flex-wrap items-center gap-3" },
                 React.createElement(Badge, { type: stateBadgeType, className: "px-4 py-3 text-xs font-bold uppercase" }, job?.state || "idle"),
                 React.createElement("div", { className: "text-sm" },
-                    React.createElement("span", { className: "font-semibold text-slate-900" }, job?.activeRunName || preview?.config?.runName || defaults.runName || "-"),
-                    React.createElement("span", { className: "ml-2 text-slate-500" },
+                    React.createElement("span", { className: "font-semibold text-base-content" }, job?.activeRunName || preview?.config?.runName || defaults.runName || "-"),
+                    React.createElement("span", { className: "ml-2 text-base-content/60" },
                         job?.durationSeconds != null ? `${job.durationSeconds}s` : "",
                         " \u2022 ",
                         formatCount(runs.length, "run")))),

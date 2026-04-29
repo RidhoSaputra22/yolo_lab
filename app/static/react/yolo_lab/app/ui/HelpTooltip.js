@@ -56,7 +56,7 @@ export default function HelpTooltip({ text, label }) {
         } },
         React.createElement("button", { ref: triggerRef, type: "button", "aria-describedby": open ? tooltipId : undefined, "aria-label": `Info ${label}`, className: `inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border bg-base-200 text-[11px] font-bold leading-none transition-colors duration-150 ${open
                 ? "border-amber-500 text-amber-700"
-                : "border-base-300 text-base-content/65"}` }, "i"),
+                : "border-base-300 text-base-content/60"}` }, "i"),
         globalThis.ReactDOM?.createPortal && typeof document !== "undefined"
             ? globalThis.ReactDOM.createPortal(tooltipNode, document.body)
             : tooltipNode));

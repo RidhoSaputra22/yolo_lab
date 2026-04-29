@@ -9,12 +9,21 @@ body {
   min-height: 100%;
 }
 
+:root {
+  --yolo-page-bg: #f4f7fb;
+  --yolo-surface-soft: rgba(255, 255, 255, 0.78);
+  --yolo-shadow-card: 0 16px 36px rgba(15, 23, 42, 0.08);
+  --yolo-shadow-float: 0 22px 48px rgba(15, 23, 42, 0.12);
+  --yolo-border-soft: rgba(148, 163, 184, 0.26);
+  --yolo-code-bg: #020617;
+}
+
 body {
   font-family:
     "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  background: #ffffff;
-  color: #18242b;
+  background: var(--yolo-page-bg);
+  color: var(--fallback-bc, oklch(var(--bc) / 1));
 }
 
 code,
@@ -35,7 +44,7 @@ pre,
 }
 
 ::selection {
-  background: rgba(216, 91, 52, 0.18);
+  background: color-mix(in oklab, var(--fallback-p, oklch(var(--p) / 1)) 24%, transparent);
 }
 
 ::-webkit-scrollbar {
@@ -44,19 +53,27 @@ pre,
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(24, 36, 43, 0.06);
+  background: color-mix(in oklab, var(--fallback-bc, oklch(var(--bc) / 1)) 8%, transparent);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(24, 36, 43, 0.22);
+  background: color-mix(in oklab, var(--fallback-bc, oklch(var(--bc) / 1)) 24%, transparent);
   border-radius: 9999px;
   border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--fallback-bc, oklch(var(--bc) / 1)) 38%, transparent);
   background-clip: padding-box;
 }
 
 /* DaisyUI v4 component overrides */
 .btn {
   @apply shadow-sm;
+  min-height: 2.75rem;
+  height: auto;
+  line-height: 1.1;
 }
 
 .card {
@@ -68,6 +85,9 @@ pre,
 .select,
 .textarea {
   @apply transition-all duration-150;
+  min-height: 2.85rem;
+  border-color: color-mix(in oklab, var(--fallback-bc, oklch(var(--bc) / 1)) 16%, transparent);
+  background-color: color-mix(in oklab, var(--fallback-b1, oklch(var(--b1) / 1)) 94%, var(--fallback-b2, oklch(var(--b2) / 1)));
 }
 
 .input:focus,
@@ -86,6 +106,9 @@ details > summary::-webkit-details-marker {
 
 .badge {
   font-size: xx-small;
+  min-height: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 /* Card body spacing fix for compact variant */
@@ -97,4 +120,51 @@ details > summary::-webkit-details-marker {
 .text-wrap-anywhere {
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.tracking-tight {
+  letter-spacing: 0 !important;
+}
+
+.yolo-app-shell {
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, var(--yolo-page-bg) 0%, var(--fallback-b1, oklch(var(--b1) / 1)) 42%, var(--yolo-page-bg) 100%);
+}
+
+.yolo-app-header {
+  box-shadow: 0 1px 0 var(--yolo-border-soft), 0 12px 28px rgba(15, 23, 42, 0.04);
+}
+
+.yolo-eyebrow {
+  letter-spacing: 0.28em;
+}
+
+.yolo-nav-button {
+  min-width: 118px;
+}
+
+.yolo-card {
+  border: 1px solid var(--yolo-border-soft);
+  box-shadow: var(--yolo-shadow-card);
+}
+
+.yolo-card .card-body {
+  padding: 1.25rem;
+}
+
+.yolo-toolbar {
+  border: 1px solid var(--yolo-border-soft);
+  background-color: var(--yolo-surface-soft);
+  box-shadow: var(--yolo-shadow-card);
+}
+
+.yolo-muted-panel {
+  border-color: var(--yolo-border-soft);
+  background-color: color-mix(in oklab, var(--fallback-b2, oklch(var(--b2) / 1)) 62%, transparent);
+}
+
+.yolo-code-panel {
+  background-color: var(--yolo-code-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }

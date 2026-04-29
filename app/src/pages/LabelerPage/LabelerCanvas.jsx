@@ -29,10 +29,10 @@ export function LabelerCanvas({
   onCanvasMouseLeave,
 }) {
   return (
-    <Card className="h-full rounded-md border border-base-300 bg-base-100/90 shadow-xl">
-      <div className="flex h-full min-h-0 h-screen flex-col gap-4">
+    <Card className="h-full min-h-[420px] rounded-md border border-base-300 bg-base-100/90 shadow-xl lg:min-h-[560px]">
+      <div className="flex h-full min-h-0 flex-col gap-4">
         {!currentImageName ? (
-          <div className="grid min-h-0 flex-1 place-items-center rounded-md border border-dashed border-base-300 bg-base-200/40 p-8 text-center text-sm text-slate-500">
+          <div className="yolo-muted-panel grid min-h-0 flex-1 place-items-center rounded-md border border-dashed border-base-300 bg-base-200/40 p-8 text-center text-sm text-base-content/60">
             Frame belum dimuat. Pilih salah satu item di sidebar.
           </div>
         ) : (
@@ -63,7 +63,7 @@ export function LabelerCanvas({
             ) : null}
             <div
               ref={stageViewportRef}
-              className="relative min-h-0 max-h-[600px] h-full flex-1 overflow-auto rounded-md border border-base-300 bg-base-100 p-4"
+              className="relative h-full min-h-[480px] flex-1 overflow-auto rounded-md border border-base-300 bg-base-200/60 p-4"
               style={{
                 overscrollBehavior: "contain",
                 
@@ -80,7 +80,7 @@ export function LabelerCanvas({
               >
                 <div
                   ref={frameShellRef}
-                  className="absolute overflow-hidden rounded-md border border-base-300 bg-white shadow-2xl"
+                  className="absolute overflow-hidden rounded-md border border-base-300 bg-black shadow-2xl"
                   style={{
                     left: stageLayout.frameOffsetX,
                     top: stageLayout.frameOffsetY,

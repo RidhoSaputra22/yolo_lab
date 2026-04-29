@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Badge, Button, Paragraph } from "./ui.js";
+import { Button } from "./ui.js";
 import LabelerPage from "./pages/LabelerPage.jsx";
 import FootagePage from "./pages/FootagePage.jsx";
 import TesterPage from "./pages/TesterPage.jsx";
@@ -13,6 +13,13 @@ const ROUTES = {
   tester: "/tester",
   training: "/training",
 };
+
+const NAV_ITEMS = [
+  { route: "labeler", label: "Manual Labeler", variant: "primary" },
+  { route: "footage", label: "Footage Dataset", variant: "info" },
+  { route: "tester", label: "YOLO Tester", variant: "secondary" },
+  { route: "training", label: "YOLO Training", variant: "warning" },
+];
 
 function routeFromPath(pathname) {
   if (pathname.startsWith("/footage")) {
@@ -65,18 +72,21 @@ export default function App() {
         ? {
             eyebrow: "Offline Video Runner",
             title: "YOLO Tester",
-            
+            description:
+              "Jalankan inferensi video offline, simpan output, dan cek artifact hasil tracking dari satu workspace.",
           }
         : route === "training"
           ? {
               eyebrow: "Dataset Training Pipeline",
               title: "YOLO Training",
-            
+              description:
+                "Siapkan split dataset dari label aktif, preview command, lalu jalankan training YOLO dengan konfigurasi yang tersimpan.",
             }
           : {
               eyebrow: "Frame Annotation Workspace",
               title: "Manual Labeler",
-            
+              description:
+                "Label bounding box frame CCTV secara manual dengan navigasi cepat, checkpoint, dan auto-label pendukung.",
             },
     [route],
   );
@@ -86,82 +96,52 @@ export default function App() {
       <div
         className={joinClasses(
           isLabelerRoute ? "flex pb-32 flex-col overflow-hidden" : "min-h-screen",
-          "bg-white text-base-content",
+          "yolo-app-shell text-base-content",
         )}
       >
         <header
-          className="z-30 border-b border-base-300/70 bg-base-100/85 backdrop-blur-xl sticky top-0"
+          className="yolo-app-header sticky top-0 z-30 border-b border-base-300/70 bg-base-100/90 backdrop-blur-xl"
         >
           <div
-            className="mx-auto flex w-full max-w-[1800px] px-4 lg:px-6 flex-col gap-4 py-4"
+            className="mx-auto flex w-full max-w-[1800px] flex-col gap-4 px-4 py-4 lg:px-6"
           >
-           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div className="space-y-2">
-                 
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-700">
-                      {pageMeta.eyebrow}
-                    </p>
-                    <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-                      {pageMeta.title}
-                    </h1>
-                    
-                  </div>
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <div className="min-w-0 space-y-2 xl:max-w-[560px] 2xl:max-w-4xl">
+                <p className="yolo-eyebrow text-[11px] font-semibold uppercase tracking-[0.28em] text-primary">
+                  {pageMeta.eyebrow}
+                </p>
+                <div className="max-w-4xl">
+                  <h1 className="text-3xl font-bold tracking-tight text-base-content">
+                    {pageMeta.title}
+                  </h1>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/70">
+                    {pageMeta.description}
+                  </p>
                 </div>
-
-                <nav className="flex flex-wrap gap-2">
-                  <Button
-                    variant={route === "labeler" ? "primary" : "ghost"}
-                    isSubmit={false}
-                    className={joinClasses(
-                      "rounded-md px-5",
-                      route !== "labeler" && "border border-base-300 bg-base-100",
-                    )}
-                    onClick={() => navigate("labeler")}
-                    
-                  >
-                    Manual Labeler
-                  </Button>
-                  <Button
-                    variant={route === "footage" ? "info" : "ghost"}
-                    isSubmit={false}
-                    className={joinClasses(
-                      "rounded-md px-5",
-                      route !== "footage" && "border border-base-300 bg-base-100",
-                    )}
-                    onClick={() => navigate("footage")}
-                  >
-                    Footage Dataset
-                  </Button>
-                  <Button
-                    variant={route === "tester" ? "secondary" : "ghost"}
-                    isSubmit={false}
-                    className={joinClasses(
-                      "rounded-md px-5",
-                      route !== "tester" && "border border-base-300 bg-base-100",
-                    )}
-                    onClick={() => navigate("tester")}
-                  >
-                    YOLO Tester
-                  </Button>
-                  <Button
-                    variant={route === "training" ? "warning" : "ghost"}
-                    isSubmit={false}
-                    className={joinClasses(
-                      "rounded-md px-5",
-                      route !== "training" && "border border-base-300 bg-base-100",
-                    )}
-                    onClick={() => navigate("training")}
-                  >
-                    YOLO Training
-                  </Button>
-                </nav>
               </div>
+
+              <nav className="flex flex-wrap gap-2 lg:justify-end">
+                {NAV_ITEMS.map((item) => (
+                  <Button
+                    key={item.route}
+                    variant={route === item.route ? item.variant : "ghost"}
+                    isSubmit={false}
+                    className={joinClasses(
+                      "yolo-nav-button rounded-md px-4",
+                      route !== item.route && "border border-base-300 bg-base-100/80",
+                    )}
+                    onClick={() => navigate(item.route)}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+              </nav>
+            </div>
           </div>
         </header>
 
         <main
-          className="mx-auto w-full max-w-[1800px] px-4 lg:px-6 py-5 lg:py-6"
+          className="mx-auto w-full max-w-[1800px] px-4 py-5 lg:px-6 lg:py-6"
         >
           {route === "footage" ? (
             <FootagePage onNavigate={navigate} />

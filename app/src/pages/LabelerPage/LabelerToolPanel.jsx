@@ -124,10 +124,10 @@ export function LabelerToolPanel({
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="flex items-start justify-between gap-3 rounded-md border border-base-300 bg-base-200/40 p-3 text-sm"
+                className="yolo-muted-panel flex items-start justify-between gap-3 rounded-md border border-base-300 bg-base-200/40 p-3 text-sm"
               >
-                <span className="text-slate-500">{label}</span>
-                <strong className="max-w-[60%] break-all text-right text-slate-900">{value}</strong>
+                <span className="text-base-content/60">{label}</span>
+                <strong className="max-w-[60%] break-all text-right text-base-content">{value}</strong>
               </div>
             ))}
             {parseError ? (
@@ -168,7 +168,7 @@ export function LabelerToolPanel({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">Box {index + 1}</p>
+                        <p className="text-sm font-semibold text-base-content">Box {index + 1}</p>
                         <Paragraph className="mt-2 text-xs opacity-100">
                           x={Math.round(box.x)}, y={Math.round(box.y)}, w={Math.round(box.width)}, h=
                           {Math.round(box.height)}
@@ -199,7 +199,7 @@ export function LabelerToolPanel({
         eyebrow="Shortcut"
         description="Ringkasan gesture dan shortcut yang paling sering dipakai saat labeling."
       >
-        <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-slate-600">
+        <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-base-content/70">
           <li>Drag area kosong untuk membuat box baru.</li>
           <li>Klik box untuk pilih, lalu drag isi box untuk geser.</li>
           <li>Drag sudut atau sisi box untuk resize dari semua arah.</li>

@@ -39,7 +39,7 @@ export function LabelerHeader({
     >
       <div className="space-y-4">
         <div>
-          <h2 className="break-all text-lg font-bold tracking-tight text-slate-900">
+          <h2 className="break-all text-lg font-bold tracking-tight text-base-content">
             {currentImageItem ? currentImageItem.name : "Belum ada frame"}
           </h2>
           <Paragraph className="mt-2 text-sm leading-6 opacity-100">
@@ -93,13 +93,13 @@ export function LabelerHeader({
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
-              stroke-width="1.5"
+              strokeWidth="1.5"
               stroke="currentColor"
-              class="size-5"
+              className="size-5"
             >
               <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3"
               />
             </svg>
@@ -169,13 +169,13 @@ export function LabelerHeader({
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
-                stroke-width="1.5"
+                strokeWidth="1.5"
                 stroke="currentColor"
-                class="size-5"
+                className="size-5"
               >
                 <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5"
                 />
               </svg>

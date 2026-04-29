@@ -29,9 +29,9 @@ export function TrainingSidebar({ workspace, runtimePaths }) {
                     React.createElement("h3", { className: "text-sm font-bold" }, "Dataset"),
                     React.createElement(Badge, { type: workspace?.dataYamlExists ? "success" : "warning", className: "px-3 py-2" }, workspace?.dataYamlExists ? "data.yaml ✓" : "cek dataset")),
                 React.createElement("div", { className: "grid grid-cols-2 gap-2" },
-                    React.createElement(MetricTile, { label: "Train", value: String(workspace?.datasetTrainImages ?? "-"), detail: `${workspace?.datasetTrainLabels ?? "-"} label`, textColor: 'text-black' }),
-                    React.createElement(MetricTile, { label: "Val", value: String(workspace?.datasetValImages ?? "-"), detail: `${workspace?.datasetValLabels ?? "-"} label`, textColor: 'text-black' })),
+                    React.createElement(MetricTile, { label: "Train", value: String(workspace?.datasetTrainImages ?? "-"), detail: `${workspace?.datasetTrainLabels ?? "-"} label` }),
+                    React.createElement(MetricTile, { label: "Val", value: String(workspace?.datasetValImages ?? "-"), detail: `${workspace?.datasetValLabels ?? "-"} label` })),
                 React.createElement("div", { className: "rounded-md border border-base-300 bg-base-200/40 px-3 py-2" },
-                    React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-black" }, "Class"),
+                    React.createElement("p", { className: "text-[10px] font-semibold uppercase tracking-[0.18em] text-base-content/60" }, "Class"),
                     React.createElement("div", { className: "mt-2 flex flex-wrap gap-1" }, (workspace?.classNames || []).length ? (workspace.classNames.map((className) => (React.createElement(Badge, { key: className, type: "warning", className: "px-2 py-1" }, className)))) : (React.createElement("span", { className: "text-xs text-slate-400" }, "Belum ada class"))))))));
 }

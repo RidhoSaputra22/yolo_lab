@@ -55,19 +55,16 @@ export function TrainingSidebar({ workspace, runtimePaths }) {
               label="Train"
               value={String(workspace?.datasetTrainImages ?? "-")}
               detail={`${workspace?.datasetTrainLabels ?? "-"} label`}
-              textColor='text-black'
-              
             />
             <MetricTile
               label="Val"
               value={String(workspace?.datasetValImages ?? "-")}
               detail={`${workspace?.datasetValLabels ?? "-"} label`}
-              textColor='text-black'
             />
           </div>
 
           <div className="rounded-md border border-base-300 bg-base-200/40 px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-black">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-base-content/60">
               Class
             </p>
             <div className="mt-2 flex flex-wrap gap-1">
