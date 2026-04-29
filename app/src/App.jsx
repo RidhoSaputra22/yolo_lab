@@ -57,7 +57,7 @@ export default function App() {
       route === "footage"
         ? {
             eyebrow: "Footage Dataset Workspace",
-            title: "Footage Dataset React",
+            title: "Footage Dataset",
             description:
               "Preview video dataset di train/footage, import footage baru, lalu ekstrak frame dengan step yang bisa diatur sebelum lanjut ke labeling.",
           }
@@ -85,7 +85,7 @@ export default function App() {
     <ToastProvider>
       <div
         className={joinClasses(
-          isLabelerRoute ? "flex h-screen flex-col overflow-hidden" : "min-h-screen",
+          isLabelerRoute ? "flex pb-32 flex-col overflow-hidden" : "min-h-screen",
           "bg-white text-base-content",
         )}
       >

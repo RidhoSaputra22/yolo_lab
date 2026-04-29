@@ -49,7 +49,7 @@ export default function App() {
     const pageMeta = useMemo(() => route === "footage"
         ? {
             eyebrow: "Footage Dataset Workspace",
-            title: "Footage Dataset React",
+            title: "Footage Dataset",
             description: "Preview video dataset di train/footage, import footage baru, lalu ekstrak frame dengan step yang bisa diatur sebelum lanjut ke labeling.",
         }
         : route === "tester"
@@ -67,7 +67,7 @@ export default function App() {
                     title: "Manual Labeler",
                 }, [route]);
     return (React.createElement(ToastProvider, null,
-        React.createElement("div", { className: joinClasses(isLabelerRoute ? "flex h-screen flex-col overflow-hidden" : "min-h-screen", "bg-white text-base-content") },
+        React.createElement("div", { className: joinClasses(isLabelerRoute ? "flex pb-32 flex-col overflow-hidden" : "min-h-screen", "bg-white text-base-content") },
             React.createElement("header", { className: "z-30 border-b border-base-300/70 bg-base-100/85 backdrop-blur-xl sticky top-0" },
                 React.createElement("div", { className: "mx-auto flex w-full max-w-[1800px] px-4 lg:px-6 flex-col gap-4 py-4" },
                     React.createElement("div", { className: "flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between" },

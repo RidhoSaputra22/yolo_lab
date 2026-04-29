@@ -53,11 +53,11 @@ export function LabelerHeader({
           </Paragraph>
         </div>
 
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-5 gap-2 ">
           <Button
             variant="ghost"
             isSubmit={false}
-            size="sm"
+            size="xs"
             className="rounded-md border border-base-300 bg-base-100"
             disabled={!visibleImages.length || interactionLocked}
             onClick={() => onNavigate(-1)}
@@ -70,7 +70,7 @@ export function LabelerHeader({
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="size-6"
+              className="size-5"
             >
               <path
                 strokeLinecap="round"
@@ -82,7 +82,7 @@ export function LabelerHeader({
           <Button
             variant="ghost"
             isSubmit={false}
-            size="sm"
+            size="xs"
             className="rounded-md border border-base-300 bg-base-100"
             disabled={!visibleImages.length || interactionLocked}
             onClick={() => onNavigate(1)}
@@ -95,7 +95,7 @@ export function LabelerHeader({
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              class="size-6"
+              class="size-5"
             >
               <path
                 stroke-linecap="round"
@@ -108,7 +108,7 @@ export function LabelerHeader({
             variant="warning"
             outline
             isSubmit={false}
-            size="sm"
+            size="xs"
             className="rounded-md"
             disabled={!checkpointImageName || interactionLocked}
             onClick={onOpenCheckpoint}
@@ -121,7 +121,7 @@ export function LabelerHeader({
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="size-6"
+              className="size-5"
             >
               <path
                 strokeLinecap="round"
@@ -138,7 +138,7 @@ export function LabelerHeader({
           <Button
             variant="warning"
             isSubmit={false}
-            size="sm"
+            size="xs"
             className="rounded-md"
             disabled={
               !currentImageItem?.name ||
@@ -156,7 +156,7 @@ export function LabelerHeader({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="size-6"
+                className="size-5"
               >
                 <path
                   strokeLinecap="round"
@@ -171,7 +171,7 @@ export function LabelerHeader({
                 viewBox="0 0 24 24"
                 stroke-width="1.5"
                 stroke="currentColor"
-                class="size-6"
+                class="size-5"
               >
                 <path
                   stroke-linecap="round"
@@ -185,7 +185,7 @@ export function LabelerHeader({
             variant="warning"
             outline
             isSubmit={false}
-            size="sm"
+            size="xs"
             className="rounded-md"
             disabled={!hasFrames}
             onClick={onOpenAutolabelModal}
@@ -198,7 +198,7 @@ export function LabelerHeader({
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="size-6"
+              className="size-5"
             >
               <path
                 strokeLinecap="round"
@@ -215,7 +215,7 @@ export function LabelerHeader({
           <Button
             variant="primary"
             isSubmit={false}
-            size="sm"
+            size="xs"
             className="rounded-md"
             disabled={!currentImageItem?.name || interactionLocked}
             onClick={onSaveLabel}
@@ -228,7 +228,7 @@ export function LabelerHeader({
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
-              className="size-6"
+              className="size-5"
             >
               <path
                 strokeLinecap="round"
@@ -240,8 +240,8 @@ export function LabelerHeader({
           <Button
             variant="success"
             isSubmit={false}
-            size="sm"
-            className="col-span-2 rounded-md"
+            size="xs"
+            className="col-span-3 rounded-md"
             disabled={!currentImageItem?.name || interactionLocked}
             onClick={onSaveLabelAndNext}
             toolTip="Simpan label dan frame berikutnya"

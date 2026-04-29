@@ -23,7 +23,7 @@ export function LabelerSidebarSection({
   return (
     <details
       className={joinClasses(
-        "overflow-visible rounded-md border border-base-300 bg-base-100/90 shadow-lg",
+        "snap-start overflow-visible rounded-md border border-base-300 bg-base-100/90 shadow-lg",
         className,
       )}
       open={open}
@@ -47,7 +47,12 @@ export function LabelerSidebarSection({
 
           <div className="flex items-center gap-2">
             <Badge>
-              <span className="font-semibold text-white transition-transform duration-150 group-open:rotate-180">
+              <span
+                className={joinClasses(
+                  "font-semibold text-white ",
+                  open ? "rotate-180" : "rotate-0",
+                )}
+              >
                 ▼
               </span>
             </Badge>

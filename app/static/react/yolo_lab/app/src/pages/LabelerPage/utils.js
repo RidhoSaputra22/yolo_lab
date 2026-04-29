@@ -51,6 +51,23 @@ export function boxesEqual(leftBoxes, rightBoxes) {
     });
 }
 /**
+ * Calculate fit zoom level so frame stays fully visible in the viewport
+ */
+export function getFitZoomLevel(naturalSize, stageSize) {
+    if (!naturalSize.width || !naturalSize.height) {
+        return 1;
+    }
+    const viewportWidth = Math.max(0, Number(stageSize?.width) || 0);
+    const viewportHeight = Math.max(0, Number(stageSize?.height) || 0);
+    if (!viewportWidth || !viewportHeight) {
+        return 1;
+    }
+    const widthScale = viewportWidth / naturalSize.width;
+    const heightScale = viewportHeight / naturalSize.height;
+    const fitScale = Math.min(widthScale, heightScale);
+    return Number.isFinite(fitScale) && fitScale > 0 ? fitScale : 1;
+}
+/**
  * Calculate display metrics for image with zoom level
  */
 export function getDisplayMetricsForZoom(naturalSize, stageSize, zoomLevel) {
@@ -62,8 +79,9 @@ export function getDisplayMetricsForZoom(naturalSize, stageSize, zoomLevel) {
             height: 0,
         };
     }
-    const fitScale = 1;
-    const displayScale = clamp(zoomLevel, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL);
+    const fitScale = getFitZoomLevel(naturalSize, stageSize);
+    const requestedScale = Number.isFinite(Number(zoomLevel)) ? Number(zoomLevel) : fitScale;
+    const displayScale = clamp(requestedScale, MIN_ZOOM_LEVEL, MAX_ZOOM_LEVEL);
     return {
         fitScale,
         displayScale,

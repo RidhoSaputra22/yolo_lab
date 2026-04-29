@@ -8,7 +8,7 @@ export function LabelerSidebarSection({ title, eyebrow, description = null, badg
             setOpen(true);
         }
     }, [defaultOpen]);
-    return (React.createElement("details", { className: joinClasses("overflow-visible rounded-md border border-base-300 bg-base-100/90 shadow-lg", className), open: open, onToggle: (event) => setOpen(event.currentTarget.open) },
+    return (React.createElement("details", { className: joinClasses("snap-start overflow-visible rounded-md border border-base-300 bg-base-100/90 shadow-lg", className), open: open, onToggle: (event) => setOpen(event.currentTarget.open) },
         React.createElement("summary", { className: "cursor-pointer list-none px-4 py-4" },
             React.createElement("div", { className: "flex items-start justify-between gap-3" },
                 React.createElement("div", { className: "min-w-0" },
@@ -17,6 +17,6 @@ export function LabelerSidebarSection({ title, eyebrow, description = null, badg
                     description ? (React.createElement("p", { className: "mt-2 text-sm leading-6 text-slate-600" }, description)) : null),
                 React.createElement("div", { className: "flex items-center gap-2" },
                     React.createElement(Badge, null,
-                        React.createElement("span", { className: "font-semibold text-white transition-transform duration-150 group-open:rotate-180" }, "\u25BC"))))),
+                        React.createElement("span", { className: joinClasses("font-semibold text-white ", open ? "rotate-180" : "rotate-0") }, "\u25BC"))))),
         React.createElement("div", { className: joinClasses("border-t border-base-300 px-4 py-4", contentClassName) }, children)));
 }

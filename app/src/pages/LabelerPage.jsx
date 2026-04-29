@@ -42,6 +42,7 @@ import {
   filterImages,
   cloneBoxes,
   boxesEqual,
+  getFitZoomLevel,
   getDisplayMetricsForZoom,
   getStageLayoutMetrics,
 } from "./LabelerPage/index.js";
@@ -135,6 +136,7 @@ export default function LabelerPage() {
   const saveAndNextSinceCheckpointRef = useRef(0);
   const draftBoxesRef = useRef(null);
   const overlayFrameRef = useRef(0);
+  const autoFitImageNameRef = useRef(null);
   const preferencesHydratedRef = useRef(false);
   const previousAutolabelRunningRef = useRef(false);
   const { setNotice } = useToast();
@@ -268,6 +270,34 @@ export default function LabelerPage() {
       window.removeEventListener("resize", scheduleMeasure);
     };
   }, [currentImageName]);
+
+  useEffect(() => {
+    if (!currentImageName) {
+      autoFitImageNameRef.current = null;
+      return;
+    }
+    if (autoFitImageNameRef.current === currentImageName) {
+      return;
+    }
+    if (!naturalSize.width || !naturalSize.height || !stageSize.width || !stageSize.height) {
+      return;
+    }
+
+    const nextZoom = clamp(
+      getFitZoomLevel(naturalSize, stageSize),
+      MIN_ZOOM_LEVEL,
+      MAX_ZOOM_LEVEL,
+    );
+    autoFitImageNameRef.current = currentImageName;
+    zoomLevelRef.current = nextZoom;
+    setZoomLevel((current) => (Math.abs(current - nextZoom) < 0.0001 ? current : nextZoom));
+
+    const viewport = stageViewportRef.current;
+    if (viewport) {
+      viewport.scrollLeft = 0;
+      viewport.scrollTop = 0;
+    }
+  }, [currentImageName, naturalSize.width, naturalSize.height, stageSize.width, stageSize.height]);
 
   const markDirty = (nextDirty) => {
     dirtyRef.current = nextDirty;
@@ -501,6 +531,7 @@ export default function LabelerPage() {
     currentImageNameRef.current = null;
     navigationImageNameRef.current = null;
     setCurrentImageName(null);
+    autoFitImageNameRef.current = null;
     setImageSrc("");
     setNaturalSize({ width: 0, height: 0 });
     setHasLabelFile(false);
@@ -1286,8 +1317,21 @@ export default function LabelerPage() {
   };
 
   const resetZoom = () => {
-    zoomLevelRef.current = 1;
-    setZoomLevel(1);
+    const canComputeFitZoom =
+      naturalSizeRef.current.width &&
+      naturalSizeRef.current.height &&
+      stageSizeRef.current.width &&
+      stageSizeRef.current.height;
+    const nextZoom = clamp(
+      getFitZoomLevel(naturalSizeRef.current, stageSizeRef.current),
+      MIN_ZOOM_LEVEL,
+      MAX_ZOOM_LEVEL,
+    );
+    zoomLevelRef.current = nextZoom;
+    setZoomLevel(nextZoom);
+    if (currentImageNameRef.current) {
+      autoFitImageNameRef.current = canComputeFitZoom ? currentImageNameRef.current : null;
+    }
     if (stageViewportRef.current) {
       stageViewportRef.current.scrollLeft = 0;
       stageViewportRef.current.scrollTop = 0;
@@ -2165,7 +2209,7 @@ export default function LabelerPage() {
     (item) => item.name === currentImageName,
   );
   const zoomLabel = currentImageName
-    ? Math.abs(zoomLevel - 1) < 0.001
+    ? Math.abs(zoomLevel - displayMetrics.fitScale) < 0.001
       ? "Fit"
       : `${Math.round(zoomLevel * 100)}%`
     : "-";
@@ -2173,12 +2217,10 @@ export default function LabelerPage() {
   return (
     <>
       <div
-        className="grid h-full min-h-0 gap-4 grid-rows-[minmax(280px,42vh)_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] lg:grid-rows-1 "
-        style={{
-          height: "calc(100% - var(--yolo-log-dock-height, 0px))",
-        }}
+        className="grid h-[75vh] min-h-0 gap-4 grid-rows-[minmax(280px,42vh)_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] lg:grid-rows-1 "
+       
       >
-        <aside className="min-h-0  overflow-y-scroll pr-1 h-[600px]">
+        <aside className="min-h-0 overflow-y-scroll snap-y snap-mandatory pr-1">
           <div className="grid gap-4">
             <LabelerHeader
               currentImageItem={currentImageItem}

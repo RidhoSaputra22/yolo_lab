@@ -14,6 +14,7 @@ export {
   filterImages,
   cloneBoxes,
   boxesEqual,
+  getFitZoomLevel,
   getDisplayMetricsForZoom,
   getStageLayoutMetrics,
 } from "./utils.js";

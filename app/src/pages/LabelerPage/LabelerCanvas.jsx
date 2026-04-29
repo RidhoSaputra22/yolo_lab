@@ -37,7 +37,7 @@ export function LabelerCanvas({
           </div>
         ) : (
           <div className="relative min-h-0 flex-1">
-            <div className="pointer-events-none absolute left-4 top-4 z-20">
+            <div className="pointer-events-none absolute right-4 top-4 z-20">
               <div className="pointer-events-auto">
                 <Button
                   variant="error"
@@ -63,11 +63,10 @@ export function LabelerCanvas({
             ) : null}
             <div
               ref={stageViewportRef}
-              className="relative min-h-0 max-h-[550px] h-full flex-1 overflow-auto rounded-md border border-base-300 bg-base-100 p-4"
+              className="relative min-h-0 max-h-[600px] h-full flex-1 overflow-auto rounded-md border border-base-300 bg-base-100 p-4"
               style={{
                 overscrollBehavior: "contain",
-                backgroundImage:
-                  "linear-gradient(135deg, rgba(216, 91, 52, 0.06), transparent 34%), linear-gradient(315deg, rgba(29, 111, 82, 0.07), transparent 28%)",
+                
               }}
             >
               <div
